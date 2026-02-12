@@ -1,0 +1,31 @@
+{
+  "name": "@pulse/sdk",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "typecheck": "tsc --noEmit",
+    "create-api-key": "bun run scripts/create-api-key.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
+    "openai": "^6.16.0"
+  }
+}

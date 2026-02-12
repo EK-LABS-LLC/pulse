@@ -1,6 +1,6 @@
-import type { Trace } from '../types';
-import { defaults, type ResolvedConfig } from './config';
-import { sendTraces } from '../transport/http';
+import type { Trace } from "../types";
+import { defaults, type ResolvedConfig } from "./config";
+import { sendTraces } from "../transport/http";
 
 let config: ResolvedConfig | null = null;
 let traceBuffer: Trace[] = [];
@@ -12,7 +12,7 @@ export function setConfig(resolvedConfig: ResolvedConfig): void {
 
 export function getConfig(): ResolvedConfig {
   if (!config) {
-    throw new Error('Pulse SDK: not initialized. Call initPulse() first.');
+    throw new Error("Pulse SDK: not initialized. Call initPulse() first.");
   }
   return config;
 }
@@ -55,7 +55,7 @@ export async function flushBuffer(): Promise<void> {
   try {
     await sendTraces(cfg.apiUrl, cfg.apiKey, traces);
   } catch (error) {
-    console.error('Pulse SDK: failed to flush traces:', error);
+    console.error("Pulse SDK: failed to flush traces:", error);
   }
 }
 

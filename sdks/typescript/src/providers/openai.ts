@@ -1,9 +1,20 @@
-import type OpenAI from 'openai';
-import type { ChatCompletion, ChatCompletionCreateParamsNonStreaming } from 'openai/resources/chat/completions';
-import { Provider, type ObserveOptions } from '../types';
-import { normalizeOpenAIResponse } from '../lib/normalize';
-import { buildTrace, buildErrorTrace, getStartTime, calculateElapsedTime, extractPulseParams, resolveTraceMetadata, type TraceMetadata } from './base';
-import { addToBuffer, isEnabled } from '../core/state';
+import type OpenAI from "openai";
+import type {
+  ChatCompletion,
+  ChatCompletionCreateParamsNonStreaming,
+} from "openai/resources/chat/completions";
+import { Provider, type ObserveOptions } from "../types";
+import { normalizeOpenAIResponse } from "../lib/normalize";
+import {
+  buildTrace,
+  buildErrorTrace,
+  getStartTime,
+  calculateElapsedTime,
+  extractPulseParams,
+  resolveTraceMetadata,
+  type TraceMetadata,
+} from "./base";
+import { addToBuffer, isEnabled } from "../core/state";
 
 /**
  * Wraps the chat.completions.create method to capture traces
@@ -14,21 +25,23 @@ import { addToBuffer, isEnabled } from '../core/state';
  * @returns Wrapped function that captures traces
  */
 function wrapChatCompletionCreate(
-  original: OpenAI.Chat.Completions['create'],
+  original: OpenAI.Chat.Completions["create"],
   provider: Provider,
   options?: ObserveOptions
-): OpenAI.Chat.Completions['create'] {
+): OpenAI.Chat.Completions["create"] {
   return async function wrappedCreate(
     this: OpenAI.Chat.Completions,
     body: ChatCompletionCreateParamsNonStreaming,
-    requestOptions?: Parameters<OpenAI.Chat.Completions['create']>[1]
+    requestOptions?: Parameters<OpenAI.Chat.Completions["create"]>[1]
   ): Promise<ChatCompletion> {
     if (!isEnabled()) {
       return original.call(this, body, requestOptions) as Promise<ChatCompletion>;
     }
 
     const startTime = getStartTime();
-    const { cleanBody, pulseSessionId, pulseMetadata } = extractPulseParams(body as unknown as Record<string, unknown>);
+    const { cleanBody, pulseSessionId, pulseMetadata } = extractPulseParams(
+      body as unknown as Record<string, unknown>
+    );
     const requestBody = cleanBody;
 
     const traceMetadata = resolveTraceMetadata(
@@ -38,7 +51,11 @@ function wrapChatCompletionCreate(
     );
 
     try {
-      const response = await original.call(this, cleanBody as unknown as typeof body, requestOptions) as ChatCompletion;
+      const response = (await original.call(
+        this,
+        cleanBody as unknown as typeof body,
+        requestOptions
+      )) as ChatCompletion;
 
       const latencyMs = calculateElapsedTime(startTime);
 
@@ -62,7 +79,7 @@ function wrapChatCompletionCreate(
 
       throw error;
     }
-  } as OpenAI.Chat.Completions['create'];
+  } as OpenAI.Chat.Completions["create"];
 }
 
 export function patchOpenAI<T extends OpenAI>(

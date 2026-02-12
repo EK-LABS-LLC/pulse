@@ -7,12 +7,12 @@ export interface PulseConfig {
 }
 
 export enum Provider {
-  OpenAI = 'openai',
-  Anthropic = 'anthropic',
-  OpenRouter = 'openrouter',
+  OpenAI = "openai",
+  Anthropic = "anthropic",
+  OpenRouter = "openrouter",
 }
 
-export type TraceStatus = 'success' | 'error';
+export type TraceStatus = "success" | "error";
 
 export interface Trace {
   trace_id: string;
@@ -54,34 +54,45 @@ export interface PulseParams {
   pulseMetadata?: Record<string, unknown>;
 }
 
-export type ObservedOpenAI<T extends import('openai').default = import('openai').default> = Omit<T, 'chat'> & {
-  chat: Omit<T['chat'], 'completions'> & {
-    completions: Omit<T['chat']['completions'], 'create'> & {
+export type ObservedOpenAI<T extends import("openai").default = import("openai").default> = Omit<
+  T,
+  "chat"
+> & {
+  chat: Omit<T["chat"], "completions"> & {
+    completions: Omit<T["chat"]["completions"], "create"> & {
       create: {
         (
-          body: import('openai').default.ChatCompletionCreateParamsNonStreaming & PulseParams,
-          options?: import('openai').default.RequestOptions
-        ): Promise<import('openai').default.Chat.ChatCompletion>;
+          body: import("openai").default.ChatCompletionCreateParamsNonStreaming & PulseParams,
+          options?: import("openai").default.RequestOptions
+        ): Promise<import("openai").default.Chat.ChatCompletion>;
         (
-          body: import('openai').default.ChatCompletionCreateParamsStreaming & PulseParams,
-          options?: import('openai').default.RequestOptions
-        ): Promise<import('openai/streaming').Stream<import('openai').default.Chat.ChatCompletionChunk>>;
+          body: import("openai").default.ChatCompletionCreateParamsStreaming & PulseParams,
+          options?: import("openai").default.RequestOptions
+        ): Promise<
+          import("openai/streaming").Stream<import("openai").default.Chat.ChatCompletionChunk>
+        >;
       };
     };
   };
 };
 
-export type ObservedAnthropic<T extends import('@anthropic-ai/sdk').default = import('@anthropic-ai/sdk').default> = Omit<T, 'messages'> & {
-  messages: Omit<T['messages'], 'create'> & {
+export type ObservedAnthropic<
+  T extends import("@anthropic-ai/sdk").default = import("@anthropic-ai/sdk").default,
+> = Omit<T, "messages"> & {
+  messages: Omit<T["messages"], "create"> & {
     create: {
       (
-        body: import('@anthropic-ai/sdk').default.MessageCreateParamsNonStreaming & PulseParams,
-        options?: import('@anthropic-ai/sdk').default.RequestOptions
-      ): Promise<import('@anthropic-ai/sdk').default.Message>;
+        body: import("@anthropic-ai/sdk").default.MessageCreateParamsNonStreaming & PulseParams,
+        options?: import("@anthropic-ai/sdk").default.RequestOptions
+      ): Promise<import("@anthropic-ai/sdk").default.Message>;
       (
-        body: import('@anthropic-ai/sdk').default.MessageCreateParamsStreaming & PulseParams,
-        options?: import('@anthropic-ai/sdk').default.RequestOptions
-      ): Promise<import('@anthropic-ai/sdk/streaming').Stream<import('@anthropic-ai/sdk').default.RawMessageStreamEvent>>;
+        body: import("@anthropic-ai/sdk").default.MessageCreateParamsStreaming & PulseParams,
+        options?: import("@anthropic-ai/sdk").default.RequestOptions
+      ): Promise<
+        import("@anthropic-ai/sdk/streaming").Stream<
+          import("@anthropic-ai/sdk").default.RawMessageStreamEvent
+        >
+      >;
     };
   };
 };

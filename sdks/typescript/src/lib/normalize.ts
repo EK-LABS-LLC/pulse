@@ -5,9 +5,9 @@
  * into a unified NormalizedResponse format for trace storage.
  */
 
-import type { NormalizedResponse } from '../types';
-import type { ChatCompletion } from 'openai/resources/chat/completions';
-import type { Message } from '@anthropic-ai/sdk/resources/messages';
+import type { NormalizedResponse } from "../types";
+import type { ChatCompletion } from "openai/resources/chat/completions";
+import type { Message } from "@anthropic-ai/sdk/resources/messages";
 
 /**
  * Stop reason mapping from provider-specific values to normalized values
@@ -20,10 +20,10 @@ import type { Message } from '@anthropic-ai/sdk/resources/messages';
  * | Tool use       | tool_calls        | tool_use        | tool_calls    |
  */
 const ANTHROPIC_STOP_REASON_MAP: Record<string, string> = {
-  end_turn: 'stop',
-  max_tokens: 'length',
-  stop_sequence: 'stop',
-  tool_use: 'tool_calls',
+  end_turn: "stop",
+  max_tokens: "length",
+  stop_sequence: "stop",
+  tool_use: "tool_calls",
 };
 
 /**
@@ -56,9 +56,10 @@ export function normalizeOpenAIResponse(response: ChatCompletion): NormalizedRes
   // OpenRouter includes cost in response
   // Cast to access OpenRouter-specific field
   const openRouterResponse = response as ChatCompletion & { cost?: number };
-  const costCents = openRouterResponse.cost !== undefined
-    ? openRouterResponse.cost * 100 // Convert dollars to cents
-    : undefined;
+  const costCents =
+    openRouterResponse.cost !== undefined
+      ? openRouterResponse.cost * 100 // Convert dollars to cents
+      : undefined;
 
   return {
     content,
@@ -84,11 +85,11 @@ export function normalizeAnthropicResponse(response: Message): NormalizedRespons
   // Anthropic returns an array of content blocks, we join text blocks
   const textParts: string[] = [];
   for (const block of response.content) {
-    if (block.type === 'text') {
+    if (block.type === "text") {
       textParts.push(block.text);
     }
   }
-  const content = textParts.length > 0 ? textParts.join('') : null;
+  const content = textParts.length > 0 ? textParts.join("") : null;
 
   // Extract token counts from usage object
   // Anthropic uses input_tokens/output_tokens (already matches our internal naming)
@@ -97,9 +98,7 @@ export function normalizeAnthropicResponse(response: Message): NormalizedRespons
 
   // Map Anthropic stop_reason to normalized finish_reason
   const stopReason = response.stop_reason;
-  const finishReason = stopReason
-    ? ANTHROPIC_STOP_REASON_MAP[stopReason] ?? stopReason
-    : null;
+  const finishReason = stopReason ? (ANTHROPIC_STOP_REASON_MAP[stopReason] ?? stopReason) : null;
 
   // Model name from response
   const model = response.model;

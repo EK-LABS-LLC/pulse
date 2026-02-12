@@ -1,4 +1,4 @@
-import type { PulseConfig } from '../types';
+import type { PulseConfig } from "../types";
 
 export interface ResolvedConfig {
   apiKey: string;
@@ -9,7 +9,7 @@ export interface ResolvedConfig {
 }
 
 export const defaults = {
-  apiUrl: 'http://localhost:3000',
+  apiUrl: "http://localhost:3000",
   batchSize: 10,
   flushInterval: 5000,
   enabled: true,
@@ -17,21 +17,21 @@ export const defaults = {
 
 export function loadConfig(config: PulseConfig): ResolvedConfig {
   if (!config.apiKey) {
-    throw new Error('Pulse SDK: apiKey is required');
+    throw new Error("Pulse SDK: apiKey is required");
   }
 
-  if (!config.apiKey.startsWith('pulse_sk_')) {
+  if (!config.apiKey.startsWith("pulse_sk_")) {
     throw new Error('Pulse SDK: apiKey must start with "pulse_sk_"');
   }
 
   const batchSize = config.batchSize ?? defaults.batchSize;
   if (batchSize < 1 || batchSize > 100) {
-    throw new Error('Pulse SDK: batchSize must be between 1 and 100');
+    throw new Error("Pulse SDK: batchSize must be between 1 and 100");
   }
 
   const flushInterval = config.flushInterval ?? defaults.flushInterval;
   if (flushInterval < 1000) {
-    throw new Error('Pulse SDK: flushInterval must be at least 1000ms');
+    throw new Error("Pulse SDK: flushInterval must be at least 1000ms");
   }
 
   return {

@@ -1,10 +1,22 @@
-import type OpenAI from 'openai';
-import type Anthropic from '@anthropic-ai/sdk';
-import { type PulseConfig, Provider, type ObserveOptions, type ObservedOpenAI, type ObservedAnthropic } from './types';
-import { loadConfig } from './core/config';
-import { setConfig, startFlushInterval, flushBuffer, stopFlushInterval, isEnabled } from './core/state';
-import { patchOpenAI } from './providers/openai';
-import { patchAnthropic } from './providers/anthropic';
+import type OpenAI from "openai";
+import type Anthropic from "@anthropic-ai/sdk";
+import {
+  type PulseConfig,
+  Provider,
+  type ObserveOptions,
+  type ObservedOpenAI,
+  type ObservedAnthropic,
+} from "./types";
+import { loadConfig } from "./core/config";
+import {
+  setConfig,
+  startFlushInterval,
+  flushBuffer,
+  stopFlushInterval,
+  isEnabled,
+} from "./core/state";
+import { patchOpenAI } from "./providers/openai";
+import { patchAnthropic } from "./providers/anthropic";
 
 let shutdownRegistered = false;
 
@@ -25,26 +37,36 @@ export function initPulse(config: PulseConfig): void {
       try {
         await flushBuffer();
       } catch (error) {
-        console.error('Pulse SDK: error during final flush:', error);
+        console.error("Pulse SDK: error during final flush:", error);
       }
       stopFlushInterval();
     };
 
-    process.on('beforeExit', () => shutdown('beforeExit'));
-    process.on('SIGINT', async () => { await shutdown('SIGINT'); process.exit(0); });
-    process.on('SIGTERM', async () => { await shutdown('SIGTERM'); process.exit(0); });
+    process.on("beforeExit", () => shutdown("beforeExit"));
+    process.on("SIGINT", async () => {
+      await shutdown("SIGINT");
+      process.exit(0);
+    });
+    process.on("SIGTERM", async () => {
+      await shutdown("SIGTERM");
+      process.exit(0);
+    });
   }
 }
 
 /** Wrap an LLM client to automatically capture traces. */
-export function observe<T extends OpenAI>(client: T, provider: Provider, options?: ObserveOptions): ObservedOpenAI<T>;
-export function observe<T extends Anthropic>(client: T, provider: Provider, options?: ObserveOptions): ObservedAnthropic<T>;
-export function observe<T>(client: T, provider: Provider, options?: ObserveOptions): T;
-export function observe<T>(
+export function observe<T extends OpenAI>(
   client: T,
   provider: Provider,
   options?: ObserveOptions
-): T {
+): ObservedOpenAI<T>;
+export function observe<T extends Anthropic>(
+  client: T,
+  provider: Provider,
+  options?: ObserveOptions
+): ObservedAnthropic<T>;
+export function observe<T>(client: T, provider: Provider, options?: ObserveOptions): T;
+export function observe<T>(client: T, provider: Provider, options?: ObserveOptions): T {
   switch (provider) {
     case Provider.OpenAI:
     case Provider.OpenRouter:
@@ -56,9 +78,7 @@ export function observe<T>(
   }
 }
 
-export {
-  Provider,
-};
+export { Provider };
 
 export type {
   PulseConfig,
@@ -69,4 +89,4 @@ export type {
   PulseParams,
   ObservedOpenAI,
   ObservedAnthropic,
-} from './types';
+} from "./types";

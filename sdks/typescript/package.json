@@ -15,6 +15,7 @@
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node",
     "typecheck": "tsc --noEmit",
+    "format": "bunx prettier --config ../.prettierrc --ignore-path ../.prettierignore --write \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
     "create-api-key": "bun run scripts/create-api-key.ts"
   },
   "devDependencies": {

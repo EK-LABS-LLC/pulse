@@ -4,8 +4,8 @@
  * Wraps Anthropic client methods to capture traces for LLM calls.
  */
 
-import type Anthropic from '@anthropic-ai/sdk';
-import type { Stream } from '@anthropic-ai/sdk/streaming';
+import type Anthropic from "@anthropic-ai/sdk";
+import type { Stream } from "@anthropic-ai/sdk/streaming";
 import type {
   Message,
   MessageCreateParamsNonStreaming,
@@ -19,22 +19,30 @@ import type {
   ContentBlock,
   TextBlock,
   Usage,
-} from '@anthropic-ai/sdk/resources/messages';
-import { Provider, type ObserveOptions, type NormalizedResponse } from '../types';
-import { normalizeAnthropicResponse } from '../lib/normalize';
-import { buildTrace, buildErrorTrace, getStartTime, calculateElapsedTime, extractPulseParams, resolveTraceMetadata, type TraceMetadata } from './base';
-import { addToBuffer, isEnabled } from '../core/state';
+} from "@anthropic-ai/sdk/resources/messages";
+import { Provider, type ObserveOptions, type NormalizedResponse } from "../types";
+import { normalizeAnthropicResponse } from "../lib/normalize";
+import {
+  buildTrace,
+  buildErrorTrace,
+  getStartTime,
+  calculateElapsedTime,
+  extractPulseParams,
+  resolveTraceMetadata,
+  type TraceMetadata,
+} from "./base";
+import { addToBuffer, isEnabled } from "../core/state";
 
 /**
  * Stop reason mapping from Anthropic values to normalized values
  */
 const ANTHROPIC_STOP_REASON_MAP: Record<string, string> = {
-  end_turn: 'stop',
-  max_tokens: 'length',
-  stop_sequence: 'stop',
-  tool_use: 'tool_calls',
-  pause_turn: 'pause',
-  refusal: 'refusal',
+  end_turn: "stop",
+  max_tokens: "length",
+  stop_sequence: "stop",
+  tool_use: "tool_calls",
+  pause_turn: "pause",
+  refusal: "refusal",
 };
 
 /**
@@ -43,7 +51,7 @@ const ANTHROPIC_STOP_REASON_MAP: Record<string, string> = {
 interface StreamAccumulator {
   id: string | null;
   model: string | null;
-  role: 'assistant';
+  role: "assistant";
   content: ContentBlock[];
   stopReason: string | null;
   stopSequence: string | null;
@@ -58,12 +66,12 @@ function createStreamAccumulator(): StreamAccumulator {
   return {
     id: null,
     model: null,
-    role: 'assistant',
+    role: "assistant",
     content: [],
     stopReason: null,
     stopSequence: null,
     usage: null,
-    textContent: '',
+    textContent: "",
   };
 }
 
@@ -72,32 +80,32 @@ function createStreamAccumulator(): StreamAccumulator {
  */
 function processStreamEvent(event: RawMessageStreamEvent, acc: StreamAccumulator): void {
   switch (event.type) {
-    case 'message_start': {
+    case "message_start": {
       const startEvent = event as RawMessageStartEvent;
       acc.id = startEvent.message.id;
       acc.model = startEvent.message.model;
       acc.usage = startEvent.message.usage;
       break;
     }
-    case 'content_block_start': {
+    case "content_block_start": {
       // Initialize content block
       acc.content.push(event.content_block);
       break;
     }
-    case 'content_block_delta': {
+    case "content_block_delta": {
       const deltaEvent = event as RawContentBlockDeltaEvent;
-      if (deltaEvent.delta.type === 'text_delta') {
+      if (deltaEvent.delta.type === "text_delta") {
         const textDelta = deltaEvent.delta as TextDelta;
         acc.textContent += textDelta.text;
         // Update the text block content
         const block = acc.content[deltaEvent.index];
-        if (block && block.type === 'text') {
+        if (block && block.type === "text") {
           (block as TextBlock).text += textDelta.text;
         }
       }
       break;
     }
-    case 'message_delta': {
+    case "message_delta": {
       const messageDelta = event as RawMessageDeltaEvent;
       acc.stopReason = messageDelta.delta.stop_reason;
       acc.stopSequence = messageDelta.delta.stop_sequence;
@@ -126,7 +134,7 @@ function processStreamEvent(event: RawMessageStreamEvent, acc: StreamAccumulator
 function accumulatorToNormalizedResponse(acc: StreamAccumulator): NormalizedResponse {
   // Map stop reason to normalized format
   const finishReason = acc.stopReason
-    ? ANTHROPIC_STOP_REASON_MAP[acc.stopReason] ?? acc.stopReason
+    ? (ANTHROPIC_STOP_REASON_MAP[acc.stopReason] ?? acc.stopReason)
     : null;
 
   return {
@@ -134,7 +142,7 @@ function accumulatorToNormalizedResponse(acc: StreamAccumulator): NormalizedResp
     inputTokens: acc.usage?.input_tokens ?? null,
     outputTokens: acc.usage?.output_tokens ?? null,
     finishReason,
-    model: acc.model ?? 'unknown',
+    model: acc.model ?? "unknown",
   };
 }
 
@@ -166,7 +174,13 @@ function createTracedStream(
         traceRecorded = true;
         const latencyMs = calculateElapsedTime(startTime);
         const normalizedResponse = accumulatorToNormalizedResponse(accumulator);
-        const trace = buildTrace(requestBody, normalizedResponse, Provider.Anthropic, latencyMs, traceMetadata);
+        const trace = buildTrace(
+          requestBody,
+          normalizedResponse,
+          Provider.Anthropic,
+          latencyMs,
+          traceMetadata
+        );
         addToBuffer(trace);
       }
     } catch (error) {
@@ -196,7 +210,7 @@ function createTracedStream(
       }
       // For all other properties, use the original
       const value = Reflect.get(target, prop, receiver);
-      if (typeof value === 'function') {
+      if (typeof value === "function") {
         return value.bind(target);
       }
       return value;
@@ -218,28 +232,28 @@ function createTracedStream(
  * @returns Wrapped function that captures traces
  */
 function wrapMessagesCreate(
-  original: Anthropic.Messages['create'],
+  original: Anthropic.Messages["create"],
   options?: ObserveOptions
-): Anthropic.Messages['create'] {
+): Anthropic.Messages["create"] {
   // Overload 1: Non-streaming
   async function wrappedCreate(
     body: MessageCreateParamsNonStreaming,
-    requestOptions?: Parameters<Anthropic.Messages['create']>[1]
+    requestOptions?: Parameters<Anthropic.Messages["create"]>[1]
   ): Promise<Message>;
   // Overload 2: Streaming
   async function wrappedCreate(
     body: MessageCreateParamsStreaming,
-    requestOptions?: Parameters<Anthropic.Messages['create']>[1]
+    requestOptions?: Parameters<Anthropic.Messages["create"]>[1]
   ): Promise<Stream<RawMessageStreamEvent>>;
   // Overload 3: Base (could be either)
   async function wrappedCreate(
     body: MessageCreateParamsBase,
-    requestOptions?: Parameters<Anthropic.Messages['create']>[1]
+    requestOptions?: Parameters<Anthropic.Messages["create"]>[1]
   ): Promise<Stream<RawMessageStreamEvent> | Message>;
   // Implementation
   async function wrappedCreate(
     body: MessageCreateParamsNonStreaming | MessageCreateParamsStreaming | MessageCreateParamsBase,
-    requestOptions?: Parameters<Anthropic.Messages['create']>[1]
+    requestOptions?: Parameters<Anthropic.Messages["create"]>[1]
   ): Promise<Message | Stream<RawMessageStreamEvent>> {
     // If SDK is disabled, just call the original method
     if (!isEnabled()) {
@@ -247,9 +261,11 @@ function wrapMessagesCreate(
     }
 
     const startTime = getStartTime();
-    const { cleanBody, pulseSessionId, pulseMetadata } = extractPulseParams(body as unknown as Record<string, unknown>);
+    const { cleanBody, pulseSessionId, pulseMetadata } = extractPulseParams(
+      body as unknown as Record<string, unknown>
+    );
     const requestBody = cleanBody;
-    const isStreaming = 'stream' in body && body.stream === true;
+    const isStreaming = "stream" in body && body.stream === true;
 
     const traceMetadata = resolveTraceMetadata(
       { sessionId: options?.sessionId, metadata: options?.metadata },
@@ -260,7 +276,10 @@ function wrapMessagesCreate(
     if (isStreaming) {
       // Handle streaming response
       try {
-        const stream = await original(cleanBody as unknown as MessageCreateParamsStreaming, requestOptions);
+        const stream = await original(
+          cleanBody as unknown as MessageCreateParamsStreaming,
+          requestOptions
+        );
         // Return a traced stream that captures events and builds trace on completion
         return createTracedStream(
           stream as Stream<RawMessageStreamEvent>,
@@ -288,7 +307,10 @@ function wrapMessagesCreate(
     } else {
       // Handle non-streaming response
       try {
-        const response = await original(cleanBody as unknown as MessageCreateParamsNonStreaming, requestOptions) as Message;
+        const response = (await original(
+          cleanBody as unknown as MessageCreateParamsNonStreaming,
+          requestOptions
+        )) as Message;
 
         // Calculate latency
         const latencyMs = calculateElapsedTime(startTime);
@@ -297,7 +319,13 @@ function wrapMessagesCreate(
         const normalizedResponse = normalizeAnthropicResponse(response);
 
         // Build and buffer trace
-        const trace = buildTrace(requestBody, normalizedResponse, Provider.Anthropic, latencyMs, traceMetadata);
+        const trace = buildTrace(
+          requestBody,
+          normalizedResponse,
+          Provider.Anthropic,
+          latencyMs,
+          traceMetadata
+        );
         addToBuffer(trace);
 
         // Return original response unchanged
@@ -322,7 +350,7 @@ function wrapMessagesCreate(
     }
   }
 
-  return wrappedCreate as Anthropic.Messages['create'];
+  return wrappedCreate as Anthropic.Messages["create"];
 }
 
 /**
@@ -348,10 +376,7 @@ function wrapMessagesCreate(
  * });
  * ```
  */
-export function patchAnthropic<T extends Anthropic>(
-  client: T,
-  options?: ObserveOptions
-): T {
+export function patchAnthropic<T extends Anthropic>(client: T, options?: ObserveOptions): T {
   // Store original method
   const originalCreate = client.messages.create.bind(client.messages);
 

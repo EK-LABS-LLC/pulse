@@ -63,7 +63,7 @@ const server = Bun.serve({
     }
 
     if (url.pathname === "/run" && req.method === "POST") {
-      const body = await req.json().catch(() => ({})) as {
+      const body = (await req.json().catch(() => ({}))) as {
         provider?: string;
         pulseSessionId?: string;
         pulseMetadata?: Record<string, unknown>;
@@ -77,9 +77,15 @@ const server = Bun.serve({
       try {
         if (provider === "openai") return Response.json(await runOpenAI(options));
         if (provider === "anthropic") return Response.json(await runAnthropic(options));
-        return Response.json({ openai: await runOpenAI(options), anthropic: await runAnthropic(options) });
+        return Response.json({
+          openai: await runOpenAI(options),
+          anthropic: await runAnthropic(options),
+        });
       } catch (error) {
-        return Response.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+        return Response.json(
+          { error: error instanceof Error ? error.message : "Unknown error" },
+          { status: 500 }
+        );
       }
     }
 

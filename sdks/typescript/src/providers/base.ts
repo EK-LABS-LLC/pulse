@@ -1,15 +1,17 @@
-import type { Trace, Provider, TraceStatus, NormalizedResponse, ObserveOptions } from '../types';
-import { generateUUID } from '../lib/uuid';
-import { calculateCost } from '../lib/pricing';
+import type { Trace, Provider, TraceStatus, NormalizedResponse, ObserveOptions } from "../types";
+import { generateUUID } from "../lib/uuid";
+import { calculateCost } from "../lib/pricing";
 
 export interface TraceMetadata {
   sessionId?: string;
   metadata?: Record<string, unknown>;
 }
 
-export function extractPulseParams(
-  body: Record<string, unknown>
-): { cleanBody: Record<string, unknown>; pulseSessionId?: string; pulseMetadata?: Record<string, unknown> } {
+export function extractPulseParams(body: Record<string, unknown>): {
+  cleanBody: Record<string, unknown>;
+  pulseSessionId?: string;
+  pulseMetadata?: Record<string, unknown>;
+} {
   const { pulseSessionId, pulseMetadata, ...cleanBody } = body;
   return {
     cleanBody,
@@ -38,7 +40,7 @@ export function resolveTraceMetadata(
  * @returns Elapsed time in milliseconds
  */
 export function calculateElapsedTime(startTime: number): number {
-  const endTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const endTime = typeof performance !== "undefined" ? performance.now() : Date.now();
   return Math.round(endTime - startTime);
 }
 
@@ -49,7 +51,7 @@ export function calculateElapsedTime(startTime: number): number {
  * @returns Current timestamp in milliseconds
  */
 export function getStartTime(): number {
-  return typeof performance !== 'undefined' ? performance.now() : Date.now();
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
 }
 
 /**
@@ -69,7 +71,7 @@ export function buildTrace(
   latencyMs: number,
   options?: TraceMetadata
 ): Trace {
-  const modelRequested = (request.model as string) ?? 'unknown';
+  const modelRequested = (request.model as string) ?? "unknown";
 
   // Calculate cost from response data or use provider-supplied cost
   let costCents: number | undefined;
@@ -79,11 +81,7 @@ export function buildTrace(
       costCents = response.costCents;
     } else if (response.inputTokens !== null && response.outputTokens !== null) {
       // Calculate cost based on model and token usage
-      const calculated = calculateCost(
-        response.model,
-        response.inputTokens,
-        response.outputTokens
-      );
+      const calculated = calculateCost(response.model, response.inputTokens, response.outputTokens);
       if (calculated !== null) {
         costCents = calculated;
       }
@@ -102,7 +100,7 @@ export function buildTrace(
     output_tokens: response?.outputTokens ?? undefined,
     output_text: response?.content ?? undefined,
     finish_reason: response?.finishReason ?? undefined,
-    status: response ? 'success' : 'error',
+    status: response ? "success" : "error",
     latency_ms: latencyMs,
     cost_cents: costCents,
     session_id: options?.sessionId,
@@ -129,7 +127,7 @@ export function buildErrorTrace(
   latencyMs: number,
   options?: TraceMetadata
 ): Trace {
-  const modelRequested = (request.model as string) ?? 'unknown';
+  const modelRequested = (request.model as string) ?? "unknown";
 
   const trace: Trace = {
     trace_id: generateUUID(),
@@ -137,7 +135,7 @@ export function buildErrorTrace(
     provider,
     model_requested: modelRequested,
     request_body: request,
-    status: 'error',
+    status: "error",
     error: {
       name: error.name,
       message: error.message,

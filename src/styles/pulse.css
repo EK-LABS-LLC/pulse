@@ -346,6 +346,32 @@ starlight-tabs [role="tab"] {
   border-color: var(--pulse-border-strong);
 }
 
+/* Keep LinkCard hover states dark and readable in docs "Next steps" grids. */
+.sl-markdown-content .sl-link-card {
+  border-color: var(--pulse-border);
+  background: var(--pulse-bg-1);
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.sl-markdown-content .sl-link-card:hover {
+  background: var(--pulse-bg-2);
+  border-color: var(--pulse-border-strong);
+}
+
+.sl-markdown-content .sl-link-card .title {
+  color: #ffffff;
+}
+
+.sl-markdown-content .sl-link-card .description,
+.sl-markdown-content .sl-link-card .icon {
+  color: #9a9a9a;
+}
+
+.sl-markdown-content .sl-link-card:hover .description,
+.sl-markdown-content .sl-link-card:hover .icon {
+  color: #d4d4d4;
+}
+
 /* API page */
 .api-shell {
   display: block;

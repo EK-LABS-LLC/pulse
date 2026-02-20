@@ -19,6 +19,26 @@ Dashboard endpoints under `/dashboard/api/*` use authenticated session cookies.
 Authorization: Bearer pulse_sk_...
 ```
 
+## Control plane endpoints (users, projects, keys)
+
+These are the endpoints used by the dashboard and `pulse setup` to manage accounts and projects.
+
+`/dashboard/api/*` routes use the Better Auth session cookie. Project-scoped admin routes also require `X-Project-Id`.
+
+| Endpoint | Auth | Notes |
+| --- | --- | --- |
+| `POST /dashboard/api/signup` | Public | Creates user + first project bootstrap. |
+| `GET /dashboard/api/projects` | Session cookie | List projects for current user. |
+| `POST /dashboard/api/projects` | Session cookie | Create project for current user. |
+| `GET /dashboard/api/api-keys` | Session + `X-Project-Id` | List API keys for active project (admin). |
+| `POST /dashboard/api/api-keys` | Session + `X-Project-Id` | Create API key for active project (admin). |
+| `PATCH /dashboard/api/api-keys/:id` | Session + `X-Project-Id` | Rename API key (admin). |
+| `DELETE /dashboard/api/api-keys/:id` | Session + `X-Project-Id` | Delete API key (admin). |
+| `GET /dashboard/api/users` | Session + `X-Project-Id` | List project users (admin). |
+| `POST /dashboard/api/users` | Session + `X-Project-Id` | Add project user (admin). |
+
+Better Auth session/account endpoints are under `/api/auth/*` (for example, sign-in/sign-out/session routes).
+
 <section id="get-health">
   <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/health</code></h2>
   Health check endpoint for readiness and liveness. Public route with no authentication required.

@@ -30,6 +30,10 @@ export default defineConfig({
 					],
 				},
 				{
+					label: 'Modes',
+					items: [{ label: 'Single vs Scale', slug: 'docs/modes' }],
+				},
+				{
 					label: 'CLI',
 					items: [{ label: 'CLI Reference', slug: 'docs/cli' }],
 				},

@@ -8,9 +8,9 @@ import { Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components
 
 ## Run Pulse server
 
-Start the trace service before instrumenting your app. For local development, single mode (SQLite) is the quickest path.
+Set up Pulse in this order: install binary, choose mode, run setup, then run the server.
 
-Install the binary:
+### 1) Install the binary
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse-server
@@ -18,25 +18,47 @@ curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scri
 
 This installs both `pulse-server` (trace service) and `pulse` (CLI integrations).
 
-Set required environment variables:
+### 2) Choose single vs scale mode and set env vars
+
+Use `single` for the fastest local setup. Use `scale` when you need Postgres-backed multi-node or higher-throughput ingest.
+
+See [Single vs Scale Modes](/docs/modes/) for an in-depth comparison and operational guidance.
+
+Single mode (default, local SQLite):
 
 ```bash
-export BETTER_AUTH_SECRET='replace-with-32+char-secret'
-export ENCRYPTION_KEY='replace-with-32+char-secret'
+export PULSE_MODE=single
+export BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
+export ENCRYPTION_KEY="$(openssl rand -hex 32)"
 export BETTER_AUTH_URL='http://localhost:3000'
 ```
 
-Start the service:
+Scale mode (Postgres + partitioned listeners):
+
+```bash
+export PULSE_MODE=scale
+export DATABASE_URL='postgresql://pulse:pulse@localhost:5432/pulse'
+export BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
+export ENCRYPTION_KEY="$(openssl rand -hex 32)"
+export BETTER_AUTH_URL='http://localhost:3000'
+```
+
+### 3) Run `pulse setup`
+
+```bash
+pulse setup
+```
+
+`pulse setup` creates your dashboard account, project, and API key, then writes `~/.pulse/config.toml`.
+
+### 4) Start the server
 
 ```bash
 pulse-server
 ```
 
-Create your account + API key (writes `~/.pulse/config.toml`):
-
-```bash
-pulse setup --no-start-server
-```
+Use the same env vars from step 2 when starting the server.
+If `pulse setup` already started `pulse-server`, you can skip this step.
 
 ## Install SDK
 

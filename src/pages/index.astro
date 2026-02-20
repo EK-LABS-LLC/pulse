@@ -1,0 +1,441 @@
+---
+import "../styles/pulse.css";
+import { Code } from "astro:components";
+
+const features = [
+  {
+    tag: "Tracing",
+    title: "End-to-end trace capture",
+    desc: "Every prompt, completion, token count, latency, and cost stored with full request and response bodies.",
+  },
+  {
+    tag: "Sessions",
+    title: "Session timelines",
+    desc: "Group related calls into sessions. See full conversations or agent runs as a timeline.",
+  },
+  {
+    tag: "Analytics",
+    title: "Cost and usage tracking",
+    desc: "Track spend per model, per project, per session. Catch cost spikes before they hit your bill.",
+  },
+  {
+    tag: "Routing",
+    title: "Provider agnostic",
+    desc: "OpenAI, Anthropic, OpenRouter. One SDK, consistent metrics across all providers.",
+  },
+  {
+    tag: "Debugging",
+    title: "Fast root-cause workflows",
+    desc: "Pivot from aggregate analytics to individual traces and spans quickly when incidents happen.",
+  },
+  {
+    tag: "Deployment",
+    title: "Single-node to scale mode",
+    desc: "Run as a single binary with built-in SQLite, or switch to Postgres + partitioned listeners for higher throughput.",
+  },
+];
+
+const dashboardCards = [
+  {
+    title: "Command Center",
+    src: "/assets/OverView.png",
+    desc: "Overview of traces, spend, and live service health across your projects.",
+  },
+  {
+    title: "Agent Run Playback",
+    src: "/assets/agent-runs.png",
+    desc: "Replay each agent run with tool calls, timing, and failure points in order.",
+  },
+  {
+    title: "Cost Intelligence",
+    src: "/assets/analytics.png",
+    desc: "Track token usage and cost trends to catch spikes before they become problems.",
+  },
+];
+
+const heroDashboard = {
+  src: "/assets/OverView.png",
+  alt: "Pulse dashboard overview screenshot",
+};
+
+const integrations = [
+  {
+    id: "claude",
+    name: "Claude Code",
+    logo: "/assets/claudecode.jpg",
+    desc: "Capture tool events, sessions, and agent runs from Claude Code.",
+    href: "/docs/claude-code/",
+  },
+  {
+    id: "opencode",
+    name: "Opencode",
+    logo: "/assets/opencode.png",
+    desc: "Stream Opencode execution events into Pulse timelines and analytics.",
+    href: "/docs/opencode/",
+  },
+  {
+    id: "openclaw",
+    name: "OpenClaw",
+    logo: "/assets/openclaw.png",
+    desc: "Track OpenClaw sessions and tool activity alongside model traces.",
+    href: "/docs/openclaw/",
+  },
+];
+
+const docsCards = [
+  {
+    label: "Getting started",
+    title: "Quickstart",
+    desc: "Install the SDK, create an API key, and capture your first trace in under 5 minutes.",
+    href: "/docs/",
+  },
+  {
+    label: "SDK",
+    title: "Provider adapters",
+    desc: "Integrate with OpenAI, Anthropic, and OpenRouter using the observe() wrapper.",
+    href: "/docs/providers/",
+  },
+  {
+    label: "API",
+    title: "REST API reference",
+    desc: "Query traces, sessions, and analytics programmatically. Full endpoint documentation.",
+    href: "/docs/api/",
+  },
+  {
+    label: "Concepts",
+    title: "Sessions & metadata",
+    desc: "Group traces with session IDs and attach custom metadata for filtering.",
+    href: "/docs/sessions/",
+  },
+  {
+    label: "Config",
+    title: "Configuration",
+    desc: "Batching, flush intervals, disabling tracing, and all initPulse() options.",
+    href: "/docs/config/",
+  },
+];
+
+const codeTheme = "night-owl";
+
+const serverInstallCode = String.raw`curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse`;
+
+const installCode = String.raw`bun add @pulse/sdk
+pip install pulse-sdk`;
+
+const wrapCode = String.raw`const client = observe(
+  new OpenAI({ apiKey: "sk-..." }),
+  Provider.OpenAI
+);`;
+
+const statsCode = String.raw`142 traces captured
+$0.47 total cost
+avg latency 1.2s`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pulse</title>
+    <meta
+      name="description"
+      content="LLM observability for TypeScript and Python."
+    />
+    <link rel="icon" href="/favicon.svg" />
+  </head>
+  <body class="landing-body">
+    <nav class="landing-nav">
+      <div class="landing-nav-inner">
+        <div class="landing-nav-left">
+          <a href="/" class="brand">Pulse</a>
+          <div class="landing-links">
+            <a href="#quick-start">Quick start</a>
+            <a href="#integrations">Integrations</a>
+            <a href="#dashboard">Dashboard</a>
+            <a href="#features">Features</a>
+            <a href="#how-it-works">How it works</a>
+            <a href="/docs/">Docs</a>
+          </div>
+        </div>
+        <a
+          href="https://github.com/EK-LABS-LLC/trace-service"
+          class="github-icon-link"
+          aria-label="Pulse GitHub repository"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M12 2C6.477 2 2 6.596 2 12.266c0 4.537 2.865 8.386 6.839 9.744.5.095.682-.223.682-.496 0-.245-.009-.893-.014-1.752-2.782.62-3.369-1.398-3.369-1.398-.455-1.188-1.11-1.504-1.11-1.504-.907-.637.069-.624.069-.624 1.003.072 1.531 1.056 1.531 1.056.891 1.581 2.339 1.124 2.91.859.091-.668.349-1.124.635-1.382-2.221-.261-4.555-1.143-4.555-5.087 0-1.124.39-2.043 1.029-2.763-.103-.262-.446-1.317.098-2.746 0 0 .84-.277 2.75 1.055A9.41 9.41 0 0 1 12 6.933c.85.004 1.706.117 2.505.344 1.909-1.332 2.747-1.055 2.747-1.055.546 1.429.203 2.484.1 2.746.64.72 1.027 1.639 1.027 2.763 0 3.954-2.338 4.823-4.566 5.08.359.318.678.947.678 1.909 0 1.378-.012 2.489-.012 2.828 0 .276.18.596.688.495C19.137 20.648 22 16.801 22 12.266 22 6.596 17.523 2 12 2Z"
+            ></path>
+          </svg>
+        </a>
+      </div>
+    </nav>
+
+    <main>
+      <section class="hero">
+        <div class="hero-grid">
+          <div>
+            <h1>Observability for every LLM call your app makes</h1>
+            <p>
+              Trace prompts, completions, latency, tokens, and cost across OpenAI,
+              Anthropic, and OpenRouter with a single SDK for TypeScript and
+              Python.
+            </p>
+            <div class="hero-ctas">
+              <a href="https://github.com/EK-LABS-LLC/trace-service" class="btn btn-primary"
+                >Get started</a
+              >
+              <a href="/docs/" class="btn btn-secondary">Read the docs</a>
+            </div>
+          </div>
+          <div class="hero-dashboard-card">
+            <img src={heroDashboard.src} alt={heroDashboard.alt} loading="eager" />
+          </div>
+        </div>
+      </section>
+
+      <section id="quick-start" class="landing-section quickstart-section">
+        <div class="section-head quickstart-head">
+          <div class="eyebrow">Quick start</div>
+          <h2>Install Pulse server first</h2>
+          <p>
+            Run this script to install the Pulse server binary, then start
+            instrumenting with the SDK.
+          </p>
+        </div>
+        <div class="code-card quickstart-code-card">
+          <div class="code-card-head">
+            <span>Server install script</span>
+            <button
+              type="button"
+              class="copy-install-btn"
+              data-copy-value={serverInstallCode}
+              aria-label="Copy install script"
+            >
+              Copy
+            </button>
+          </div>
+          <Code
+            code={serverInstallCode}
+            lang="bash"
+            theme={codeTheme}
+            defaultColor="dark"
+            class="landing-code-block quickstart-code-block"
+          />
+        </div>
+      </section>
+
+      <section id="integrations" class="landing-section integrations-section">
+        <div class="section-head">
+          <div class="eyebrow">Integrations</div>
+          <h2>Works with the agents your team already uses</h2>
+          <p>
+            Native integrations for agent runtimes and CLIs so traces, runs, and
+            tool activity land in one system.
+          </p>
+        </div>
+        <div class="integrations-grid">
+          {
+            integrations.map((integration) => (
+              <a href={integration.href} class="integration-card">
+                <img
+                  class={`integration-logo integration-logo--${integration.id}`}
+                  src={integration.logo}
+                  alt={`${integration.name} logo`}
+                  loading="lazy"
+                />
+                <h3>{integration.name}</h3>
+                <p>{integration.desc}</p>
+              </a>
+            ))
+          }
+        </div>
+      </section>
+
+      <section id="dashboard" class="landing-section">
+        <div class="section-head">
+          <div class="eyebrow">Dashboard</div>
+          <h2>See exactly what your team will use day to day</h2>
+          <p>
+            Fast visibility for tracing, run replay, triage, and spend decisions.
+          </p>
+        </div>
+        <div class="dashboard-grid">
+          {
+            dashboardCards.map((card) => (
+              <article class="dashboard-card">
+                <div class="dashboard-media">
+                  <img src={card.src} alt={`${card.title} dashboard screenshot`} loading="lazy" />
+                </div>
+                <div class="dashboard-caption">
+                  <h3>{card.title}</h3>
+                  <p>{card.desc}</p>
+                </div>
+              </article>
+            ))
+          }
+        </div>
+      </section>
+
+      <section id="features" class="landing-section">
+        <div class="section-head">
+          <div class="eyebrow">Features</div>
+          <h2>Everything you need to understand your LLM stack</h2>
+          <p>
+            From individual traces to full session timelines, Pulse gives your
+            team the visibility to ship with confidence.
+          </p>
+        </div>
+        <div class="feature-grid">
+          {
+            features.map((f) => (
+              <article class="feature-card">
+                <div class="feature-tag">{f.tag}</div>
+                <h3>{f.title}</h3>
+                <p>{f.desc}</p>
+              </article>
+            ))
+          }
+        </div>
+      </section>
+
+      <section id="how-it-works" class="landing-section">
+        <div class="section-head">
+          <div class="eyebrow">How it works</div>
+          <h2>Instrument in minutes, not days</h2>
+          <p>Three steps to full observability across your LLM stack.</p>
+        </div>
+        <div class="how-grid">
+          <article class="how-card">
+            <div class="step">Step 01</div>
+            <h3>Install the SDK</h3>
+            <p>Add the SDK to your project. Works with JS/TS and Python runtimes.</p>
+            <Code
+              code={installCode}
+              lang="bash"
+              theme={codeTheme}
+              defaultColor="dark"
+              class="landing-code-block how-code-block"
+            />
+          </article>
+          <article class="how-card">
+            <div class="step">Step 02</div>
+            <h3>Wrap your LLM client</h3>
+            <p>Call <code>observe()</code> on your existing client. No API rewrite.</p>
+            <Code
+              code={wrapCode}
+              lang="ts"
+              theme={codeTheme}
+              defaultColor="dark"
+              class="landing-code-block how-code-block"
+            />
+          </article>
+          <article class="how-card">
+            <div class="step">Step 03</div>
+            <h3>Open the dashboard</h3>
+            <p>Traces flow in automatically. Search, filter, and analyze quickly.</p>
+            <Code
+              code={statsCode}
+              lang="text"
+              theme={codeTheme}
+              defaultColor="dark"
+              class="landing-code-block how-code-block"
+            />
+          </article>
+        </div>
+      </section>
+
+      <section class="landing-section">
+        <div class="section-head">
+          <div class="eyebrow">Documentation</div>
+          <h2>Everything you need to track your agent usage</h2>
+          <p>Guides, API reference, and examples to get from zero to production.</p>
+        </div>
+        <div class="docs-grid">
+          {
+            docsCards.map((d) => (
+              <a href={d.href} class="docs-card">
+                <div class="docs-label">{d.label}</div>
+                <h3>{d.title}</h3>
+                <p>{d.desc}</p>
+                <span>Read guide →</span>
+              </a>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="cta-section">
+        <h2>Start tracking your agents</h2>
+        <p>Free and open source. Self-host anywhere.</p>
+        <div class="hero-ctas">
+          <a href="https://github.com/EK-LABS-LLC/trace-service" class="btn btn-primary"
+            >Get started</a
+          >
+          <a href="/docs/" class="btn btn-secondary">Read the docs</a>
+        </div>
+      </section>
+    </main>
+    <script is:inline>
+      const copyButtons = document.querySelectorAll(".copy-install-btn");
+      const navSectionLinks = document.querySelectorAll('.landing-links a[href^="#"]');
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      const fallbackCopy = (value) => {
+        const textarea = document.createElement("textarea");
+        textarea.value = value;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "absolute";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      };
+
+      copyButtons.forEach((button) => {
+        button.addEventListener("click", async () => {
+          const value = button.getAttribute("data-copy-value");
+          if (!value) return;
+
+          try {
+            if (navigator.clipboard?.writeText) {
+              await navigator.clipboard.writeText(value);
+            } else {
+              fallbackCopy(value);
+            }
+            const prev = button.textContent;
+            button.textContent = "Copied";
+            window.setTimeout(() => {
+              button.textContent = prev || "Copy";
+            }, 1300);
+          } catch {
+            button.textContent = "Failed";
+            window.setTimeout(() => {
+              button.textContent = "Copy";
+            }, 1300);
+          }
+        });
+      });
+
+      navSectionLinks.forEach((link) => {
+        link.addEventListener("click", (event) => {
+          const href = link.getAttribute("href");
+          if (!href || href === "#") return;
+
+          const target = document.querySelector(href);
+          if (!target) return;
+
+          event.preventDefault();
+          target.scrollIntoView({
+            behavior: prefersReducedMotion ? "auto" : "smooth",
+            block: "start",
+          });
+          window.history.pushState(null, "", href);
+        });
+      });
+    </script>
+  </body>
+</html>

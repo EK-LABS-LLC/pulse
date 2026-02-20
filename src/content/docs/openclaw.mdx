@@ -1,0 +1,74 @@
+---
+title: OpenClaw
+description: Capture OpenClaw sessions and tool events in Pulse for timeline and cost analysis.
+draft: true
+---
+
+## Overview
+
+Pulse can ingest OpenClaw agent execution events into the same trace pipeline as SDK traffic, letting you correlate agent runs with model calls and downstream failures.
+
+## Quick start
+
+Requires a running Pulse trace service and a configured Pulse CLI.
+
+1. Configure CLI credentials and endpoint.
+
+```bash
+pulse init
+```
+
+2. Connect OpenClaw hooks.
+
+```bash
+pulse connect
+```
+
+If prompted to choose an integration, select `OpenClaw`.
+
+3. Confirm integration health.
+
+```bash
+pulse status
+```
+
+## Events captured
+
+OpenClaw integration emits spans for:
+
+- session start/end
+- prompt submission
+- tool execution
+- tool failures
+- agent run lifecycle events
+
+## Span fields
+
+| Field | Description |
+| --- | --- |
+| `span_id` | UUID v4 span identifier |
+| `session_id` | OpenClaw session identifier |
+| `timestamp` | Event timestamp (ISO 8601) |
+| `source` | `openclaw` |
+| `kind` | Event category |
+| `event_type` | Concrete event name |
+| `status` | `success` or `error` |
+| `tool_name` | Tool name when applicable |
+| `tool_input` | Tool input payload |
+| `tool_response` | Tool output payload |
+| `error` | Error object for failed events |
+| `metadata` | Integration and environment metadata |
+
+## Debugging
+
+For setup validation:
+
+```bash
+export PULSE_DEBUG=1
+```
+
+After running OpenClaw, inspect status and logs:
+
+```bash
+pulse status
+```

@@ -1,0 +1,74 @@
+---
+title: Opencode
+description: Capture Opencode tool calls, sessions, and run metadata in Pulse.
+draft: true
+---
+
+## Overview
+
+Pulse can ingest Opencode agent activity as structured spans so you can trace tool usage, failures, and session timelines from the same dashboard used for SDK traces.
+
+## Quick start
+
+Requires a running Pulse trace service and a local Pulse CLI setup.
+
+1. Configure Pulse CLI.
+
+```bash
+pulse init
+```
+
+2. Connect Opencode hooks.
+
+```bash
+pulse connect
+```
+
+If your CLI prompts for an integration target, choose `Opencode`.
+
+3. Verify installation.
+
+```bash
+pulse status
+```
+
+## Events captured
+
+Typical Opencode events map into these Pulse span kinds:
+
+- `tool_use`
+- `session`
+- `agent_run`
+- `user_prompt`
+- `notification`
+
+## Span fields
+
+| Field | Description |
+| --- | --- |
+| `span_id` | UUID v4 span identifier |
+| `session_id` | Opencode session identifier |
+| `timestamp` | Event timestamp (ISO 8601) |
+| `source` | `opencode` |
+| `kind` | High-level event category |
+| `event_type` | Specific event type |
+| `status` | `success` or `error` |
+| `tool_name` | Tool name for tool events |
+| `tool_input` | Serialized tool input |
+| `tool_response` | Tool output payload |
+| `error` | Error payload for failed events |
+| `metadata` | Project ID, CLI version, and extra event metadata |
+
+## Debugging
+
+Enable debug logs when validating a new integration setup:
+
+```bash
+export PULSE_DEBUG=1
+```
+
+Then run Opencode once and inspect:
+
+```bash
+pulse status
+```

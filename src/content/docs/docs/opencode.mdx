@@ -1,0 +1,101 @@
+---
+title: Opencode
+description: Capture Opencode tool calls, sessions, and run metadata in Pulse.
+---
+
+## Overview
+
+Pulse installs an Opencode plugin that subscribes to Opencode events and forwards normalized event payloads to `pulse emit`.
+
+All spans are tagged with `source: "opencode"`.
+
+## Quick start
+
+Requires a running Pulse trace service and a local Pulse CLI setup.
+
+1. Configure Pulse CLI.
+
+```bash
+pulse init
+```
+
+2. Connect Opencode hooks.
+
+```bash
+pulse connect
+```
+
+If your CLI prompts for an integration target, choose `Opencode`.
+
+3. Verify installation.
+
+```bash
+pulse status
+```
+
+## Integration behavior
+
+Detection path: `~/.config/opencode/`  
+Installed plugin path: `~/.config/opencode/plugin/pulse-plugin.ts`
+
+`pulse connect` only modifies the Pulse plugin file and leaves other Opencode configuration untouched.
+
+Safe to re-run:
+
+- `pulse connect` is idempotent
+- `pulse disconnect` removes only Pulse artifacts
+
+## Events captured
+
+| Opencode event | Pulse event | Notes |
+| --- | --- | --- |
+| `session.created` | `session_start` | Session starts |
+| `session.idle` | `session_end` | `reason="idle"` |
+| `session.error` | `session_end` | `reason="error"` plus error details |
+| `message.updated` (user) | `user_prompt_submit` | Captures prompt text |
+| `message.updated` (assistant) | `assistant_message` | Captures output, tokens, cost when available |
+| `tool.execute.before` | `pre_tool_use` | Captures tool name, input, ID |
+| `tool.execute.after` | `post_tool_use` | Captures tool response |
+
+## Span fields
+
+| Field | Description |
+| --- | --- |
+| `span_id` | UUID v4 span identifier |
+| `session_id` | Opencode session identifier |
+| `timestamp` | Event timestamp (ISO 8601) |
+| `source` | `opencode` |
+| `kind` | High-level event category |
+| `event_type` | Specific event type |
+| `status` | `success` or `error` |
+| `tool_name` | Tool name for tool events |
+| `tool_input` | Serialized tool input |
+| `tool_response` | Tool output payload |
+| `error` | Error payload for failed events |
+| `metadata` | Project ID, CLI version, and extra event metadata |
+
+## Auto-update behavior
+
+When running `pulse connect` or `pulse status`, Pulse can detect if the installed plugin is stale compared to the version bundled in the CLI binary.
+
+If stale, run:
+
+```bash
+pulse connect
+```
+
+## Debugging
+
+Enable debug logs when validating a new integration setup:
+
+```bash
+export PULSE_DEBUG=1
+```
+
+Then run Opencode once and inspect:
+
+```bash
+pulse status
+```
+
+For CLI-wide troubleshooting, see [CLI Reference](/docs/cli/).

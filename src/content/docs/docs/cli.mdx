@@ -1,0 +1,361 @@
+---
+title: CLI Reference
+description: Install, configure, and operate Pulse CLI for Claude Code, Opencode, and OpenClaw integrations.
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## What is Pulse CLI?
+
+Pulse CLI (`pulse`) captures AI-agent activity as structured spans and ships it to your Pulse trace service.
+
+It is designed to be:
+
+- lightweight (single Rust binary)
+- safe for agent runtimes (non-blocking hooks)
+- quiet by default (no stdout/stderr noise from hooks)
+
+## Install
+
+Recommended (one-line installer):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.sh | sh
+```
+
+From source:
+
+```bash
+git clone https://github.com/anthropics/pulse-trace-cli
+cd pulse-trace-cli
+
+# Build + install to ~/.local/bin/pulse
+make install
+```
+
+Or install directly with Cargo:
+
+```bash
+cargo install --path .
+```
+
+Make sure `~/.local/bin` is on your `PATH` if you used `make install`.
+
+## Getting Started
+
+### 1. Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.sh | sh
+```
+
+### 2. Configure
+
+```bash
+pulse init
+```
+
+You will be prompted for trace service URL, API key, and project ID.
+
+### 3. Connect
+
+```bash
+pulse connect
+```
+
+Pulse auto-detects supported agents (Claude Code, Opencode, OpenClaw) and installs integrations.
+
+### 4. Verify
+
+```bash
+pulse status
+```
+
+After this, agent sessions send traces automatically.
+
+## Setup in 3 commands
+
+```bash
+pulse init
+pulse connect
+pulse status
+```
+
+After setup, use your agent normally. Pulse captures sessions, tool calls, prompts, responses, and lifecycle events automatically.
+
+## Command reference
+
+### `pulse init`
+
+Configures trace-service connection and writes `~/.pulse/config.toml`.
+
+Interactive:
+
+```bash
+pulse init
+```
+
+Non-interactive:
+
+```bash
+pulse init \
+  --api-url https://pulse.example.com \
+  --api-key sk-xxx \
+  --project-id my-project
+```
+
+Skip health-check validation:
+
+```bash
+pulse init \
+  --api-url https://pulse.example.com \
+  --api-key sk-xxx \
+  --project-id my-project \
+  --no-validate
+```
+
+| Flag | Description |
+| --- | --- |
+| `--api-url <URL>` | Trace service URL |
+| `--api-key <KEY>` | API key |
+| `--project-id <ID>` | Project identifier |
+| `--no-validate` | Skip health check |
+
+### `pulse connect`
+
+Installs Pulse integrations into detected agents.
+
+```bash
+pulse connect
+```
+
+Typical output:
+
+```text
+Claude Code: installed 10/10 hooks
+Opencode:    installed plugin
+OpenClaw:    installed hook
+```
+
+Safe to run multiple times (idempotent).
+
+### `pulse disconnect`
+
+Removes Pulse-specific integrations from detected agents.
+
+```bash
+pulse disconnect
+```
+
+Only Pulse entries are removed; other hooks/plugins are preserved.
+
+## Uninstall
+
+```bash
+pulse disconnect
+rm ~/.local/bin/pulse
+rm -rf ~/.pulse
+```
+
+### `pulse status`
+
+Shows config, connectivity, and integration health.
+
+```bash
+pulse status
+```
+
+Typical output:
+
+```text
+Configuration:
+  API URL:    https://pulse.example.com
+  Project ID: my-project
+  API Key:    sk-x***
+  Config:     ~/.pulse/config.toml
+
+Connectivity:
+  Trace service: reachable
+
+Hooks:
+  Claude Code: detected, connected (10/10 hooks)
+  Opencode:    detected, connected (plugin installed)
+  OpenClaw:    not detected
+```
+
+### `pulse emit <event_type>`
+
+Internal command called by integrations. Usually not called directly.
+
+```bash
+echo '{"session_id":"abc","tool_name":"Bash"}' | pulse emit pre_tool_use
+```
+
+Design constraints:
+
+- always exits with code `0`
+- no stdout/stderr output
+- 2-second HTTP timeout
+
+## Configuration
+
+Config file: `~/.pulse/config.toml`
+
+```toml
+api_url = "https://pulse.example.com"
+api_key = "sk-your-api-key"
+project_id = "my-project"
+```
+
+| Field | Description |
+| --- | --- |
+| `api_url` | Base URL of Pulse trace service |
+| `api_key` | Bearer token for authentication |
+| `project_id` | Project identifier attached to spans |
+
+## Environment variables
+
+| Variable | Description |
+| --- | --- |
+| `PULSE_DEBUG` | Set `1` to log raw integration payloads |
+| `PULSE_DEBUG_LOG` | Override debug log path (`~/.pulse/debug.log` by default) |
+
+## Events and span model
+
+Pulse integrations emit these normalized event types:
+
+| Event | Kind | Description |
+| --- | --- | --- |
+| `session_start` | `session` | Agent session begins |
+| `session_end` | `session` | Agent session ends |
+| `stop` | `session` | Agent stops execution |
+| `user_prompt_submit` | `user_prompt` | User sends prompt |
+| `assistant_message` | `llm_response` | Assistant response |
+| `pre_tool_use` | `tool_use` | Tool call about to run |
+| `post_tool_use` | `tool_use` | Tool call succeeded |
+| `post_tool_use_failure` | `tool_use` | Tool call failed/interrupted |
+| `subagent_start` | `agent_run` | Child agent started |
+| `subagent_stop` | `agent_run` | Child agent finished |
+| `notification` | `notification` | Agent notification event |
+
+Example span payload:
+
+```json
+{
+  "span_id": "550e8400-e29b-41d4-a716-446655440000",
+  "session_id": "abc-123",
+  "timestamp": "2026-02-19T14:30:00.000Z",
+  "source": "claude_code",
+  "kind": "tool_use",
+  "event_type": "pre_tool_use",
+  "status": "success",
+  "tool_name": "Bash",
+  "tool_use_id": "tool_abc",
+  "tool_input": { "command": "ls" },
+  "metadata": {
+    "cli_version": "0.1.0",
+    "project_id": "my-project"
+  }
+}
+```
+
+Additional fields such as `tool_response`, `error`, `model`, `agent_name`, and `cwd` are included when available.
+
+## Agent integrations at a glance
+
+| Integration | Detection path | Pulse-managed files |
+| --- | --- | --- |
+| Claude Code | `~/.claude/settings.json` | `hooks` entries in `settings.json` |
+| Opencode | `~/.config/opencode/` | `~/.config/opencode/plugin/pulse-plugin.ts` |
+| OpenClaw | `~/.openclaw/` | `~/.openclaw/hooks/pulse-hook/` |
+
+Pulse only modifies Pulse-owned entries/files. Other hooks and plugins are preserved.
+
+## Troubleshooting
+
+### `Config missing`
+
+Run:
+
+```bash
+pulse init
+```
+
+### Agent not detected
+
+Pulse detection paths:
+
+- Claude Code: `~/.claude/settings.json`
+- Opencode: `~/.config/opencode/`
+- OpenClaw: `~/.openclaw/`
+
+### Hooks installed but no spans
+
+1. Run `pulse status` and confirm trace service is reachable.
+2. Enable debug logs with `PULSE_DEBUG=1`.
+3. Check `~/.pulse/debug.log` for incoming payloads.
+4. Verify API key and project ID.
+
+### Stale integration plugin
+
+After CLI upgrades, run:
+
+```bash
+pulse connect
+```
+
+## Architecture
+
+```text
+Claude Code hooks / Opencode plugin / OpenClaw hook
+          -> pulse emit <event_type>
+          -> normalize payload into span
+          -> POST /v1/spans/async (2s timeout)
+          -> Pulse trace service
+```
+
+Design choices:
+
+- non-blocking hooks
+- silent failure mode for integrations (`pulse emit` exits `0`)
+- idempotent connect/disconnect behavior
+- no runtime npm downloads for plugin content
+
+## Building from source
+
+```bash
+# Debug build
+make build
+
+# Release build
+make release
+
+# Run tests
+make test
+
+# Install to ~/.local/bin
+make install
+```
+
+## Running E2E tests
+
+Requires Docker/Podman and a reachable Pulse trace service.
+
+```bash
+# Run all suites
+make e2e
+
+# Individual suites
+make e2e-claude
+make e2e-claude-tools
+make e2e-opencode
+make e2e-opencode-tools
+```
+
+## Integration docs
+
+<CardGrid>
+  <LinkCard title="Claude Code" href="/docs/claude-code/">Hook mapping and behavior.</LinkCard>
+  <LinkCard title="Opencode" href="/docs/opencode/">Plugin path and event mapping.</LinkCard>
+  <LinkCard title="OpenClaw" href="/docs/openclaw/">Hook directory and event mapping.</LinkCard>
+</CardGrid>

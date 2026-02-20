@@ -1,0 +1,160 @@
+---
+title: Quickstart
+description: Instrument your first LLM call in under 5 minutes.
+draft: true
+---
+
+import { Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## Run Pulse server
+
+Start the trace service before instrumenting your app. For local development, single mode (SQLite) is the quickest path.
+
+Install the binary:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse
+```
+
+Set required environment variables:
+
+```bash
+export BETTER_AUTH_SECRET='replace-with-32+char-secret'
+export ENCRYPTION_KEY='replace-with-32+char-secret'
+export BETTER_AUTH_URL='http://localhost:3000'
+```
+
+Start the service:
+
+```bash
+pulse
+```
+
+## Install SDK
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```bash
+bun add @pulse/sdk
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```bash
+pip install pulse-sdk
+```
+
+  </TabItem>
+</Tabs>
+
+Works with Bun, Node, or any JavaScript/Python runtime.
+
+## Initialize
+
+Call `initPulse()` once at application startup. You need an API key from the Pulse dashboard.
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+import { initPulse } from "@pulse/sdk";
+
+initPulse({
+  apiKey: "pulse_sk_...",
+});
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+from pulse_sdk import init_pulse
+
+init_pulse({
+  "api_key": "pulse_sk_...",
+})
+```
+
+  </TabItem>
+</Tabs>
+
+This starts background trace batches and registers shutdown handlers to flush remaining traces on exit.
+
+## Wrap your client
+
+Use `observe()` to wrap your LLM client. The returned client behaves identically and tracing is captured as a side effect.
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+import { initPulse, observe, Provider } from "@pulse/sdk";
+import OpenAI from "openai";
+
+initPulse({ apiKey: "pulse_sk_..." });
+
+const client = observe(
+  new OpenAI({ apiKey: "sk-..." }),
+  Provider.OpenAI
+);
+
+const res = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Hello" }],
+});
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+from pulse_sdk import init_pulse, observe, Provider
+from openai import OpenAI
+
+init_pulse({ "api_key": "pulse_sk_..." })
+
+client = observe(
+  OpenAI(api_key="sk-..."),
+  Provider.OPENAI
+)
+
+res = client.chat.completions.create(
+  model="gpt-4o",
+  messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+  </TabItem>
+</Tabs>
+
+## What gets captured
+
+| Field | Description |
+| --- | --- |
+| Request and response bodies | Full prompt and completion |
+| Token counts | Input and output tokens |
+| Latency | End-to-end request duration in milliseconds |
+| Cost | Provider-reported or SDK-estimated when model pricing is available |
+| Model | Requested and actual model used |
+| Status | `success` or `error` |
+| Provider | `openai`, `anthropic`, or `openrouter` |
+
+## Supported providers
+
+| Provider | Client | Enum |
+| --- | --- | --- |
+| OpenAI | `openai` | `Provider.OpenAI` |
+| Anthropic | `@anthropic-ai/sdk` | `Provider.Anthropic` |
+| OpenRouter | `openai` | `Provider.OpenRouter` |
+
+See [Providers](/docs/providers/) for detailed usage.
+
+## Next steps
+
+<CardGrid>
+  <LinkCard title="Configuration" href="/docs/config/">Tune batching, flush intervals, and validation rules.</LinkCard>
+  <LinkCard title="Sessions & Metadata" href="/docs/sessions/">Group traces and attach user or feature metadata.</LinkCard>
+  <LinkCard title="REST API" href="/docs/api/">Query traces, spans, sessions, and analytics programmatically.</LinkCard>
+</CardGrid>

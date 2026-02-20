@@ -1,0 +1,184 @@
+---
+title: REST API
+description: All endpoints on the Pulse trace service.
+tableOfContents: false
+draft: true
+---
+
+import MethodBadge from '../../components/MethodBadge.astro';
+import ApiRouteShell from '../../components/ApiRouteShell.astro';
+
+<ApiRouteShell>
+
+## Authentication
+
+Data-plane endpoints under `/v1/*` require a project API key in the `Authorization` header.
+Dashboard endpoints under `/dashboard/api/*` use authenticated session cookies.
+
+```bash
+Authorization: Bearer pulse_sk_...
+```
+
+<section id="get-health">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/health</code></h2>
+  Health check endpoint for readiness and liveness. Public route with no authentication required.
+
+```bash
+GET /health
+```
+
+</section>
+
+<section id="post-v1-traces-async">
+  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/traces/async</code></h2>
+  Queue a batch of traces for asynchronous persistence. This is the primary ingestion path used by the SDK.
+
+| Field | Value |
+| --- | --- |
+| Method | `POST` |
+| Body | JSON array of trace objects |
+| Response | `202 Accepted` |
+
+```bash
+curl -X POST https://your-pulse/v1/traces/async \
+  -H "Authorization: Bearer pulse_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '[{
+    "trace_id": "uuid",
+    "timestamp": "2025-01-01T00:00:00Z",
+    "provider": "openai",
+    "model_requested": "gpt-4o",
+    "request_body": { ... },
+    "response_body": { ... },
+    "input_tokens": 50,
+    "output_tokens": 100,
+    "latency_ms": 1200,
+    "status": "success"
+  }]'
+```
+
+</section>
+
+<section id="get-v1-traces">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/traces</code></h2>
+  Query traces for the authenticated project.
+
+**Query parameters**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `session_id` | `string` | Filter by session ID. |
+| `provider` | `string` | Filter by provider (`openai`, `anthropic`, `openrouter`). |
+| `model` | `string` | Filter by model name. |
+| `status` | `string` | Filter by status (`success` or `error`). |
+| `date_from` | `string` | Start date (`ISO`, epoch, or `YYYY-MM-DD`). |
+| `date_to` | `string` | End date (`ISO`, epoch, or `YYYY-MM-DD`). |
+| `limit` | `number` | Maximum number of results. |
+| `offset` | `number` | Pagination offset. |
+
+```bash
+GET /v1/traces?provider=openai&status=error&limit=20
+```
+
+Returns `{ traces: [...], total: number }`.
+
+</section>
+
+<section id="get-v1-traces-id">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/traces/:id</code></h2>
+  Get a single trace by ID.
+
+```bash
+GET /v1/traces/550e8400-e29b-41d4-a716-446655440000
+```
+
+Returns the trace object or `404`.
+
+</section>
+
+<section id="get-v1-spans">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/spans</code></h2>
+  Query agent spans for the authenticated project.
+
+```bash
+GET /v1/spans?source=claude_code&kind=tool_use&limit=50
+```
+
+</section>
+
+<section id="get-v1-spans-id">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/spans/:id</code></h2>
+  Get a single span by ID.
+
+```bash
+GET /v1/spans/550e8400-e29b-41d4-a716-446655440000
+```
+
+</section>
+
+<section id="get-v1-sessions-id">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/sessions/:id</code></h2>
+  Get all traces for a session, ordered by timestamp ascending.
+
+```bash
+GET /v1/sessions/550e8400-e29b-41d4-a716-446655440000
+```
+
+Returns `{ sessionId: string, traces: [...] }` or `404`.
+
+</section>
+
+<section id="get-v1-sessions-id-spans">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/sessions/:id/spans</code></h2>
+  Get all spans for a session, ordered by timestamp ascending.
+
+```bash
+GET /v1/sessions/550e8400-e29b-41d4-a716-446655440000/spans
+```
+
+Returns `{ sessionId: string, spans: [...] }` or `404`.
+
+</section>
+
+<section id="get-v1-analytics">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/analytics</code></h2>
+  Aggregated metrics for the authenticated project.
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `date_from` | `string` | Yes | Start of date range. |
+| `date_to` | `string` | Yes | End of date range. |
+| `group_by` | `string` | No | Optional grouping dimension. |
+
+</section>
+
+## Dashboard API
+
+Project and API key management for the dashboard lives under `/dashboard/api/*` and uses session auth cookies.
+
+## Trace object
+
+```json
+{
+  "trace_id": "uuid",
+  "timestamp": "ISO 8601",
+  "provider": "openai | anthropic | openrouter",
+  "model_requested": "gpt-4o",
+  "model_used": "gpt-4o-2024-11-20",
+  "provider_request_id": "...",
+  "request_body": { "...": "..." },
+  "response_body": { "...": "..." },
+  "input_tokens": 50,
+  "output_tokens": 100,
+  "output_text": "Hello! How can I...",
+  "finish_reason": "stop",
+  "status": "success",
+  "error": null,
+  "cost_cents": 0.18,
+  "latency_ms": 1234,
+  "session_id": "conv-abc-123",
+  "metadata": { "userId": "user-123" }
+}
+```
+
+</ApiRouteShell>

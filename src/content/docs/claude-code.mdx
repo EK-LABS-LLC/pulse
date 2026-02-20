@@ -1,0 +1,116 @@
+---
+title: Claude Code
+description: Capture tool calls, sessions, and agent events from Claude Code automatically.
+draft: true
+---
+
+## Overview
+
+Pulse CLI hooks into Claude Code to capture tool and session events as structured spans, then ships them to your Pulse trace service.
+
+This gives full visibility into agent workflows: tool calls, reasoning steps, and session state changes.
+
+> Hooks are async and non-blocking. Claude Code does not wait on Pulse.
+
+## Quick start
+
+Requires a running Pulse trace service and Claude Code installed.
+
+1. Install the CLI.
+
+```bash
+cargo install --path .
+```
+
+2. Initialize the CLI.
+
+```bash
+pulse init
+```
+
+Prompts for trace service URL, API key, and project ID, then writes to `~/.pulse/config.toml`.
+
+3. Connect hooks.
+
+```bash
+pulse connect
+```
+
+Every Claude Code session now sends spans to your trace service.
+
+## Hooks installed
+
+`pulse connect` installs 10 async hooks in `~/.claude/settings.json`:
+
+- `PreToolUse`
+- `PostToolUse`
+- `PostToolUseFailure`
+- `SessionStart`
+- `SessionEnd`
+- `Stop`
+- `SubagentStart`
+- `SubagentStop`
+- `UserPromptSubmit`
+- `Notification`
+
+## Span schema
+
+Each span sent to Pulse includes:
+
+| Field | Description |
+| --- | --- |
+| `span_id` | UUID v4 identifier |
+| `session_id` | Claude Code session identifier |
+| `timestamp` | ISO 8601 timestamp |
+| `source` | Always `claude_code` |
+| `kind` | `tool_use`, `session`, `agent_run`, `user_prompt`, `notification` |
+| `event_type` | Specific event (for example `post_tool_use`) |
+| `status` | `success` or `error` |
+| `tool_name` | Tool name for tool events |
+| `tool_input` | Tool input payload |
+| `tool_response` | Tool response payload |
+| `error` | Error details for failures |
+| `cwd` | Working directory |
+| `model` | Model name if present |
+| `agent_name` | Subagent type for subagent events |
+| `metadata` | `cli_version`, `project_id`, and event-specific data |
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `pulse init` | Configure trace service connection |
+| `pulse connect` | Install hooks into Claude Code |
+| `pulse disconnect` | Remove Pulse hooks |
+| `pulse status` | Show config, connectivity, and hook status |
+| `pulse emit <type>` | Emit a span (used by hooks) |
+
+## CI / non-interactive setup
+
+```bash
+pulse init \
+  --api-url https://pulse.example.com \
+  --api-key sk-your-key \
+  --project-id my-project \
+  --no-validate
+```
+
+## Debugging
+
+```bash
+export PULSE_DEBUG=1
+```
+
+Writes raw payloads to `~/.pulse/debug.log`.
+
+Override log path:
+
+```bash
+export PULSE_DEBUG_LOG=/path/to/file
+```
+
+## Viewing in dashboard
+
+- Open **Sessions -> Agents** to view Claude Code sessions and agent runs.
+- Click a session to inspect the waterfall timeline.
+- Click an individual span for full input, output, error, and metadata payloads.

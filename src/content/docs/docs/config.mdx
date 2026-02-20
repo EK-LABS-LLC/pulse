@@ -1,0 +1,100 @@
+---
+title: Configuration
+description: All options for initPulse().
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## initPulse(config)
+
+Call once at application startup before any `observe()` calls.
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+import { initPulse } from "@pulse/sdk";
+
+initPulse({
+  apiKey: "pulse_sk_...",
+  apiUrl: "https://pulse.yourcompany.com",
+  batchSize: 20,
+  flushInterval: 10000,
+  enabled: process.env.NODE_ENV === "production",
+});
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+import os
+from pulse_sdk import init_pulse
+
+init_pulse({
+  "api_key": "pulse_sk_...",
+  "api_url": "https://pulse.yourcompany.com",
+  "batch_size": 20,
+  "flush_interval": 10000,
+  "enabled": os.environ.get("ENV") == "production",
+})
+```
+
+  </TabItem>
+</Tabs>
+
+## Options
+
+| Option | Type | Required | Description |
+| --- | --- | --- | --- |
+| `apiKey` | `string` | Yes | Your Pulse API key. Must start with `pulse_sk_`. |
+| `apiUrl` | `string` | No | Pulse server URL. Default: `http://localhost:3000` |
+| `batchSize` | `number` | No | Number of traces to buffer before flushing. Range: `1-100`. Default: `10` |
+| `flushInterval` | `number` | No | Milliseconds between periodic flushes. Minimum: `1000`. Default: `5000` |
+| `enabled` | `boolean` | No | Enable or disable tracing. Default: `true` |
+
+## Batching behavior
+
+Traces are buffered in memory and sent to the server in two situations:
+
+- Buffer reaches `batchSize` and flushes immediately.
+- The `flushInterval` timer fires and flushes what is buffered.
+
+On process exit (`beforeExit`, `SIGINT`, `SIGTERM`), the SDK flushes all remaining traces before shutdown.
+
+## Validation
+
+`initPulse()` validates values at startup:
+
+- `apiKey` must be a non-empty string starting with `pulse_sk_`.
+- `batchSize` must be an integer between `1` and `100`.
+- `flushInterval` must be at least `1000ms`.
+
+Invalid values throw immediately so misconfiguration is caught early.
+
+## Disabling tracing
+
+Set `enabled: false` to turn off all tracing. `observe()` still returns a working client but skips trace capture.
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+initPulse({
+  apiKey: "pulse_sk_...",
+  enabled: false,
+});
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+init_pulse({
+  "api_key": "pulse_sk_...",
+  "enabled": False,
+})
+```
+
+  </TabItem>
+</Tabs>

@@ -9,6 +9,9 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'Pulse',
+			expressiveCode: {
+				themes: ['min-dark'],
+			},
 			description: 'Docs for the Pulse trace service and SDK.',
 			social: [
 				{

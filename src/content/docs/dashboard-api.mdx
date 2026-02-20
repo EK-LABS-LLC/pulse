@@ -1,0 +1,174 @@
+---
+title: Dashboard API
+description: Control-plane endpoints for accounts, projects, API keys, and project users.
+draft: true
+---
+
+## Scope and auth
+
+Dashboard API endpoints are under `/dashboard/api/*`.
+
+Auth model:
+
+- Session cookie auth from Better Auth (`/api/auth/*`).
+- Project-scoped admin routes require `X-Project-Id`.
+
+Required header for project-scoped routes:
+
+```bash
+X-Project-Id: <project-id>
+```
+
+## Account bootstrap
+
+### `POST /dashboard/api/signup`
+
+Creates a dashboard user and bootstraps their first project.
+
+Request body:
+
+```json
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "super-secret-password",
+  "projectName": "My Project"
+}
+```
+
+Response:
+
+- `201`: `{ "success": true }`
+- `400`: invalid JSON or missing required fields (`name`, `email`, `password`, `projectName`)
+
+## Projects
+
+### `GET /dashboard/api/projects`
+
+Returns projects for the authenticated user.
+
+Response:
+
+- `200`: `{ "projects": [{ "id": "...", "name": "...", "createdAt": "...", "role": "admin|user" }] }`
+
+### `POST /dashboard/api/projects`
+
+Creates a project for the authenticated user.
+
+Request body:
+
+```json
+{
+  "name": "New Project"
+}
+```
+
+Response:
+
+- `201`: `{ "projectId": "...", "apiKey": "pulse_sk_...", "name": "New Project" }`
+- `400`: missing/empty `name`
+
+## API keys (project admin)
+
+These routes require session auth + `X-Project-Id` + project admin role.
+
+### `GET /dashboard/api/api-keys`
+
+Lists API keys for the selected project.
+
+Response:
+
+- `200`: `{ "keys": [{ "id": "...", "projectId": "...", "projectName": "...", "key": "pulse_sk_...", "name": "...", "lastUsedAt": "...", "createdAt": "..." }] }`
+
+### `POST /dashboard/api/api-keys`
+
+Creates an API key for the selected project.
+
+Request body:
+
+```json
+{
+  "name": "CI Key"
+}
+```
+
+`name` is optional. If omitted, default is `"API Key"`.
+
+Response:
+
+- `201`: `{ "apiKey": "pulse_sk_..." }`
+- `400`: invalid request body
+
+### `PATCH /dashboard/api/api-keys/:id`
+
+Renames an API key.
+
+Request body:
+
+```json
+{
+  "name": "New Key Name"
+}
+```
+
+Response:
+
+- `200`: `{ "success": true }`
+- `400`: missing/invalid `name`
+- `404`: API key not found
+
+### `DELETE /dashboard/api/api-keys/:id`
+
+Deletes an API key.
+
+Response:
+
+- `200`: `{ "success": true }`
+- `404`: API key not found
+
+## Project users (project admin)
+
+These routes require session auth + `X-Project-Id` + project admin role.
+
+### `GET /dashboard/api/users`
+
+Lists project members.
+
+Response:
+
+- `200`: `{ "users": [{ "userId": "...", "name": "...", "email": "...", "role": "admin|user", "createdAt": "..." }] }`
+
+### `POST /dashboard/api/users`
+
+Adds a user to the selected project.
+
+For an existing account, `email` is sufficient.  
+For a new account, provide `name`, `email`, and `password`.
+
+Request body examples:
+
+```json
+{
+  "email": "existing-user@example.com",
+  "role": "user"
+}
+```
+
+```json
+{
+  "name": "New User",
+  "email": "new-user@example.com",
+  "password": "super-secret-password",
+  "role": "admin"
+}
+```
+
+Response:
+
+- `201`: `{ "user": { "userId": "...", "name": "...", "email": "...", "role": "admin|user", "createdAt": "..." } }`
+- `400`: invalid JSON or missing required fields
+- `409`: user already belongs to the project
+
+## Related Better Auth routes
+
+Session/account endpoints are exposed under `/api/auth/*` (for example sign-in, sign-out, session).

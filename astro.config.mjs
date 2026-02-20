@@ -54,7 +54,10 @@ export default defineConfig({
 				},
 				{
 					label: 'Reference',
-					items: [{ label: 'REST API', slug: 'docs/api' }],
+					items: [
+						{ label: 'REST API', slug: 'docs/api' },
+						{ label: 'Dashboard API', slug: 'docs/dashboard-api' },
+					],
 				},
 			],
 			credits: false,

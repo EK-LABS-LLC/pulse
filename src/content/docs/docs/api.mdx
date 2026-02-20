@@ -12,74 +12,12 @@ import ApiRouteShell from '../../../components/ApiRouteShell.astro';
 ## Authentication
 
 Data-plane endpoints under `/v1/*` require a project API key in the `Authorization` header.
-Dashboard endpoints under `/dashboard/api/*` use authenticated session cookies.
 
 ```bash
 Authorization: Bearer pulse_sk_...
 ```
 
-## Control plane endpoints (users, projects, keys)
-
-These are the endpoints used by the dashboard and `pulse setup` to manage accounts and projects.
-
-`/dashboard/api/*` routes use the Better Auth session cookie. Project-scoped admin routes also require `X-Project-Id`.
-
-| Endpoint | Auth | Notes |
-| --- | --- | --- |
-| `POST /dashboard/api/signup` | Public | Creates user + first project bootstrap. |
-| `GET /dashboard/api/projects` | Session cookie | List projects for current user. |
-| `POST /dashboard/api/projects` | Session cookie | Create project for current user. |
-| `GET /dashboard/api/api-keys` | Session + `X-Project-Id` | List API keys for active project (admin). |
-| `POST /dashboard/api/api-keys` | Session + `X-Project-Id` | Create API key for active project (admin). |
-| `PATCH /dashboard/api/api-keys/:id` | Session + `X-Project-Id` | Rename API key (admin). |
-| `DELETE /dashboard/api/api-keys/:id` | Session + `X-Project-Id` | Delete API key (admin). |
-| `GET /dashboard/api/users` | Session + `X-Project-Id` | List project users (admin). |
-| `POST /dashboard/api/users` | Session + `X-Project-Id` | Add project user (admin). |
-
-Better Auth session/account endpoints are under `/api/auth/*` (for example, sign-in/sign-out/session routes).
-
-<section id="post-dashboard-api-signup">
-  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/dashboard/api/signup</code></h2>
-  Create a dashboard user and bootstrap the first project.
-
-</section>
-
-<section id="get-dashboard-api-projects">
-  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/dashboard/api/projects</code></h2>
-  List projects for the authenticated user (session cookie required).
-
-</section>
-
-<section id="post-dashboard-api-projects">
-  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/dashboard/api/projects</code></h2>
-  Create a new project for the authenticated user.
-
-</section>
-
-<section id="get-dashboard-api-api-keys">
-  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/dashboard/api/api-keys</code></h2>
-  List API keys for the selected project. Requires session auth plus `X-Project-Id` and project-admin role.
-
-</section>
-
-<section id="post-dashboard-api-api-keys">
-  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/dashboard/api/api-keys</code></h2>
-  Create an API key for the selected project. Requires session auth plus `X-Project-Id` and project-admin role.
-  Related endpoints: `PATCH /dashboard/api/api-keys/:id`, `DELETE /dashboard/api/api-keys/:id`.
-
-</section>
-
-<section id="get-dashboard-api-users">
-  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/dashboard/api/users</code></h2>
-  List users in the selected project. Requires session auth plus `X-Project-Id` and project-admin role.
-
-</section>
-
-<section id="post-dashboard-api-users">
-  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/dashboard/api/users</code></h2>
-  Add a user to the selected project. Requires session auth plus `X-Project-Id` and project-admin role.
-
-</section>
+Control-plane/account endpoints (`/dashboard/api/*` and `/api/auth/*`) are documented in [Dashboard API](/docs/dashboard-api/).
 
 <section id="get-health">
   <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/health</code></h2>
@@ -237,10 +175,6 @@ Returns `{ sessionId: string, spans: [...] }` or `404`.
   Aggregated span metrics for the authenticated project.
 
 </section>
-
-## Dashboard API
-
-Project and API key management for the dashboard lives under `/dashboard/api/*` and uses session auth cookies.
 
 ## Trace object
 

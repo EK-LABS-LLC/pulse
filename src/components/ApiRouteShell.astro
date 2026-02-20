@@ -7,42 +7,6 @@ const routeGroups = [
     routes: [{ id: "get-health", method: "GET", path: "/health" }],
   },
   {
-    label: "Control Plane",
-    routes: [
-      {
-        id: "post-dashboard-api-signup",
-        method: "POST",
-        path: "/dashboard/api/signup",
-      },
-      {
-        id: "get-dashboard-api-projects",
-        method: "GET",
-        path: "/dashboard/api/projects",
-      },
-      {
-        id: "post-dashboard-api-projects",
-        method: "POST",
-        path: "/dashboard/api/projects",
-      },
-      {
-        id: "get-dashboard-api-api-keys",
-        method: "GET",
-        path: "/dashboard/api/api-keys",
-      },
-      {
-        id: "post-dashboard-api-api-keys",
-        method: "POST",
-        path: "/dashboard/api/api-keys",
-      },
-      { id: "get-dashboard-api-users", method: "GET", path: "/dashboard/api/users" },
-      {
-        id: "post-dashboard-api-users",
-        method: "POST",
-        path: "/dashboard/api/users",
-      },
-    ],
-  },
-  {
     label: "Ingestion",
     routes: [
       { id: "post-v1-traces-async", method: "POST", path: "/v1/traces/async" },

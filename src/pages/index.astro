@@ -117,7 +117,7 @@ const docsCards = [
 
 const codeTheme = "night-owl";
 
-const serverInstallCode = String.raw`curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse`;
+const serverInstallCode = String.raw`curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse-server`;
 
 const installCode = String.raw`bun add @pulse/sdk
 pip install pulse-sdk`;
@@ -201,7 +201,7 @@ avg latency 1.2s`;
           <div class="eyebrow">Quick start</div>
           <h2>Install Pulse server first</h2>
           <p>
-            Run this script to install the Pulse server binary, then start
+            Run this script to install the Pulse server and CLI binaries, then start
             instrumenting with the SDK.
           </p>
         </div>

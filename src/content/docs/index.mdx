@@ -13,8 +13,10 @@ Start the trace service before instrumenting your app. For local development, si
 Install the binary:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse-server
 ```
+
+This installs both `pulse-server` (trace service) and `pulse` (CLI integrations).
 
 Set required environment variables:
 
@@ -27,7 +29,13 @@ export BETTER_AUTH_URL='http://localhost:3000'
 Start the service:
 
 ```bash
-pulse
+pulse-server
+```
+
+Create your account + API key (writes `~/.pulse/config.toml`):
+
+```bash
+pulse setup --no-start-server
 ```
 
 ## Install SDK
@@ -53,7 +61,7 @@ Works with Bun, Node, or any JavaScript/Python runtime.
 
 ## Initialize
 
-Call `initPulse()` once at application startup. You need an API key from the Pulse dashboard.
+Call `initPulse()` once at application startup using the API key created during `pulse setup`.
 
 <Tabs>
   <TabItem label="TypeScript">

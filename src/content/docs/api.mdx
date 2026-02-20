@@ -39,6 +39,49 @@ These are the endpoints used by the dashboard and `pulse setup` to manage accoun
 
 Better Auth session/account endpoints are under `/api/auth/*` (for example, sign-in/sign-out/session routes).
 
+<section id="post-dashboard-api-signup">
+  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/dashboard/api/signup</code></h2>
+  Create a dashboard user and bootstrap the first project.
+
+</section>
+
+<section id="get-dashboard-api-projects">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/dashboard/api/projects</code></h2>
+  List projects for the authenticated user (session cookie required).
+
+</section>
+
+<section id="post-dashboard-api-projects">
+  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/dashboard/api/projects</code></h2>
+  Create a new project for the authenticated user.
+
+</section>
+
+<section id="get-dashboard-api-api-keys">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/dashboard/api/api-keys</code></h2>
+  List API keys for the selected project. Requires session auth plus `X-Project-Id` and project-admin role.
+
+</section>
+
+<section id="post-dashboard-api-api-keys">
+  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/dashboard/api/api-keys</code></h2>
+  Create an API key for the selected project. Requires session auth plus `X-Project-Id` and project-admin role.
+  Related endpoints: `PATCH /dashboard/api/api-keys/:id`, `DELETE /dashboard/api/api-keys/:id`.
+
+</section>
+
+<section id="get-dashboard-api-users">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/dashboard/api/users</code></h2>
+  List users in the selected project. Requires session auth plus `X-Project-Id` and project-admin role.
+
+</section>
+
+<section id="post-dashboard-api-users">
+  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/dashboard/api/users</code></h2>
+  Add a user to the selected project. Requires session auth plus `X-Project-Id` and project-admin role.
+
+</section>
+
 <section id="get-health">
   <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/health</code></h2>
   Health check endpoint for readiness and liveness. Public route with no authentication required.
@@ -76,6 +119,12 @@ curl -X POST https://your-pulse/v1/traces/async \
     "status": "success"
   }]'
 ```
+
+</section>
+
+<section id="post-v1-traces-batch">
+  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/traces/batch</code></h2>
+  Ingest traces synchronously in one request.
 
 </section>
 
@@ -136,6 +185,18 @@ GET /v1/spans/550e8400-e29b-41d4-a716-446655440000
 
 </section>
 
+<section id="post-v1-spans-async">
+  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/spans/async</code></h2>
+  Queue spans for asynchronous persistence via span WAL processing.
+
+</section>
+
+<section id="post-v1-spans-batch">
+  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/spans/batch</code></h2>
+  Ingest spans synchronously in one request.
+
+</section>
+
 <section id="get-v1-sessions-id">
   <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/sessions/:id</code></h2>
   Get all traces for a session, ordered by timestamp ascending.
@@ -169,6 +230,12 @@ Returns `{ sessionId: string, spans: [...] }` or `404`.
 | `date_from` | `string` | Yes | Start of date range. |
 | `date_to` | `string` | Yes | End of date range. |
 | `group_by` | `string` | No | Optional grouping dimension. |
+
+</section>
+
+<section id="get-v1-analytics-spans">
+  <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/analytics/spans</code></h2>
+  Aggregated span metrics for the authenticated project.
 
 </section>
 

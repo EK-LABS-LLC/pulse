@@ -7,8 +7,49 @@ const routeGroups = [
     routes: [{ id: "get-health", method: "GET", path: "/health" }],
   },
   {
+    label: "Control Plane",
+    routes: [
+      {
+        id: "post-dashboard-api-signup",
+        method: "POST",
+        path: "/dashboard/api/signup",
+      },
+      {
+        id: "get-dashboard-api-projects",
+        method: "GET",
+        path: "/dashboard/api/projects",
+      },
+      {
+        id: "post-dashboard-api-projects",
+        method: "POST",
+        path: "/dashboard/api/projects",
+      },
+      {
+        id: "get-dashboard-api-api-keys",
+        method: "GET",
+        path: "/dashboard/api/api-keys",
+      },
+      {
+        id: "post-dashboard-api-api-keys",
+        method: "POST",
+        path: "/dashboard/api/api-keys",
+      },
+      { id: "get-dashboard-api-users", method: "GET", path: "/dashboard/api/users" },
+      {
+        id: "post-dashboard-api-users",
+        method: "POST",
+        path: "/dashboard/api/users",
+      },
+    ],
+  },
+  {
     label: "Ingestion",
-    routes: [{ id: "post-v1-traces-async", method: "POST", path: "/v1/traces/async" }],
+    routes: [
+      { id: "post-v1-traces-async", method: "POST", path: "/v1/traces/async" },
+      { id: "post-v1-traces-batch", method: "POST", path: "/v1/traces/batch" },
+      { id: "post-v1-spans-async", method: "POST", path: "/v1/spans/async" },
+      { id: "post-v1-spans-batch", method: "POST", path: "/v1/spans/batch" },
+    ],
   },
   {
     label: "Traces",
@@ -29,6 +70,7 @@ const routeGroups = [
         method: "GET",
         path: "/v1/sessions/:id/spans",
       },
+      { id: "get-v1-analytics-spans", method: "GET", path: "/v1/analytics/spans" },
     ],
   },
 ];

@@ -665,6 +665,13 @@ starlight-tabs [role="tab"] {
   font-weight: 500;
 }
 
+.btn-icon {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.4rem;
+  flex-shrink: 0;
+}
+
 .btn-primary {
   background: #fff;
   color: var(--pulse-bg-0);

@@ -1,0 +1,69 @@
+---
+title: Dashboard UI (Docker)
+description: Run the Pulse dashboard frontend as a Docker container in self-hosted environments.
+---
+
+The dashboard frontend is not bundled into `pulse-server`. Run it as a separate container and connect it to your self-hosted server.
+
+## Recommended model: same-origin
+
+Use one browser origin for both UI and API, then route by path in your reverse proxy:
+
+- `/` -> `pulse-dashboard` container
+- `/api/auth/*` -> `pulse-server`
+- `/dashboard/api/*` -> `pulse-server`
+- `/v1/*` -> `pulse-server`
+- `/health` -> `pulse-server`
+
+This avoids most cookie/CORS issues.
+
+### Server env vars for same-origin
+
+Example for `https://pulse.example.com`:
+
+```bash
+export BETTER_AUTH_URL='https://pulse.example.com'
+export FRONTEND_URL='https://pulse.example.com'
+```
+
+## Run dashboard image
+
+```bash
+docker run --rm -p 8080:8080 ghcr.io/ek-labs-llc/pulse-dashboard:<tag>
+```
+
+By default the dashboard calls `window.location.origin` for API requests.
+
+## Split-origin mode (optional)
+
+If the dashboard and API are on different origins, set `PULSE_API_BASE_URL`:
+
+```bash
+docker run --rm -p 8080:8080 \
+  -e PULSE_API_BASE_URL='https://api.example.com' \
+  ghcr.io/ek-labs-llc/pulse-dashboard:<tag>
+```
+
+Then set server env vars accordingly:
+
+```bash
+export BETTER_AUTH_URL='https://api.example.com'
+export FRONTEND_URL='https://app.example.com'
+```
+
+## Docker Compose snippet
+
+```yaml
+services:
+  dashboard:
+    image: ghcr.io/ek-labs-llc/pulse-dashboard:<tag>
+    ports:
+      - "8080:8080"
+    environment:
+      # Omit for same-origin deployments.
+      PULSE_API_BASE_URL: "https://api.example.com"
+```
+
+## Versioning
+
+Use matching server and dashboard release tags when possible (`vX.Y.Z` on both repos).

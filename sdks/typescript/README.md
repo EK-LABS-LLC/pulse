@@ -1,6 +1,6 @@
 # @eklabs/pulse-sdk
 
-TypeScript SDK for sending OpenAI/Anthropic/OpenRouter traces to Pulse.
+Official TypeScript SDK for Pulse trace ingestion.
 
 ## Install
 
@@ -16,12 +16,12 @@ npm i @eklabs/pulse-sdk
 import OpenAI from "openai";
 import { initPulse, observe, Provider } from "@eklabs/pulse-sdk";
 
-initPulse({
-  apiKey: "pulse_sk_...",
-  apiUrl: "http://localhost:3000", // optional, defaults to localhost
-});
+initPulse({ apiKey: "pulse_sk_..." });
 
-const client = observe(new OpenAI({ apiKey: process.env.OPENAI_API_KEY }), Provider.OpenAI);
+const client = observe(
+  new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
+  Provider.OpenAI
+);
 
 await client.chat.completions.create({
   model: "gpt-4o-mini",
@@ -29,40 +29,6 @@ await client.chat.completions.create({
 });
 ```
 
-## Supported Providers
+## Docs
 
-- OpenAI
-- Anthropic
-- OpenRouter (via OpenAI-compatible client)
-
-## Config
-
-```ts
-initPulse({
-  apiKey: "pulse_sk_...",      // required
-  apiUrl: "http://localhost:3000",
-  batchSize: 10,
-  flushInterval: 5000,
-  enabled: true,
-});
-```
-
-## Per-request Metadata
-
-```ts
-await client.chat.completions.create({
-  model: "gpt-4o-mini",
-  messages: [{ role: "user", content: "Hi" }],
-  pulse_session_id: "session-123",
-  pulse_metadata: { feature: "chat" },
-});
-```
-
-## API
-
-- `initPulse(config)`
-- `observe(client, provider?, options?)`
-- `flushBuffer()`
-- `shutdown()`
-
-The SDK batches traces and flushes automatically on shutdown signals.
+Full docs: https://github.com/EK-LABS-LLC/pulse-docs

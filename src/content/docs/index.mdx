@@ -165,6 +165,31 @@ res = client.chat.completions.create(
   </TabItem>
 </Tabs>
 
+## Optional: Vercel Analytics (React)
+
+If your app is deployed on Vercel, you can add Web Analytics alongside Pulse tracing.
+
+Install:
+
+```bash
+npm i @vercel/analytics
+```
+
+Add the component in your app/root layout:
+
+```tsx
+import { Analytics } from "@vercel/analytics/react";
+
+export default function App() {
+  return (
+    <>
+      {/* your app */}
+      <Analytics />
+    </>
+  );
+}
+```
+
 ## What gets captured
 
 | Field | Description |

@@ -31,4 +31,4 @@ await client.chat.completions.create({
 
 ## Docs
 
-Full docs: https://github.com/EK-LABS-LLC/pulse-docs
+Full docs: https://www.usepulse.dev/docs/

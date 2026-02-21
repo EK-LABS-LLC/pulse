@@ -363,7 +363,7 @@ function wrapMessagesCreate(
  * @example
  * ```ts
  * import Anthropic from '@anthropic-ai/sdk';
- * import { patchAnthropic } from '@pulse/sdk';
+ * import { patchAnthropic } from '@eklabs/pulse-sdk';
  *
  * const client = new Anthropic({ apiKey: 'sk-ant-...' });
  * patchAnthropic(client);

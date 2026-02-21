@@ -1,6 +1,6 @@
 {
-  "name": "@pulse/sdk",
-  "version": "0.2.3",
+  "name": "@eklabs/pulse-sdk",
+  "version": "0.2.4",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

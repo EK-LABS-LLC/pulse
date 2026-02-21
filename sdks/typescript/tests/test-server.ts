@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import { initPulse, observe, Provider } from "@pulse/sdk";
+import { initPulse, observe, Provider } from "@eklabs/pulse-sdk";
 
 const PULSE_API_KEY = process.env.PULSE_API_KEY;
 const PORT = Number(process.env.TEST_SERVER_PORT || 3001);

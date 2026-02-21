@@ -1,17 +1,17 @@
-# @pulse/sdk
+# @eklabs/pulse-sdk
 
 TypeScript SDK for instrumenting LLM clients and capturing traces to your Pulse server.
 
 ## Installation
 
 ```bash
-bun add @pulse/sdk
+bun add @eklabs/pulse-sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { initPulse, observe } from '@pulse/sdk';
+import { initPulse, observe } from '@eklabs/pulse-sdk';
 import OpenAI from 'openai';
 
 // Initialize SDK
@@ -216,5 +216,5 @@ import type {
   Trace,
   TraceStatus,
   ObserveOptions,
-} from '@pulse/sdk';
+} from '@eklabs/pulse-sdk';
 ```

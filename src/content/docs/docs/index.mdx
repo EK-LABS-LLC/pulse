@@ -71,7 +71,7 @@ See [Dashboard UI (Docker)](/docs/dashboard-ui/) for same-origin and split-origi
   <TabItem label="TypeScript">
 
 ```bash
-bun add @pulse/sdk
+bun add @eklabs/pulse-sdk
 ```
 
   </TabItem>
@@ -108,7 +108,7 @@ Call `initPulse()` once at application startup using the API key created during 
   <TabItem label="TypeScript">
 
 ```ts
-import { initPulse } from "@pulse/sdk";
+import { initPulse } from "@eklabs/pulse-sdk";
 
 initPulse({
   apiKey: "pulse_sk_...",
@@ -139,7 +139,7 @@ Use `observe()` to wrap your LLM client. The returned client behaves identically
   <TabItem label="TypeScript">
 
 ```ts
-import { initPulse, observe, Provider } from "@pulse/sdk";
+import { initPulse, observe, Provider } from "@eklabs/pulse-sdk";
 import OpenAI from "openai";
 
 initPulse({ apiKey: "pulse_sk_..." });

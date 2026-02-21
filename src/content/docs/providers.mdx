@@ -45,7 +45,7 @@ All other client methods remain untouched.
 
 ```ts
 import OpenAI from "openai";
-import { observe, Provider } from "@pulse/sdk";
+import { observe, Provider } from "@eklabs/pulse-sdk";
 
 const client = observe(
   new OpenAI({ apiKey: "sk-..." }),
@@ -94,7 +94,7 @@ Both streaming and non-streaming calls are traced. For streams, the trace is rec
 
 ```ts
 import Anthropic from "@anthropic-ai/sdk";
-import { observe, Provider } from "@pulse/sdk";
+import { observe, Provider } from "@eklabs/pulse-sdk";
 
 const client = observe(
   new Anthropic({ apiKey: "sk-ant-..." }),
@@ -142,7 +142,7 @@ OpenRouter uses the OpenAI client library. Pass `Provider.OpenRouter` so Pulse s
 
 ```ts
 import OpenAI from "openai";
-import { observe, Provider } from "@pulse/sdk";
+import { observe, Provider } from "@eklabs/pulse-sdk";
 
 const client = observe(
   new OpenAI({

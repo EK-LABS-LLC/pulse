@@ -5,9 +5,9 @@ description: Instrument your first LLM call in under 5 minutes.
 
 import { Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-## Run Pulse server
+## Run Pulse
 
-Set up Pulse in this order: install binary, choose mode, run setup, then run the server.
+Pulse now ships as one app: `pulse-server` serves both the API and the dashboard.
 
 ### 1) Install the binary
 
@@ -17,13 +17,88 @@ curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scri
 
 This installs both `pulse-server` (trace service) and `pulse` (CLI integrations).
 
-### 2) Choose single vs scale mode and set env vars
+To upgrade an existing local install, run the same command again. It replaces the binaries and dashboard assets in place and preserves your existing `~/.pulse` data, including stored traces.
 
-Use `single` for the fastest local setup. Use `scale` when you need Postgres-backed multi-node or higher-throughput ingest.
+### 2) Choose your workflow
 
-See [Single vs Scale Modes](/docs/modes/) for an in-depth comparison and operational guidance.
+#### Local managed Pulse
 
-Single mode (default, local SQLite):
+Use this when you want one local command path and a background server managed by the CLI.
+
+```bash
+pulse setup --local
+pulse up
+```
+
+Then verify:
+
+```bash
+pulse status
+```
+
+Daily use after the first setup:
+
+```bash
+pulse up
+pulse status
+```
+
+Open the dashboard at `http://localhost:3000/` or run:
+
+```bash
+pulse dashboard
+```
+
+#### Remote/shared Pulse
+
+Use this when a Pulse instance already exists at a URL you can reach.
+
+```bash
+pulse connect \
+  --api-url https://pulse.example.com \
+  --api-key pulse_sk_... \
+  --project-id my-project
+```
+
+Then verify:
+
+```bash
+pulse status
+```
+
+## Updating
+
+### Local/self-hosted Pulse
+
+Re-run the server installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse-server
+```
+
+This upgrades:
+
+- `pulse-server`
+- dashboard assets
+- `pulse` CLI
+
+It does not erase `~/.pulse`, so local trace data and config are preserved.
+
+### Remote/shared-instance users
+
+If you only need the CLI locally, re-run the CLI installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.sh | sh
+```
+
+### 3) Advanced self-hosting modes
+
+If you are operating `pulse-server` directly, choose `single` for local SQLite or `scale` for Postgres-backed higher-throughput ingest.
+
+See [Single vs Scale Modes](/docs/modes/) for the full environment and deployment guidance.
+
+Single mode example:
 
 ```bash
 export PULSE_MODE=single
@@ -32,7 +107,7 @@ export ENCRYPTION_KEY="$(openssl rand -hex 32)"
 export BETTER_AUTH_URL='http://localhost:3000'
 ```
 
-Scale mode (Postgres + partitioned listeners):
+Scale mode example:
 
 ```bash
 export PULSE_MODE=scale
@@ -41,29 +116,6 @@ export BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
 export ENCRYPTION_KEY="$(openssl rand -hex 32)"
 export BETTER_AUTH_URL='http://localhost:3000'
 ```
-
-### 3) Run `pulse setup`
-
-```bash
-pulse setup
-```
-
-`pulse setup` creates your dashboard account, project, and API key, then writes `~/.pulse/config.toml`.
-
-### 4) Start the server
-
-```bash
-pulse-server
-```
-
-Use the same env vars from step 2 when starting the server.
-If `pulse setup` already started `pulse-server`, you can skip this step.
-
-### Optional: run the dashboard UI
-
-If you want the hosted frontend UI, run the separate `pulse-dashboard` Docker image.
-
-See [Dashboard UI (Docker)](/docs/dashboard-ui/) for same-origin and split-origin deployment patterns.
 
 ## Install SDK
 
@@ -91,10 +143,14 @@ Works with Bun, Node, or any JavaScript/Python runtime.
 If you want Pulse to capture coding-agent events in addition to SDK traces:
 
 ```bash
-# Bootstrap config + account + integrations
-pulse setup --no-start-server
+# Local managed Pulse
+pulse setup --local
+pulse up
 
-# Verify config + connectivity + integration status
+# Or connect to a shared Pulse instance:
+# pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
+
+# Verify config, connectivity, and integration status
 pulse status
 ```
 
@@ -102,7 +158,7 @@ See [CLI Reference](/docs/cli/) for full command and config details.
 
 ## Initialize
 
-Call `initPulse()` once at application startup using the API key created during `pulse setup`.
+Call `initPulse()` once at application startup using the API key created during `pulse setup` or `pulse connect`.
 
 <Tabs>
   <TabItem label="TypeScript">

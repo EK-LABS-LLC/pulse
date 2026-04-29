@@ -13,13 +13,20 @@ All spans are tagged with `source: "openclaw"`.
 
 Requires a running Pulse trace service and a configured Pulse CLI.
 
-1. Configure CLI credentials and endpoint.
+1. Configure Pulse.
 
 ```bash
-pulse init
+pulse setup --local
+# or: pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
 ```
 
-2. Connect OpenClaw hooks.
+2. Start the local server if you are using local mode.
+
+```bash
+pulse up
+```
+
+3. Connect OpenClaw hooks.
 
 ```bash
 pulse connect
@@ -27,7 +34,7 @@ pulse connect
 
 If prompted to choose an integration, select `OpenClaw`.
 
-3. Confirm integration health.
+4. Confirm integration health.
 
 ```bash
 pulse status
@@ -44,6 +51,16 @@ Pulse installs:
 - `handler.ts` (event handler)
 
 `pulse connect` only modifies Pulse's hook directory and does not alter other OpenClaw hooks.
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `pulse setup --local` | Bootstrap a managed local Pulse instance |
+| `pulse up` | Start the managed local Pulse server |
+| `pulse connect` | Install or refresh OpenClaw hooks, or configure a remote Pulse target when flags are provided |
+| `pulse disconnect` | Remove the Pulse-managed OpenClaw hook package |
+| `pulse status` | Show config, connectivity, and hook status |
 
 ## Events captured
 

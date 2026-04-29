@@ -13,13 +13,20 @@ All spans are tagged with `source: "opencode"`.
 
 Requires a running Pulse trace service and a local Pulse CLI setup.
 
-1. Configure Pulse CLI.
+1. Configure Pulse.
 
 ```bash
-pulse init
+pulse setup --local
+# or: pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
 ```
 
-2. Connect Opencode hooks.
+2. Start the local server if you are using local mode.
+
+```bash
+pulse up
+```
+
+3. Connect Opencode hooks.
 
 ```bash
 pulse connect
@@ -27,7 +34,7 @@ pulse connect
 
 If your CLI prompts for an integration target, choose `Opencode`.
 
-3. Verify installation.
+4. Verify installation.
 
 ```bash
 pulse status
@@ -44,6 +51,16 @@ Safe to re-run:
 
 - `pulse connect` is idempotent
 - `pulse disconnect` removes only Pulse artifacts
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `pulse setup --local` | Bootstrap a managed local Pulse instance |
+| `pulse up` | Start the managed local Pulse server |
+| `pulse connect` | Install or refresh the Opencode plugin, or configure a remote Pulse target when flags are provided |
+| `pulse disconnect` | Remove the Pulse-managed Opencode plugin |
+| `pulse status` | Show config, connectivity, and plugin status |
 
 ## Events captured
 

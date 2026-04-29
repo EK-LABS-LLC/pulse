@@ -1,73 +1,33 @@
 ---
 title: Release Notes
-description: Notable Pulse changes by release, starting with the latest developer-experience refresh.
+description: A simple running log of Pulse releases and notable changes.
 ---
 
-## Latest release
+Add new releases at the top of this page.
 
-### Developer Experience Refresh
+## v0.2.7
 
-This release focused on making Pulse easier to install, start, update, and operate locally.
+- Date: April 29, 2026
+- Focus: developer experience
 
-#### Highlights
+Changes:
 
-- `pulse-server` now serves the dashboard directly, so the product runs as one app instead of a separate server and frontend setup
-- `pulse up`, `pulse down`, `pulse restart`, and `pulse logs` now give the CLI a real local service lifecycle
-- `pulse connect` is now the clean path for connecting to an already running shared Pulse instance
-- install and upgrade docs now point to one local happy path and one remote/shared path
-- reinstalling with the official installer preserves `~/.pulse` data, including local traces and config
+- `pulse-server` now serves the dashboard directly
+- `pulse up`, `pulse down`, `pulse restart`, and `pulse logs` now manage the local server lifecycle
+- `pulse connect` is the main path for connecting to an already running shared Pulse instance
+- local install and startup docs now follow the simpler `pulse setup --local` -> `pulse up` flow
+- upgrade docs now explain that reinstalling preserves `~/.pulse` data, including local traces and config
 
-#### What changed for local users
+Upgrade:
 
-Old local setup felt split across multiple steps and terminals.
-
-New local flow:
-
-```bash
-pulse setup --local
-pulse up
-pulse status
-```
-
-The dashboard is served from the same local Pulse server:
-
-```text
-http://localhost:3000/
-```
-
-#### What changed for shared-instance users
-
-If your team already runs Pulse somewhere else, use:
-
-```bash
-pulse connect \
-  --api-url https://pulse.example.com \
-  --api-key pulse_sk_... \
-  --project-id my-project
-```
-
-That configures the CLI and installs hooks locally without trying to start a server.
-
-#### Upgrade notes
-
-Local/self-hosted Pulse:
+- Local/self-hosted Pulse:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse-server
 ```
 
-Remote/shared-instance CLI users:
+- Remote/shared-instance CLI users:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.sh | sh
 ```
-
-Re-running the installer upgrades in place and keeps `~/.pulse` data unless you explicitly purge it.
-
-## Going forward
-
-Future entries on this page should stay short and high-signal:
-
-- what changed
-- who it affects
-- any upgrade or migration note that matters

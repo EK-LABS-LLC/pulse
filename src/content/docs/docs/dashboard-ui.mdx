@@ -1,69 +1,102 @@
 ---
-title: Dashboard UI (Docker)
-description: Run the Pulse dashboard frontend as a Docker container in self-hosted environments.
+title: Dashboard UI
+description: Serve the Pulse dashboard from pulse-server with same-origin auth and API routing.
 ---
 
-The dashboard frontend is not bundled into `pulse-server`. Run it as a separate container and connect it to your self-hosted server.
+Pulse no longer runs the dashboard as a separate service. `pulse-server` serves the built dashboard UI from `/` and exposes the API and auth routes from the same origin.
 
-## Recommended model: same-origin
+## Recommended model: same origin
 
-Use one browser origin for both UI and API, then route by path in your reverse proxy:
+Use one browser origin for everything:
 
-- `/` -> `pulse-dashboard` container
-- `/api/auth/*` -> `pulse-server`
-- `/dashboard/api/*` -> `pulse-server`
-- `/v1/*` -> `pulse-server`
-- `/health` -> `pulse-server`
+- `/` -> Pulse dashboard UI
+- `/api/auth/*` -> Better Auth session routes
+- `/dashboard/api/*` -> dashboard control-plane routes
+- `/v1/*` -> ingest and query APIs
+- `/health` -> service health
 
-This avoids most cookie/CORS issues.
+Example:
 
-### Server env vars for same-origin
+```text
+https://pulse.example.com/
+```
 
-Example for `https://pulse.example.com`:
+This is the default and recommended deployment model because it avoids most cookie and CORS issues.
+
+## Local usage
+
+For a managed local install:
+
+```bash
+pulse setup --local
+pulse up
+```
+
+Then open:
+
+```text
+http://localhost:3000/
+```
+
+## Self-hosted server configuration
+
+Set `BETTER_AUTH_URL` to the public origin of your Pulse server:
 
 ```bash
 export BETTER_AUTH_URL='https://pulse.example.com'
+```
+
+Optional:
+
+```bash
 export FRONTEND_URL='https://pulse.example.com'
 ```
 
-## Run dashboard image
+`FRONTEND_URL` is only needed when you intentionally run the frontend on a different origin during frontend development.
+
+## Docker
+
+Run the server container directly. It already includes the built dashboard assets:
 
 ```bash
-docker run --rm -p 8080:8080 ghcr.io/ek-labs-llc/pulse-dashboard:<tag>
+docker run --rm -p 3000:3000 \
+  -e BETTER_AUTH_SECRET="$(openssl rand -hex 32)" \
+  -e ENCRYPTION_KEY="$(openssl rand -hex 32)" \
+  -e BETTER_AUTH_URL='http://localhost:3000' \
+  ghcr.io/ek-labs-llc/pulse-server:<tag>
 ```
 
-By default the dashboard calls `window.location.origin` for API requests.
+Then open:
 
-## Split-origin mode (optional)
-
-If the dashboard and API are on different origins, set `PULSE_API_BASE_URL`:
-
-```bash
-docker run --rm -p 8080:8080 \
-  -e PULSE_API_BASE_URL='https://api.example.com' \
-  ghcr.io/ek-labs-llc/pulse-dashboard:<tag>
+```text
+http://localhost:3000/
 ```
 
-Then set server env vars accordingly:
+## Optional split-origin frontend development
+
+For normal product deployments, do not split the frontend and API.
+
+If you are actively developing the frontend separately, set:
 
 ```bash
 export BETTER_AUTH_URL='https://api.example.com'
 export FRONTEND_URL='https://app.example.com'
 ```
 
-## Docker Compose snippet
+In that development-only setup:
 
-```yaml
-services:
-  dashboard:
-    image: ghcr.io/ek-labs-llc/pulse-dashboard:<tag>
-    ports:
-      - "8080:8080"
-    environment:
-      # Omit for same-origin deployments.
-      PULSE_API_BASE_URL: "https://api.example.com"
+- the server still owns auth and API routes
+- the standalone frontend points API requests back to the server
+- production should return to the same-origin model
+
+## Dashboard asset discovery
+
+By default, `pulse-server` serves built dashboard assets from its bundled install paths.
+
+Advanced override:
+
+```bash
+export DASHBOARD_DIST_DIR='/path/to/dashboard/dist'
 ```
 
-## Versioning
-
-Use matching server and dashboard release tags when possible (`vX.Y.Z` on both repos).
+This is mainly useful for development or custom packaging flows.

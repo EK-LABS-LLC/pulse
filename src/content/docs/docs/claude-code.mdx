@@ -15,19 +15,26 @@ Requires:
 - Claude Code installed
 - Pulse CLI installed
 
-1. Configure connection.
+1. Configure Pulse.
 
 ```bash
-pulse init
+pulse setup --local
+# or: pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
 ```
 
-2. Install hooks.
+2. Start the local server if you are using local mode.
+
+```bash
+pulse up
+```
+
+3. Install hooks.
 
 ```bash
 pulse connect
 ```
 
-3. Verify status.
+4. Verify status.
 
 ```bash
 pulse status
@@ -81,8 +88,9 @@ Each span sent to Pulse includes:
 
 | Command | Description |
 | --- | --- |
-| `pulse init` | Configure trace service connection |
-| `pulse connect` | Install hooks into Claude Code |
+| `pulse setup --local` | Bootstrap a managed local Pulse instance |
+| `pulse up` | Start the managed local Pulse server |
+| `pulse connect` | Install Claude Code hooks, or configure a remote Pulse target when flags are provided |
 | `pulse disconnect` | Remove Pulse hooks from Claude Code |
 | `pulse status` | Show config, connectivity, and hook status |
 | `pulse emit <type>` | Emit a span (used by hooks) |
@@ -90,11 +98,10 @@ Each span sent to Pulse includes:
 ## CI / non-interactive setup
 
 ```bash
-pulse init \
+pulse connect \
   --api-url https://pulse.example.com \
-  --api-key sk-your-key \
-  --project-id my-project \
-  --no-validate
+  --api-key pulse_sk_your_key \
+  --project-id my-project
 ```
 
 ## Manual verification

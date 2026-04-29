@@ -31,6 +31,10 @@ pulse up
 3. Install hooks.
 
 ```bash
+# If already connected to a server:
+pulse install-hooks
+
+# If not yet connected:
 pulse connect
 ```
 
@@ -42,7 +46,7 @@ pulse status
 
 ## Hooks installed
 
-Detection path: `~/.claude/settings.json`  
+Detection path: `~/.claude/settings.json` or `~/.claude/settings.local.json` (preferred)  
 Modified key: `hooks` (Pulse-only entries; other hooks are preserved)
 
 `pulse connect` installs 10 async hooks:
@@ -91,6 +95,7 @@ Each span sent to Pulse includes:
 | `pulse setup --local` | Bootstrap a managed local Pulse instance |
 | `pulse up` | Start the managed local Pulse server |
 | `pulse connect` | Install Claude Code hooks, or configure a remote Pulse target when flags are provided |
+| `pulse install-hooks` | Install Claude Code hooks without changing config |
 | `pulse disconnect` | Remove Pulse hooks from Claude Code |
 | `pulse status` | Show config, connectivity, and hook status |
 | `pulse emit <type>` | Emit a span (used by hooks) |
@@ -108,6 +113,7 @@ pulse connect \
 
 ```bash
 cat ~/.claude/settings.json | jq '.hooks'
+# or: cat ~/.claude/settings.local.json | jq '.hooks'
 ```
 
 ## Debugging

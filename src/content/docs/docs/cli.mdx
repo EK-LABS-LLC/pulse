@@ -107,6 +107,7 @@ curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.
 | `pulse dashboard` | Open the current Pulse dashboard URL |
 | `pulse init` | Deprecated alias for `pulse connect` |
 | `pulse connect` | Configure a remote Pulse instance and install hooks |
+| `pulse install-hooks` | Install Pulse hooks without changing config (requires existing config) |
 | `pulse disconnect` | Remove all Pulse hooks from all agents |
 | `pulse status` | Show mode, connectivity, server state, and hook status |
 | `pulse emit <type>` | Send a span (used by hooks, not by users) |
@@ -225,6 +226,22 @@ This:
 - validates `/health` by default
 - installs hooks into detected agents unless `--no-hooks` is set
 
+### `pulse install-hooks`
+
+```bash
+pulse install-hooks
+```
+
+Installs Pulse hooks into detected agents without modifying your Pulse configuration. Use this when you are already connected to a Pulse server but don't have hooks installed.
+
+This command:
+
+- validates that `~/.pulse/config.toml` exists with valid `api_url`, `api_key`, and `project_id`
+- prompts to run `pulse connect` if config is missing or incomplete
+- installs hooks for all detected tools (Claude Code, OpenCode, OpenClaw)
+
+Use `pulse connect` when you need to both connect to a server AND install hooks.
+
 ### `pulse disconnect`
 
 ```bash
@@ -341,7 +358,7 @@ Additional fields such as `tool_response`, `error`, `model`, `agent_name`, and `
 
 | Integration | Detection path | Pulse-managed files |
 | --- | --- | --- |
-| Claude Code | `~/.claude/settings.json` | `hooks` entries in `settings.json` |
+| Claude Code | `~/.claude/settings.json` or `~/.claude/settings.local.json` | `hooks` entries in `settings.json` or `settings.local.json` |
 | Opencode | `~/.config/opencode/` | `~/.config/opencode/plugin/pulse-plugin.ts` |
 | OpenClaw | `~/.openclaw/` | `~/.openclaw/hooks/pulse-hook/` |
 
@@ -379,7 +396,7 @@ pulse logs --follow
 
 Pulse detection paths:
 
-- Claude Code: `~/.claude/settings.json`
+- Claude Code: `~/.claude/settings.json` or `~/.claude/settings.local.json` (preferred)
 - Opencode: `~/.config/opencode/`
 - OpenClaw: `~/.openclaw/`
 
@@ -395,6 +412,10 @@ Pulse detection paths:
 After CLI upgrades, run:
 
 ```bash
+# If already connected to a server:
+pulse install-hooks
+
+# If not yet connected:
 pulse connect
 ```
 

@@ -17,6 +17,8 @@ curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scri
 
 This installs both `pulse-server` (trace service) and `pulse` (CLI integrations).
 
+To upgrade an existing local install, run the same command again. It replaces the binaries and dashboard assets in place and preserves your existing `~/.pulse` data, including stored traces.
+
 ### 2) Choose your workflow
 
 #### Local managed Pulse
@@ -31,6 +33,13 @@ pulse up
 Then verify:
 
 ```bash
+pulse status
+```
+
+Daily use after the first setup:
+
+```bash
+pulse up
 pulse status
 ```
 
@@ -55,6 +64,32 @@ Then verify:
 
 ```bash
 pulse status
+```
+
+## Updating
+
+### Local/self-hosted Pulse
+
+Re-run the server installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse-server
+```
+
+This upgrades:
+
+- `pulse-server`
+- dashboard assets
+- `pulse` CLI
+
+It does not erase `~/.pulse`, so local trace data and config are preserved.
+
+### Remote/shared-instance users
+
+If you only need the CLI locally, re-run the CLI installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.sh | sh
 ```
 
 ### 3) Advanced self-hosting modes

@@ -36,6 +36,8 @@ cd pulse-trace-cli
 make install
 ```
 
+Re-running either installer upgrades in place. It replaces the installed binaries and keeps your existing `~/.pulse` config and local data.
+
 ## Getting started
 
 ### Local managed Pulse
@@ -72,6 +74,26 @@ pulse status
 ```
 
 `pulse connect` saves a remote config and installs hooks locally. It does not start a server.
+
+## Updating
+
+### Local managed Pulse
+
+Re-run the `trace-service` installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse-server
+```
+
+This updates `pulse-server`, dashboard assets, and the `pulse` CLI while preserving `~/.pulse` data.
+
+### Remote/shared Pulse users
+
+If you only use the CLI locally, re-run the CLI installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.sh | sh
+```
 
 ## Command reference
 

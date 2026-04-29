@@ -29,6 +29,10 @@ pulse up
 3. Connect OpenClaw hooks.
 
 ```bash
+# If already connected to a server:
+pulse install-hooks
+
+# If not yet connected:
 pulse connect
 ```
 
@@ -59,6 +63,7 @@ Pulse installs:
 | `pulse setup --local` | Bootstrap a managed local Pulse instance |
 | `pulse up` | Start the managed local Pulse server |
 | `pulse connect` | Install or refresh OpenClaw hooks, or configure a remote Pulse target when flags are provided |
+| `pulse install-hooks` | Install or refresh OpenClaw hooks without changing config |
 | `pulse disconnect` | Remove the Pulse-managed OpenClaw hook package |
 | `pulse status` | Show config, connectivity, and hook status |
 

@@ -5,7 +5,39 @@ description: A simple running log of Pulse releases and notable changes.
 
 Add new releases at the top of this page.
 
-## v0.2.7
+## v0.2.9 (CLI Release)
+
+- Date: April 29, 2026
+- Focus: hooks installation
+
+Changes:
+
+- New command `pulse install-hooks` - Installs Claude Code hooks without changing trace URL/config
+  - Validates pulse config exists and has valid values (api_url, api_key, project_id)
+  - Prompts to run `pulse connect` if config is missing or incomplete
+  - Installs hooks for all detected tools (Claude Code, OpenCode, OpenClaw)
+- Hook detection now checks both settings files:
+  - Primary: `.claude/settings.json`
+  - Override: `.claude/settings.local.json` (preferred if exists)
+  - Fixes issues on systems where Claude writes to settings.local.json
+- Refactored shared hook installation logic from `connect.rs` to new `install_hooks.rs` module
+  - Both `pulse connect` and `pulse setup` now use the same `install_hooks()` function
+  - Eliminated ~70 lines of duplicated code
+
+Usage:
+
+```bash
+# Install hooks without changing config (new)
+pulse install-hooks
+
+# Connect and install hooks (existing, unchanged)
+pulse connect
+
+# Setup and install hooks (existing, unchanged)
+pulse setup
+```
+
+## v0.2.7 (Server and CLI Release)
 
 - Date: April 29, 2026
 - Focus: developer experience

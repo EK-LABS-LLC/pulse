@@ -29,6 +29,10 @@ pulse up
 3. Connect Opencode hooks.
 
 ```bash
+# If already connected to a server:
+pulse install-hooks
+
+# If not yet connected:
 pulse connect
 ```
 
@@ -59,6 +63,7 @@ Safe to re-run:
 | `pulse setup --local` | Bootstrap a managed local Pulse instance |
 | `pulse up` | Start the managed local Pulse server |
 | `pulse connect` | Install or refresh the Opencode plugin, or configure a remote Pulse target when flags are provided |
+| `pulse install-hooks` | Install or refresh the Opencode plugin without changing config |
 | `pulse disconnect` | Remove the Pulse-managed Opencode plugin |
 | `pulse status` | Show config, connectivity, and plugin status |
 

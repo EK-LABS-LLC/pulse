@@ -26,7 +26,7 @@ export default defineConfig({
 					label: 'Getting Started',
 					items: [
 						{ label: 'Quickstart', slug: 'docs' },
-						{ label: 'Dashboard UI (Docker)', slug: 'docs/dashboard-ui' },
+						{ label: 'Dashboard UI', slug: 'docs/dashboard-ui' },
 						{ label: 'Configuration', slug: 'docs/config' },
 					],
 				},
@@ -59,6 +59,10 @@ export default defineConfig({
 						{ label: 'REST API', slug: 'docs/api' },
 						{ label: 'Dashboard API', slug: 'docs/dashboard-api' },
 					],
+				},
+				{
+					label: 'Updates',
+					items: [{ label: 'Release Notes', slug: 'docs/releases' }],
 				},
 			],
 			credits: false,

@@ -18,14 +18,14 @@ Requires:
 1. Configure Pulse.
 
 ```bash
-pulse setup --local
+pulse up
 # or: pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
 ```
 
-2. Start the local server if you are using local mode.
+2. Open the local dashboard if you are using local mode.
 
 ```bash
-pulse up
+pulse dashboard
 ```
 
 3. Install hooks.
@@ -92,8 +92,8 @@ Each span sent to Pulse includes:
 
 | Command | Description |
 | --- | --- |
-| `pulse setup --local` | Bootstrap a managed local Pulse instance |
-| `pulse up` | Start the managed local Pulse server |
+| `pulse up` | Start/bootstrap the managed local Pulse server |
+| `pulse dashboard` | Open the local dashboard with one-time local login |
 | `pulse connect` | Install Claude Code hooks, or configure a remote Pulse target when flags are provided |
 | `pulse install-hooks` | Install Claude Code hooks without changing config |
 | `pulse disconnect` | Remove Pulse hooks from Claude Code |

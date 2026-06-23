@@ -28,15 +28,11 @@ This is the default and recommended deployment model because it avoids most cook
 For a managed local install:
 
 ```bash
-pulse setup --local
 pulse up
+pulse dashboard
 ```
 
-Then open:
-
-```text
-http://localhost:3000/
-```
+On first run, `pulse up` bootstraps local config without storing dashboard email/password credentials. `pulse dashboard` opens the local dashboard through a one-time login URL.
 
 ## Self-hosted server configuration
 

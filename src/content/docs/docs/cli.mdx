@@ -45,14 +45,15 @@ Re-running either installer upgrades in place. It replaces the installed binarie
 Use this when Pulse should run on your machine.
 
 ```bash
-pulse setup --local
 pulse up
+pulse dashboard
 pulse status
 ```
 
 Daily use:
 
 - `pulse up` starts `pulse-server` in the background
+- `pulse dashboard` opens the local dashboard through a one-time local login URL
 - `pulse logs --follow` tails the managed server log
 - `pulse down` stops the managed server
 
@@ -99,7 +100,7 @@ curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.
 
 | Command | Description |
 | --- | --- |
-| `pulse setup` | Bootstrap a local or remote Pulse account/project and save config |
+| `pulse setup` | Manually bootstrap a local or remote Pulse account/project and save config |
 | `pulse up` | Start the managed local Pulse server in the background |
 | `pulse down` | Stop the managed local Pulse server |
 | `pulse restart` | Restart the managed local Pulse server |
@@ -114,7 +115,7 @@ curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.
 
 ### `pulse setup`
 
-Local bootstrap:
+Manual local bootstrap:
 
 ```bash
 pulse setup --local
@@ -143,7 +144,7 @@ Show the full API key in setup output:
 pulse setup --local --show-api-key
 ```
 
-After local setup, use `pulse up` for normal day-to-day startup.
+For normal local use, `pulse up` can perform first-time bootstrap automatically.
 
 ### `pulse up`
 
@@ -154,7 +155,7 @@ pulse up
 pulse up --open
 ```
 
-Starts `pulse-server` in the background, waits for `/health`, and prints the dashboard URL, PID, and log path.
+Starts `pulse-server` in the background, waits for `/health`, performs first-time local bootstrap when config is missing, and prints the dashboard URL, PID, and log path.
 
 ### `pulse down`
 
@@ -196,7 +197,7 @@ pulse dashboard
 pulse dashboard --no-open
 ```
 
-In local mode, this opens the local dashboard served by `pulse-server`. In remote mode, it opens the configured remote Pulse URL.
+In local mode, this creates a one-time local login URL and opens the dashboard served by `pulse-server`. In remote mode, it opens the configured remote Pulse URL.
 
 ### `pulse init`
 
@@ -371,7 +372,7 @@ Pulse only modifies Pulse-owned entries and files. Other hooks and plugins are p
 For local mode:
 
 ```bash
-pulse setup --local
+pulse up
 ```
 
 For remote mode:

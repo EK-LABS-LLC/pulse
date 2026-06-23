@@ -26,9 +26,11 @@ To upgrade an existing local install, run the same command again. It replaces th
 Use this when you want one local command path and a background server managed by the CLI.
 
 ```bash
-pulse setup --local
 pulse up
+pulse dashboard
 ```
+
+On first run, `pulse up` starts `pulse-server`, creates/reuses a local project and API key, and writes `~/.pulse/config.toml` without storing dashboard email/password credentials. `pulse dashboard` opens through a one-time local login URL.
 
 Then verify:
 
@@ -40,13 +42,8 @@ Daily use after the first setup:
 
 ```bash
 pulse up
-pulse status
-```
-
-Open the dashboard at `http://localhost:3000/` or run:
-
-```bash
 pulse dashboard
+pulse status
 ```
 
 #### Remote/shared Pulse
@@ -144,8 +141,8 @@ If you want Pulse to capture coding-agent events in addition to SDK traces:
 
 ```bash
 # Local managed Pulse
-pulse setup --local
 pulse up
+pulse dashboard
 
 # Or connect to a shared Pulse instance:
 # pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
@@ -158,7 +155,7 @@ See [CLI Reference](/docs/cli/) for full command and config details.
 
 ## Initialize
 
-Call `initPulse()` once at application startup using the API key created during `pulse setup` or `pulse connect`.
+Call `initPulse()` once at application startup using the API key created during `pulse up`, `pulse setup`, or `pulse connect`.
 
 <Tabs>
   <TabItem label="TypeScript">

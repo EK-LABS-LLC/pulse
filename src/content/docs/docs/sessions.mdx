@@ -7,7 +7,17 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## Sessions
 
-A session groups related LLM calls together, such as a user conversation, agent run, or batch job. Assign a session ID and all traces with that ID appear as a timeline in the dashboard.
+A session groups related traces together, such as a user conversation, agent run, or batch job.
+
+Pulse uses this hierarchy:
+
+```text
+Pulse session
+  OTel trace = one LLM call, agent turn, task, or workflow
+    OTel span = one timed operation inside that trace
+```
+
+Assign a session ID and all traces with that ID appear together in the dashboard.
 
 ## Setting a session ID
 
@@ -22,7 +32,11 @@ Pass `sessionId` in observe options. All calls through this client use this sess
 const client = observe(
   new OpenAI({ apiKey: "sk-..." }),
   Provider.OpenAI,
-  { sessionId: "conv-abc-123" }
+  {
+    sessionId: "conv-abc-123",
+    sessionName: "Support refund conversation",
+    traceName: "Answer refund policy question"
+  }
 );
 ```
 
@@ -33,7 +47,11 @@ const client = observe(
 client = observe(
   OpenAI(api_key="sk-..."),
   Provider.OPENAI,
-  { "session_id": "conv-abc-123" }
+  {
+    "session_id": "conv-abc-123",
+    "session_name": "Support refund conversation",
+    "trace_name": "Answer refund policy question",
+  }
 )
 ```
 
@@ -52,6 +70,8 @@ await client.chat.completions.create({
   model: "gpt-4o",
   messages: [{ role: "user", content: "Hello" }],
   pulseSessionId: "different-session-456",
+  pulseSessionName: "Escalated support conversation",
+  pulseTraceName: "Draft escalation response",
 });
 ```
 
@@ -63,6 +83,8 @@ client.chat.completions.create(
   model="gpt-4o",
   messages=[{"role": "user", "content": "Hello"}],
   pulse_session_id="different-session-456",
+  pulse_session_name="Escalated support conversation",
+  pulse_trace_name="Draft escalation response",
 )
 ```
 
@@ -154,6 +176,9 @@ The third argument to `observe()`:
 | Field | Type | Description |
 | --- | --- | --- |
 | `sessionId` | `string` | Default session ID for all calls through the client. |
+| `sessionName` | `string` | Human-readable name for the dashboard session. |
+| `traceName` | `string` | Human-readable name for traces created by this client. |
+| `promptPreview` | `string` | Optional prompt preview used as a display fallback. |
 | `metadata` | `Record<string, unknown>` | Metadata merged into every trace from this client. |
 
 ## Per-call params
@@ -163,11 +188,14 @@ These request fields are stripped before sending to the provider:
 | Field | Type | Description |
 | --- | --- | --- |
 | `pulseSessionId` | `string` | Override session ID for this call only. |
+| `pulseSessionName` | `string` | Override session display name for this call. |
+| `pulseTraceName` | `string` | Override trace display name for this call. |
+| `pulsePromptPreview` | `string` | Override prompt preview for this call. |
 | `pulseMetadata` | `Record<string, unknown>` | Merge additional metadata for this call. |
 
 ## Viewing sessions
 
-In the dashboard, navigate to **Sessions** to see traces grouped by session ID and ordered by timestamp.
+In the dashboard, navigate to **Sessions** to see sessions, click a session to see trace summaries, then click a trace to inspect its spans.
 
 Via API:
 

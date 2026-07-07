@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Document OTel Trace Model
+
+Date: 2026-07-07 CDT; Status: Completed; PR: TBD
+Task: Update docs for the Session -> Trace -> Span architecture and OTLP HTTP JSON ingest.
+Added/Changed: REST API docs now make `POST /v1/traces` the canonical OTLP endpoint, sessions docs explain the hierarchy and naming attributes, and CLI/agent docs describe agent-turn traces with spans.
+
 ### Make Auth Simpler - Docs Site Local Flow
 
 Date: 2026-06-23 16:04:38 CDT; Status: Completed; PR: TBD

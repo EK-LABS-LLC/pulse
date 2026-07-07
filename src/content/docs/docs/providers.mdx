@@ -9,6 +9,15 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 Wraps an LLM client and returns a traced version. The returned client keeps the same API as the original.
 
+Each observed LLM call is exported to Pulse as OTLP HTTP JSON:
+
+```text
+one OTel trace
+  one provider-call span
+```
+
+The span includes provider, model, token, cost, latency, status, session, trace name, prompt preview, and metadata attributes.
+
 <Tabs>
   <TabItem label="TypeScript">
 
@@ -48,7 +57,12 @@ import { observe, Provider } from "@eklabs/pulse-sdk";
 
 const client = observe(
   new OpenAI({ apiKey: "sk-..." }),
-  Provider.OpenAI
+  Provider.OpenAI,
+  {
+    sessionId: "conv-abc-123",
+    sessionName: "Support conversation",
+    traceName: "Answer customer question",
+  }
 );
 
 const res = await client.chat.completions.create({

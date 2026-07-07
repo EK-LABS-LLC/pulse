@@ -305,7 +305,7 @@ project_id = "my-project"
 | `mode` | `local` or `remote` |
 | `api_url` | Base URL of the current Pulse server |
 | `api_key` | Project API key used in remote mode |
-| `project_id` | Project identifier attached to spans |
+| `project_id` | Project identifier attached to emitted OTLP payloads |
 
 ## Environment variables
 
@@ -314,7 +314,19 @@ project_id = "my-project"
 | `PULSE_DEBUG` | Set `1` to log raw integration payloads |
 | `PULSE_DEBUG_LOG` | Override debug log path (`~/.pulse/debug.log` by default) |
 
-## Events and span model
+## Events and trace/span model
+
+Pulse CLI emits OTLP HTTP JSON to `POST /v1/traces`.
+
+Agent events are grouped as:
+
+```text
+Pulse session
+  agent.turn trace
+    user prompt, assistant, tool, subagent, and stop spans
+```
+
+Lifecycle-only events such as standalone session start/end events are grouped into an `agent.session_lifecycle` trace.
 
 Pulse integrations emit these normalized event types:
 
@@ -332,24 +344,22 @@ Pulse integrations emit these normalized event types:
 | `subagent_stop` | `agent_run` | Child agent finished |
 | `notification` | `notification` | Agent notification event |
 
-Example span payload:
+Example OTLP span attributes inside the emitted trace:
 
 ```json
 {
-  "span_id": "550e8400-e29b-41d4-a716-446655440000",
-  "session_id": "abc-123",
-  "timestamp": "2026-02-19T14:30:00.000Z",
-  "source": "claude_code",
-  "kind": "tool_use",
-  "event_type": "pre_tool_use",
-  "status": "success",
-  "tool_name": "Bash",
-  "tool_use_id": "tool_abc",
-  "tool_input": { "command": "ls" },
-  "metadata": {
-    "cli_version": "0.1.0",
-    "project_id": "my-project"
-  }
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "spanId": "00f067aa0ba902b7",
+  "parentSpanId": "0af7651916cd43dd",
+  "name": "agent.tool",
+  "attributes": [
+    { "key": "pulse.session.id", "value": { "stringValue": "abc-123" } },
+    { "key": "pulse.session.name", "value": { "stringValue": "Implement auth fix" } },
+    { "key": "pulse.source", "value": { "stringValue": "claude_code" } },
+    { "key": "pulse.event.kind", "value": { "stringValue": "tool_use" } },
+    { "key": "pulse.event.type", "value": { "stringValue": "pre_tool_use" } },
+    { "key": "pulse.tool.name", "value": { "stringValue": "Bash" } }
+  ]
 }
 ```
 
@@ -425,8 +435,8 @@ pulse connect
 ```text
 Claude Code hooks / Opencode plugin / OpenClaw hook
           -> pulse emit <event_type>
-          -> normalize payload into span
-          -> POST /v1/spans/async (2s timeout)
+          -> normalize payload into OTLP trace/span payload
+          -> POST /v1/traces (2s timeout)
           -> Pulse server
 ```
 

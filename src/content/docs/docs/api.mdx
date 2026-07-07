@@ -29,45 +29,67 @@ GET /health
 
 </section>
 
-<section id="post-v1-traces-async">
-  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/traces/async</code></h2>
-  Queue a batch of traces for asynchronous persistence. This is the primary ingestion path used by the SDK.
+<section id="post-v1-traces">
+  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/traces</code></h2>
+  Ingest OTLP HTTP JSON traces. This is the canonical ingestion path used by current SDKs and CLI integrations.
 
 | Field | Value |
 | --- | --- |
 | Method | `POST` |
-| Body | JSON array of trace objects |
+| Body | OTLP JSON object with `resourceSpans` |
 | Response | `202 Accepted` |
 
 ```bash
-curl -X POST https://your-pulse/v1/traces/async \
+curl -X POST https://your-pulse/v1/traces \
   -H "Authorization: Bearer pulse_sk_..." \
   -H "Content-Type: application/json" \
-  -d '[{
-    "trace_id": "uuid",
-    "timestamp": "2025-01-01T00:00:00Z",
-    "provider": "openai",
-    "model_requested": "gpt-4o",
-    "request_body": { ... },
-    "response_body": { ... },
-    "input_tokens": 50,
-    "output_tokens": 100,
-    "latency_ms": 1200,
-    "status": "success"
-  }]'
+  -d '{
+    "resourceSpans": [{
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "my-app" } }
+        ]
+      },
+      "scopeSpans": [{
+        "scope": { "name": "my-instrumentation" },
+        "spans": [{
+          "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+          "spanId": "00f067aa0ba902b7",
+          "name": "openai.chat.completions",
+          "kind": 3,
+          "startTimeUnixNano": "1767225600000000000",
+          "endTimeUnixNano": "1767225601200000000",
+          "attributes": [
+            { "key": "pulse.session_id", "value": { "stringValue": "conv-abc-123" } },
+            { "key": "pulse.source", "value": { "stringValue": "sdk" } },
+            { "key": "pulse.kind", "value": { "stringValue": "llm_call" } },
+            { "key": "gen_ai.provider.name", "value": { "stringValue": "openai" } },
+            { "key": "gen_ai.request.model", "value": { "stringValue": "gpt-4o" } }
+          ],
+          "status": { "code": 1 }
+        }]
+      }]
+    }]
+  }'
 ```
+
+</section>
+
+<section id="post-v1-traces-async">
+  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/traces/async</code></h2>
+  Legacy SDK trace adapter. Existing clients can still send the old JSON trace array during the migration window; the server converts each item into one OTel trace with one provider-call span.
 
 </section>
 
 <section id="post-v1-traces-batch">
   <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/traces/batch</code></h2>
-  Ingest traces synchronously in one request.
+  Legacy synchronous trace adapter. Prefer `POST /v1/traces` for new integrations.
 
 </section>
 
 <section id="get-v1-traces">
   <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/traces</code></h2>
-  Query traces for the authenticated project.
+  Query trace summaries for the authenticated project. Compatibility fields are returned for older clients, but results are derived from OTel spans and trace summaries.
 
 **Query parameters**
 
@@ -104,7 +126,7 @@ Returns the trace object or `404`.
 
 <section id="get-v1-spans">
   <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/spans</code></h2>
-  Query agent spans for the authenticated project.
+  Query spans for the authenticated project.
 
 ```bash
 GET /v1/spans?source=claude_code&kind=tool_use&limit=50
@@ -124,13 +146,13 @@ GET /v1/spans/550e8400-e29b-41d4-a716-446655440000
 
 <section id="post-v1-spans-async">
   <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/spans/async</code></h2>
-  Queue spans for asynchronous persistence via span WAL processing.
+  Legacy agent span adapter. Existing CLI versions can still send span arrays; current CLI versions emit OTLP JSON to `POST /v1/traces`.
 
 </section>
 
 <section id="post-v1-spans-batch">
   <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/spans/batch</code></h2>
-  Ingest spans synchronously in one request.
+  Legacy synchronous span adapter. Prefer `POST /v1/traces` for new integrations.
 
 </section>
 
@@ -177,6 +199,20 @@ Returns `{ sessionId: string, spans: [...] }` or `404`.
 </section>
 
 ## Trace object
+
+Pulse stores telemetry as:
+
+```text
+Pulse session
+  OTel trace
+    OTel span
+```
+
+`trace_summaries` are derived from spans sharing the same `traceId`; spans remain the canonical telemetry records.
+
+## Legacy trace object
+
+The legacy trace shape is still accepted by `/v1/traces/async` and `/v1/traces/batch` during the migration window. The server converts it into OTel spans internally.
 
 ```json
 {

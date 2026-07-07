@@ -77,13 +77,16 @@ Pulse installs:
 | `message:received` | `user_prompt_submit` | Captures prompt text |
 | `message:sent` | `notification` | Agent notification/message |
 
-## Span fields
+## Trace and span fields
+
+OpenClaw events are emitted as OTLP spans grouped by Pulse session. User prompt events start an `agent.turn` trace; lifecycle-only events use `agent.session_lifecycle`.
 
 | Field | Description |
 | --- | --- |
-| `span_id` | UUID v4 span identifier |
-| `session_id` | OpenClaw session identifier |
-| `timestamp` | Event timestamp (ISO 8601) |
+| `traceId` | OTel trace identifier |
+| `spanId` | OTel span identifier |
+| `pulse.session.id` | OpenClaw session identifier |
+| `pulse.session.name` | Human-readable session name when available |
 | `source` | `openclaw` |
 | `kind` | Event category |
 | `event_type` | Concrete event name |

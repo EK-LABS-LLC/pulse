@@ -79,13 +79,16 @@ Safe to re-run:
 | `tool.execute.before` | `pre_tool_use` | Captures tool name, input, ID |
 | `tool.execute.after` | `post_tool_use` | Captures tool response |
 
-## Span fields
+## Trace and span fields
+
+Opencode events are emitted as OTLP spans. User prompt events start an `agent.turn` trace; assistant and tool events attach to that trace when possible.
 
 | Field | Description |
 | --- | --- |
-| `span_id` | UUID v4 span identifier |
-| `session_id` | Opencode session identifier |
-| `timestamp` | Event timestamp (ISO 8601) |
+| `traceId` | OTel trace identifier |
+| `spanId` | OTel span identifier |
+| `pulse.session.id` | Opencode session identifier |
+| `pulse.session.name` | Human-readable session name when available |
 | `source` | `opencode` |
 | `kind` | High-level event category |
 | `event_type` | Specific event type |

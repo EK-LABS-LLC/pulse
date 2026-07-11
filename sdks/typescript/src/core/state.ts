@@ -1,9 +1,9 @@
-import type { Trace } from "../types";
+import type { Span } from "../types";
 import { defaults, type ResolvedConfig } from "./config";
-import { sendTraces } from "../transport/http";
+import { sendSpans } from "../transport/http";
 
 let config: ResolvedConfig | null = null;
-let traceBuffer: Trace[] = [];
+let traceBuffer: Span[] = [];
 let flushTimer: ReturnType<typeof setInterval> | null = null;
 
 export function setConfig(resolvedConfig: ResolvedConfig): void {
@@ -21,7 +21,7 @@ export function isEnabled(): boolean {
   return config?.enabled ?? false;
 }
 
-export function addToBuffer(trace: Trace): void {
+export function addToBuffer(trace: Span): void {
   if (!isEnabled()) {
     return;
   }
@@ -53,7 +53,7 @@ export async function flushBuffer(): Promise<void> {
   traceBuffer = [];
 
   try {
-    await sendTraces(cfg.apiUrl, cfg.apiKey, traces);
+    await sendSpans(cfg.apiUrl, cfg.apiKey, traces);
   } catch (error) {
     console.error("Pulse SDK: failed to flush traces:", error);
   }

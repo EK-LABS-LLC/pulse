@@ -96,7 +96,9 @@ function toOtlpSpan(span: Span): OtlpTracesPayload["resourceSpans"][number]["sco
   if (span.error !== undefined) attributes.push(stringAttr("pulse.error", JSON.stringify(span.error)));
   if (span.metadata) {
     for (const [key, value] of Object.entries(span.metadata)) {
-      attributes.push(stringAttr(key, typeof value === "string" ? value : JSON.stringify(value)));
+      attributes.push(
+        stringAttr(`pulse.metadata.${key}`, typeof value === "string" ? value : JSON.stringify(value)),
+      );
     }
   }
 

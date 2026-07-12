@@ -139,10 +139,20 @@ export type ObservedOpenAI<T extends import("openai").default = import("openai")
     };
   };
   responses: Omit<T["responses"], "create"> & {
-    create: (
-      body: Parameters<T["responses"]["create"]>[0] & PulseParams,
-      options?: Parameters<T["responses"]["create"]>[1],
-    ) => ReturnType<T["responses"]["create"]>;
+    create: {
+      (
+        body: import("openai").default.Responses.ResponseCreateParamsNonStreaming & PulseParams,
+        options?: import("openai").default.RequestOptions
+      ): Promise<import("openai").default.Responses.Response>;
+      (
+        body: import("openai").default.Responses.ResponseCreateParamsStreaming & PulseParams,
+        options?: import("openai").default.RequestOptions
+      ): Promise<
+        import("openai/streaming").Stream<
+          import("openai").default.Responses.ResponseStreamEvent
+        >
+      >;
+    };
   };
 };
 

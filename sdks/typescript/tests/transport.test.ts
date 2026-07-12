@@ -102,7 +102,18 @@ describe("toOtlpPayload", () => {
     expect(readAttribute(span!, "gen_ai.usage.output_tokens")).toBe("20");
     expect(readAttribute(span!, "pulse.cost_cents")).toBe(0.002);
     expect(readAttribute(span!, "pulse.output_text")).toBe("Hello");
-    expect(readAttribute(span!, "tenant")).toBe("acme");
+    expect(readAttribute(span!, "pulse.metadata.tenant")).toBe("acme");
+  });
+
+  it("namespaces metadata attributes to avoid reserved key collisions", () => {
+    const payload = toOtlpPayload([
+      sampleSpan({ metadata: { "pulse.source": "user-value" } }),
+    ]);
+    const span = payload.resourceSpans[0]?.scopeSpans[0]?.spans[0];
+
+    expect(readAttribute(span!, "pulse.source")).toBe("sdk");
+    expect(readAttribute(span!, "pulse.metadata.pulse.source")).toBe("user-value");
+    expect(span?.attributes.filter(({ key }) => key === "pulse.source")).toHaveLength(1);
   });
 
   it("serializes tool spans with tool attributes and parent linkage", () => {

@@ -104,7 +104,7 @@ function truncatePayload(value: unknown): unknown {
   return {
     truncated: true,
     originalBytes: bytes,
-    preview: serialized.slice(0, MAX_PAYLOAD_BYTES),
+    preview: truncateString(serialized),
   };
 }
 

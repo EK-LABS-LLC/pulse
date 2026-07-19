@@ -23,15 +23,24 @@ import type {
 import { Provider, type ObserveOptions, type NormalizedResponse } from "../types";
 import { normalizeAnthropicResponse } from "../lib/normalize";
 import {
-  buildTrace,
-  buildErrorTrace,
   getStartTime,
   calculateElapsedTime,
   extractPulseParams,
   resolveTraceMetadata,
-  type TraceMetadata,
 } from "./base";
 import { addToBuffer, isEnabled } from "../core/state";
+import { generateUUID } from "../lib/uuid";
+import { generateTraceId } from "../lib/ids";
+import {
+  buildProviderSpan,
+  buildToolRequestSpans,
+  buildToolResultSpans,
+  correlateToolResults,
+  extractAnthropicToolCalls,
+  extractAnthropicToolResults,
+  parseJsonish,
+  resolveSessionId,
+} from "./sdk-spans";
 
 /**
  * Stop reason mapping from Anthropic values to normalized values
@@ -57,6 +66,7 @@ interface StreamAccumulator {
   stopSequence: string | null;
   usage: Usage | null;
   textContent: string;
+  toolInputJson: Map<number, string>;
 }
 
 /**
@@ -72,6 +82,7 @@ function createStreamAccumulator(): StreamAccumulator {
     stopSequence: null,
     usage: null,
     textContent: "",
+    toolInputJson: new Map(),
   };
 }
 
@@ -101,6 +112,23 @@ function processStreamEvent(event: RawMessageStreamEvent, acc: StreamAccumulator
         const block = acc.content[deltaEvent.index];
         if (block && block.type === "text") {
           (block as TextBlock).text += textDelta.text;
+        }
+      } else if (deltaEvent.delta.type === "input_json_delta") {
+        const partialJson = (deltaEvent.delta as { partial_json?: string }).partial_json ?? "";
+        acc.toolInputJson.set(
+          deltaEvent.index,
+          (acc.toolInputJson.get(deltaEvent.index) ?? "") + partialJson,
+        );
+      }
+      break;
+    }
+    case "content_block_stop": {
+      const index = (event as { index?: number }).index;
+      if (typeof index === "number") {
+        const block = acc.content[index] as (Record<string, unknown> & { type?: string }) | undefined;
+        const partialJson = acc.toolInputJson.get(index);
+        if (block?.type === "tool_use" && partialJson) {
+          block.input = parseJsonish(partialJson);
         }
       }
       break;
@@ -143,6 +171,7 @@ function accumulatorToNormalizedResponse(acc: StreamAccumulator): NormalizedResp
     outputTokens: acc.usage?.output_tokens ?? null,
     finishReason,
     model: acc.model ?? "unknown",
+    ...(acc.id && { id: acc.id }),
   };
 }
 
@@ -156,7 +185,11 @@ function createTracedStream(
   originalStream: Stream<RawMessageStreamEvent>,
   requestBody: Record<string, unknown>,
   startTime: number,
-  traceMetadata: TraceMetadata
+  startedAt: string,
+  traceMetadata: { sessionId?: string; metadata?: Record<string, unknown> },
+  clientId: string,
+  traceId: string,
+  sessionId: string,
 ): Stream<RawMessageStreamEvent> {
   const accumulator = createStreamAccumulator();
   let traceRecorded = false;
@@ -174,28 +207,51 @@ function createTracedStream(
         traceRecorded = true;
         const latencyMs = calculateElapsedTime(startTime);
         const normalizedResponse = accumulatorToNormalizedResponse(accumulator);
-        const trace = buildTrace(
-          requestBody,
-          normalizedResponse,
-          Provider.Anthropic,
+        const providerSpan = buildProviderSpan({
+          traceId,
+          sessionId,
+          provider: Provider.Anthropic,
+          request: requestBody,
+          response: normalizedResponse,
+          startedAt,
           latencyMs,
-          traceMetadata
-        );
-        addToBuffer(trace);
+          status: "success",
+          metadata: traceMetadata.metadata,
+        });
+        addToBuffer(providerSpan);
+        for (const span of buildToolRequestSpans({
+          provider: Provider.Anthropic,
+          clientId,
+          traceId,
+          sessionId,
+          parentSpanId: providerSpan.span_id,
+          toolCalls: extractAnthropicToolCalls({ content: accumulator.content }),
+        })) {
+          addToBuffer(span);
+        }
       }
     } catch (error) {
       // Stream errored
       if (!traceRecorded) {
         traceRecorded = true;
         const latencyMs = calculateElapsedTime(startTime);
-        const trace = buildErrorTrace(
-          requestBody,
-          error instanceof Error ? error : new Error(String(error)),
-          Provider.Anthropic,
-          latencyMs,
-          traceMetadata
+        addToBuffer(
+          buildProviderSpan({
+            traceId,
+            sessionId,
+            provider: Provider.Anthropic,
+            request: requestBody,
+            response: null,
+            startedAt,
+            latencyMs,
+            status: "error",
+            error:
+              error instanceof Error
+                ? { name: error.name, message: error.message, stack: error.stack }
+                : { message: String(error) },
+            metadata: traceMetadata.metadata,
+          }),
         );
-        addToBuffer(trace);
       }
       throw error;
     }
@@ -233,6 +289,7 @@ function createTracedStream(
  */
 function wrapMessagesCreate(
   original: Anthropic.Messages["create"],
+  clientId: string,
   options?: ObserveOptions
 ): Anthropic.Messages["create"] {
   // Overload 1: Non-streaming
@@ -261,6 +318,7 @@ function wrapMessagesCreate(
     }
 
     const startTime = getStartTime();
+    const startedAt = new Date().toISOString();
     const { cleanBody, pulseSessionId, pulseMetadata } = extractPulseParams(
       body as unknown as Record<string, unknown>
     );
@@ -272,6 +330,19 @@ function wrapMessagesCreate(
       pulseSessionId,
       pulseMetadata
     );
+    const sessionId = resolveSessionId(traceMetadata.sessionId, clientId);
+    const correlation = correlateToolResults(
+      Provider.Anthropic,
+      clientId,
+      sessionId,
+      extractAnthropicToolResults(requestBody),
+    );
+    const traceId = correlation.traceId ?? generateTraceId();
+    // Tool results were produced before this request, so record them up front
+    // rather than after the provider responds.
+    for (const span of buildToolResultSpans({ traceId, sessionId, matches: correlation.matches })) {
+      addToBuffer(span);
+    }
 
     if (isStreaming) {
       // Handle streaming response
@@ -285,21 +356,30 @@ function wrapMessagesCreate(
           stream as Stream<RawMessageStreamEvent>,
           requestBody,
           startTime,
-          traceMetadata
+          startedAt,
+          traceMetadata,
+          clientId,
+          traceId,
+          sessionId,
         );
       } catch (error) {
         // Calculate latency even on error
         const latencyMs = calculateElapsedTime(startTime);
 
-        // Build error trace
-        const trace = buildErrorTrace(
-          requestBody,
-          error instanceof Error ? error : new Error(String(error)),
-          Provider.Anthropic,
-          latencyMs,
-          traceMetadata
+        addToBuffer(
+          buildProviderSpan({
+            traceId,
+            sessionId,
+            provider: Provider.Anthropic,
+            request: requestBody,
+            response: null,
+            startedAt,
+            latencyMs,
+            status: "error",
+            error: error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) },
+            metadata: traceMetadata.metadata,
+          }),
         );
-        addToBuffer(trace);
 
         // Re-throw the original error
         throw error;
@@ -318,15 +398,28 @@ function wrapMessagesCreate(
         // Normalize response
         const normalizedResponse = normalizeAnthropicResponse(response);
 
-        // Build and buffer trace
-        const trace = buildTrace(
-          requestBody,
-          normalizedResponse,
-          Provider.Anthropic,
+        const providerSpan = buildProviderSpan({
+          traceId,
+          sessionId,
+          provider: Provider.Anthropic,
+          request: requestBody,
+          response: normalizedResponse,
+          startedAt,
           latencyMs,
-          traceMetadata
-        );
-        addToBuffer(trace);
+          status: "success",
+          metadata: traceMetadata.metadata,
+        });
+        addToBuffer(providerSpan);
+        for (const span of buildToolRequestSpans({
+          provider: Provider.Anthropic,
+          clientId,
+          traceId,
+          sessionId,
+          parentSpanId: providerSpan.span_id,
+          toolCalls: extractAnthropicToolCalls(response),
+        })) {
+          addToBuffer(span);
+        }
 
         // Return original response unchanged
         return response;
@@ -334,15 +427,20 @@ function wrapMessagesCreate(
         // Calculate latency even on error
         const latencyMs = calculateElapsedTime(startTime);
 
-        // Build error trace
-        const trace = buildErrorTrace(
-          requestBody,
-          error instanceof Error ? error : new Error(String(error)),
-          Provider.Anthropic,
-          latencyMs,
-          traceMetadata
+        addToBuffer(
+          buildProviderSpan({
+            traceId,
+            sessionId,
+            provider: Provider.Anthropic,
+            request: requestBody,
+            response: null,
+            startedAt,
+            latencyMs,
+            status: "error",
+            error: error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) },
+            metadata: traceMetadata.metadata,
+          }),
         );
-        addToBuffer(trace);
 
         // Re-throw the original error
         throw error;
@@ -377,11 +475,12 @@ function wrapMessagesCreate(
  * ```
  */
 export function patchAnthropic<T extends Anthropic>(client: T, options?: ObserveOptions): T {
+  const clientId = generateUUID();
   // Store original method
   const originalCreate = client.messages.create.bind(client.messages);
 
   // Wrap messages.create
-  client.messages.create = wrapMessagesCreate(originalCreate, options);
+  client.messages.create = wrapMessagesCreate(originalCreate, clientId, options);
 
   return client;
 }

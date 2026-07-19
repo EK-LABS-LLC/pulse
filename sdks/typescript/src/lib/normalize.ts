@@ -68,6 +68,7 @@ export function normalizeOpenAIResponse(response: ChatCompletion): NormalizedRes
     finishReason,
     model,
     ...(costCents !== undefined && { costCents }),
+    ...(response.id && { id: response.id }),
   };
 }
 
@@ -109,5 +110,6 @@ export function normalizeAnthropicResponse(response: Message): NormalizedRespons
     outputTokens,
     finishReason,
     model,
+    ...(response.id && { id: response.id }),
   };
 }

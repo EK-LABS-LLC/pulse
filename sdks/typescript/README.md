@@ -1,6 +1,9 @@
 # @eklabs/pulse-sdk
 
-Official TypeScript SDK for Pulse trace ingestion.
+Official TypeScript SDK for Pulse trace ingestion. The SDK observes supported LLM clients
+and exports calls as OTLP HTTP JSON traces to Pulse (`POST /v1/traces`) — one `llm_call`
+span per provider request plus `tool_use` spans for tool calls, carrying provider, model,
+token, cost, and session attributes.
 
 ## Install
 

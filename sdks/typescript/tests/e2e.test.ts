@@ -219,7 +219,7 @@ describe("E2E Integration Tests", () => {
       }
 
       // Validate required fields
-      expect(trace.traceId).toMatch(/^[0-9a-f-]{36}$/i);
+      expect(trace.traceId).toMatch(/^[0-9a-f]{32}$/i);
       expect(trace.timestamp).toBeDefined();
       expect(new Date(trace.timestamp).toISOString()).toBe(trace.timestamp);
       expect(["openai", "anthropic"]).toContain(trace.provider);

@@ -1,120 +1,66 @@
 ---
 title: Quickstart
-description: Instrument your first LLM call in under 5 minutes.
+description: Install Pulse and see SDK and agent telemetry in one OTel view.
 ---
 
 import { Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-## Run Pulse
+## Install and open Pulse
 
-Pulse now ships as one app: `pulse-server` serves both the API and the dashboard.
-
-### 1) Install the binary
+`pulse-server` includes the API and dashboard. The installer also adds the
+`pulse` CLI.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse-server
-```
-
-This installs both `pulse-server` (trace service) and `pulse` (CLI integrations).
-
-To upgrade an existing local install, run the same command again. It replaces the binaries and dashboard assets in place and preserves your existing `~/.pulse` data, including stored traces.
-
-### 2) Choose your workflow
-
-#### Local managed Pulse
-
-Use this when you want one local command path and a background server managed by the CLI.
-
-```bash
-pulse up
-pulse dashboard
-```
-
-On first run, `pulse up` starts `pulse-server`, creates/reuses a local project and API key, and writes `~/.pulse/config.toml` without storing dashboard email/password credentials. `pulse dashboard` opens through a one-time local login URL.
-
-Then verify:
-
-```bash
+pulse up --open
 pulse status
 ```
 
-Daily use after the first setup:
+On first run, `pulse up` starts the server, creates a local project and API key,
+installs integrations for detected agents, and writes `~/.pulse/config.toml`.
+The `--open` flag opens the dashboard through a one-time local login URL.
+
+For an existing shared Pulse server, install the CLI and connect instead:
 
 ```bash
-pulse up
-pulse dashboard
-pulse status
-```
-
-#### Remote/shared Pulse
-
-Use this when a Pulse instance already exists at a URL you can reach.
-
-```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.sh | sh
 pulse connect \
   --api-url https://pulse.example.com \
   --api-key pulse_sk_... \
   --project-id my-project
-```
-
-Then verify:
-
-```bash
 pulse status
 ```
 
-## Updating
+## Unified OTel view
 
-### Local/self-hosted Pulse
+Pulse stores spans once and derives the dashboard hierarchy from them:
 
-Re-run the server installer:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse-server
+```text
+Session
+  Trace (one SDK call or agent turn)
+    Span (one operation)
 ```
 
-This upgrades:
+The **Traces** and **Sessions** pages show SDK, Claude Code, Codex, OpenCode,
+and OpenClaw traffic together. Use the Source filter to narrow either view.
+Session lifecycle markers remain stored as spans but do not create empty traces
+or inflate session totals.
 
-- `pulse-server`
-- dashboard assets
-- `pulse` CLI
-
-It does not erase `~/.pulse`, so local trace data and config are preserved.
-
-### Remote/shared-instance users
-
-If you only need the CLI locally, re-run the CLI installer:
+## Update Pulse
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.sh | sh
+pulse update
+pulse restart        # local installs: restart a running server
+pulse install-hooks  # refresh detected agent integrations
+pulse status
 ```
 
-### 3) Advanced self-hosting modes
+For local mode, `pulse update` updates the server, dashboard, and CLI. For
+remote mode, it updates only the local CLI. Existing `~/.pulse` configuration
+and local data are preserved. See [CLI Reference](/docs/cli/#pulse-update) for
+non-interactive updates and update-check behavior.
 
-If you are operating `pulse-server` directly, choose `single` for local SQLite or `scale` for Postgres-backed higher-throughput ingest.
-
-See [Single vs Scale Modes](/docs/modes/) for the full environment and deployment guidance.
-
-Single mode example:
-
-```bash
-export PULSE_MODE=single
-export BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
-export ENCRYPTION_KEY="$(openssl rand -hex 32)"
-export BETTER_AUTH_URL='http://localhost:3000'
-```
-
-Scale mode example:
-
-```bash
-export PULSE_MODE=scale
-export DATABASE_URL='postgresql://pulse:pulse@localhost:5432/pulse'
-export BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
-export ENCRYPTION_KEY="$(openssl rand -hex 32)"
-export BETTER_AUTH_URL='http://localhost:3000'
-```
-
-## Install SDK
+## Add SDK tracing
 
 <Tabs>
   <TabItem label="TypeScript">

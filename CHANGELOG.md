@@ -4,9 +4,12 @@
 
 ### Document OTel Trace Model
 
-Date: 2026-07-07 CDT; Status: Completed; PR: TBD
+Date: 2026-07-25 CDT; Status: In Progress; PR: #5 https://github.com/EK-LABS-LLC/pulse-docs/pull/5
 Task: Update docs for the Session -> Trace -> Span architecture and OTLP HTTP JSON ingest.
-Added/Changed: REST API docs now make `POST /v1/traces` the canonical OTLP endpoint, sessions docs explain the hierarchy and naming attributes, and CLI/agent docs describe agent-turn traces with spans.
+Added/Changed: Quickstart, dashboard, sessions, SDK, CLI, and agent docs explain the unified source-aware Session -> Trace -> Span model.
+Added: Codex integration setup, event mapping, trust, update, and troubleshooting guidance.
+Changed: Setup leads with `pulse up --open`; updates lead with `pulse update`, restart, hook refresh, and status verification.
+Fixed/Removed: Removed deleted legacy trace endpoints and unsupported SDK naming options from the docs.
 
 ### Make Auth Simpler - Docs Site Local Flow
 

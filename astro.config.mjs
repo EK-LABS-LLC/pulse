@@ -42,6 +42,7 @@ export default defineConfig({
 					label: 'Integrations',
 					items: [
 						{ label: 'Claude Code', slug: 'docs/claude-code' },
+						{ label: 'Codex', slug: 'docs/codex' },
 						{ label: 'Opencode', slug: 'docs/opencode' },
 						{ label: 'OpenClaw', slug: 'docs/openclaw' },
 					],

@@ -1,6 +1,6 @@
 ---
 title: CLI Reference
-description: Install, configure, and operate Pulse CLI for Claude Code, Opencode, and OpenClaw integrations.
+description: Install, update, and operate Pulse for SDK and agent telemetry.
 ---
 
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
@@ -78,23 +78,29 @@ pulse status
 
 ## Updating
 
-### Local managed Pulse
-
-Re-run the `trace-service` installer:
+Use the built-in updater:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-service/main/scripts/install.sh | bash -s -- pulse-server
+pulse update
+pulse restart        # local mode, if the server was already running
+pulse install-hooks  # refresh agent integration files
+pulse status
 ```
 
-This updates `pulse-server`, dashboard assets, and the `pulse` CLI while preserving `~/.pulse` data.
+Local mode updates `pulse-server`, dashboard assets, and the CLI. Remote mode
+updates only the local CLI. Updates preserve `~/.pulse` configuration and local
+data.
 
-### Remote/shared Pulse users
-
-If you only use the CLI locally, re-run the CLI installer:
+For automation, skip the confirmation prompt:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.sh | sh
+pulse update --yes
 ```
+
+`pulse up`, `pulse restart`, and `pulse dashboard` also check for newer
+releases in interactive terminals. A declined version is not offered again
+unless a newer version is published. Set `PULSE_SKIP_UPDATE_CHECK=1` to disable
+these startup checks.
 
 ## Command reference
 
@@ -106,6 +112,7 @@ curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/trace-cli/main/install.
 | `pulse restart` | Restart the managed local Pulse server |
 | `pulse logs` | Show or follow managed local server logs |
 | `pulse dashboard` | Open the current Pulse dashboard URL |
+| `pulse update` | Update the local CLI and, in local mode, the server/dashboard |
 | `pulse init` | Deprecated alias for `pulse connect` |
 | `pulse connect` | Configure a remote Pulse instance and install hooks |
 | `pulse install-hooks` | Install Pulse hooks without changing config (requires existing config) |
@@ -198,6 +205,19 @@ pulse dashboard --no-open
 ```
 
 In local mode, this creates a one-time local login URL and opens the dashboard served by `pulse-server`. In remote mode, it opens the configured remote Pulse URL.
+
+### `pulse update`
+
+```bash
+pulse update
+
+# Non-interactive
+pulse update --yes
+```
+
+The updater compares installed versions with the latest GitHub releases. Local
+mode updates the server, bundled dashboard, and CLI; remote mode updates only
+the CLI. Restart a running local server with `pulse restart`.
 
 ### `pulse init`
 
@@ -326,7 +346,8 @@ Pulse session
     user prompt, assistant, tool, subagent, and stop spans
 ```
 
-Lifecycle-only events such as standalone session start/end events are grouped into an `agent.session_lifecycle` trace.
+Lifecycle-only session start/end events are stored as spans but excluded from
+the Traces list and session trace totals.
 
 Pulse integrations emit these normalized event types:
 
@@ -369,7 +390,8 @@ Additional fields such as `tool_response`, `error`, `model`, `agent_name`, and `
 
 | Integration | Detection path | Pulse-managed files |
 | --- | --- | --- |
-| Claude Code | `~/.claude/settings.json` or `~/.claude/settings.local.json` | `hooks` entries in `settings.json` or `settings.local.json` |
+| Claude Code | `~/.claude/` | Pulse entries in `~/.claude/settings.json` |
+| Codex | `~/.codex/` | Pulse entries in `~/.codex/hooks.json` |
 | Opencode | `~/.config/opencode/` | `~/.config/opencode/plugin/pulse-plugin.ts` |
 | OpenClaw | `~/.openclaw/` | `~/.openclaw/hooks/pulse-hook/` |
 
@@ -407,7 +429,8 @@ pulse logs --follow
 
 Pulse detection paths:
 
-- Claude Code: `~/.claude/settings.json` or `~/.claude/settings.local.json` (preferred)
+- Claude Code: `~/.claude/`
+- Codex: `~/.codex/`
 - Opencode: `~/.config/opencode/`
 - OpenClaw: `~/.openclaw/`
 
@@ -433,7 +456,7 @@ pulse connect
 ## Architecture
 
 ```text
-Claude Code hooks / Opencode plugin / OpenClaw hook
+Claude Code or Codex hooks / OpenCode plugin / OpenClaw hook
           -> pulse emit <event_type>
           -> normalize payload into OTLP trace/span payload
           -> POST /v1/traces (2s timeout)
@@ -474,6 +497,7 @@ make e2e-opencode-tools
 
 <CardGrid>
   <LinkCard title="Claude Code" href="/docs/claude-code/">Hook mapping and behavior.</LinkCard>
+  <LinkCard title="Codex" href="/docs/codex/">Hook mapping and trust setup.</LinkCard>
   <LinkCard title="Opencode" href="/docs/opencode/">Plugin path and event mapping.</LinkCard>
   <LinkCard title="OpenClaw" href="/docs/openclaw/">Hook directory and event mapping.</LinkCard>
 </CardGrid>

@@ -16,31 +16,15 @@ Requires a running Pulse trace service and a local Pulse CLI setup.
 1. Configure Pulse.
 
 ```bash
-pulse up
+pulse up --open
 # or: pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
 ```
 
-2. Open the local dashboard if you are using local mode.
+First-time local setup installs integrations for detected agents. To install or
+refresh the plugin later:
 
 ```bash
-pulse dashboard
-```
-
-3. Connect Opencode hooks.
-
-```bash
-# If already connected to a server:
 pulse install-hooks
-
-# If not yet connected:
-pulse connect
-```
-
-If your CLI prompts for an integration target, choose `Opencode`.
-
-4. Verify installation.
-
-```bash
 pulse status
 ```
 
@@ -81,7 +65,10 @@ Safe to re-run:
 
 ## Trace and span fields
 
-Opencode events are emitted as OTLP spans. User prompt events start an `agent.turn` trace; assistant and tool events attach to that trace when possible.
+Opencode events are emitted as OTLP spans. User prompt events start an
+`agent.turn` trace; assistant and tool events attach to that trace when
+possible. Session start/end lifecycle spans remain queryable but do not appear
+as traces or increase session trace totals.
 
 | Field | Description |
 | --- | --- |
@@ -101,12 +88,12 @@ Opencode events are emitted as OTLP spans. User prompt events start an `agent.tu
 
 ## Auto-update behavior
 
-When running `pulse connect` or `pulse status`, Pulse can detect if the installed plugin is stale compared to the version bundled in the CLI binary.
-
-If stale, run:
+After updating Pulse, refresh the bundled plugin and verify it:
 
 ```bash
-pulse connect
+pulse update
+pulse install-hooks
+pulse status
 ```
 
 ## Debugging

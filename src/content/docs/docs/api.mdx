@@ -37,7 +37,7 @@ GET /health
 | --- | --- |
 | Method | `POST` |
 | Body | OTLP JSON object with `resourceSpans` |
-| Response | `202 Accepted` |
+| Response | `200 OK`; `partialSuccess` is returned when individual spans are rejected |
 
 ```bash
 curl -X POST https://your-pulse/v1/traces \
@@ -75,27 +75,16 @@ curl -X POST https://your-pulse/v1/traces \
 
 </section>
 
-<section id="post-v1-traces-async">
-  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/traces/async</code></h2>
-  Legacy SDK trace adapter. Existing clients can still send the old JSON trace array during the migration window; the server converts each item into one OTel trace with one provider-call span.
-
-</section>
-
-<section id="post-v1-traces-batch">
-  <h2 class="endpoint-heading"><MethodBadge method="POST" /> <code>/v1/traces/batch</code></h2>
-  Legacy synchronous trace adapter. Prefer `POST /v1/traces` for new integrations.
-
-</section>
-
 <section id="get-v1-traces">
   <h2 class="endpoint-heading"><MethodBadge method="GET" /> <code>/v1/traces</code></h2>
-  Query trace summaries for the authenticated project. Compatibility fields are returned for older clients, but results are derived from OTel spans and trace summaries.
+  Query span-derived trace summaries for the authenticated project.
 
 **Query parameters**
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `session_id` | `string` | Filter by session ID. |
+| `source` | `string` | Filter by `sdk`, `claude_code`, `codex`, `opencode`, or `openclaw`. |
 | `provider` | `string` | Filter by provider (`openai`, `anthropic`, `openrouter`). |
 | `model` | `string` | Filter by model name. |
 | `status` | `string` | Filter by status (`success` or `error`). |
@@ -105,10 +94,10 @@ curl -X POST https://your-pulse/v1/traces \
 | `offset` | `number` | Pagination offset. |
 
 ```bash
-GET /v1/traces?provider=openai&status=error&limit=20
+GET /v1/traces?source=claude_code&status=error&limit=20
 ```
 
-Returns `{ traces: [...], total: number }`.
+Returns `{ traces: [...], total: number, limit: number, offset: number }`.
 
 </section>
 
@@ -198,43 +187,19 @@ Returns `{ sessionId: string, spans: [...] }` or `404`.
 
 </section>
 
-## Trace object
+## Data model
 
-Pulse stores telemetry as:
+Spans are the canonical records. Traces and sessions are derived at read time:
 
 ```text
-Pulse session
-  OTel trace
-    OTel span
+Session
+  Trace (one SDK call or agent turn)
+    Span (one operation)
 ```
 
-`trace_summaries` are derived from spans sharing the same `traceId`; spans remain the canonical telemetry records.
-
-## Legacy trace object
-
-The legacy trace shape is still accepted by `/v1/traces/async` and `/v1/traces/batch` during the migration window. The server converts it into OTel spans internally.
-
-```json
-{
-  "trace_id": "uuid",
-  "timestamp": "ISO 8601",
-  "provider": "openai | anthropic | openrouter",
-  "model_requested": "gpt-4o",
-  "model_used": "gpt-4o-2024-11-20",
-  "provider_request_id": "...",
-  "request_body": { "...": "..." },
-  "response_body": { "...": "..." },
-  "input_tokens": 50,
-  "output_tokens": 100,
-  "output_text": "Hello! How can I...",
-  "finish_reason": "stop",
-  "status": "success",
-  "error": null,
-  "cost_cents": 0.18,
-  "latency_ms": 1234,
-  "session_id": "conv-abc-123",
-  "metadata": { "userId": "user-123" }
-}
-```
+SDK summaries include provider, model, token, and cost fields. Agent summaries
+include source, span count, tool-call count, and edited-file count. Both use the
+same trace detail response and span tree. Standalone `session_start` and
+`session_end` spans remain queryable from `/v1/spans` but do not form traces.
 
 </ApiRouteShell>

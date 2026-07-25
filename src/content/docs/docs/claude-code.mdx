@@ -18,36 +18,26 @@ Requires:
 1. Configure Pulse.
 
 ```bash
-pulse up
+pulse up --open
 # or: pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
 ```
 
-2. Open the local dashboard if you are using local mode.
+First-time local setup installs hooks for detected agents. To install or refresh
+them later:
 
 ```bash
-pulse dashboard
-```
-
-3. Install hooks.
-
-```bash
-# If already connected to a server:
 pulse install-hooks
-
-# If not yet connected:
-pulse connect
-```
-
-4. Verify status.
-
-```bash
 pulse status
 ```
 
 ## Hooks installed
 
-Detection path: `~/.claude/settings.json` or `~/.claude/settings.local.json` (preferred)  
-Modified key: `hooks` (Pulse-only entries; other hooks are preserved)
+Detection path: `~/.claude/`
+
+Modified file: `~/.claude/settings.json` (`hooks` key)
+
+Pulse preserves unrelated hooks and migrates older Pulse entries out of
+`settings.local.json`.
 
 `pulse connect` installs 10 async hooks:
 
@@ -76,11 +66,14 @@ Pulse session
     user prompt, assistant, tool, subagent, and stop spans
 ```
 
+Standalone session start/end spans are retained as lifecycle telemetry but do
+not appear as traces or increase session trace totals.
+
 Each OTLP span includes Pulse attributes for:
 
 | Field | Description |
 | --- | --- |
-| `traceId` | OTel trace identifier for the agent turn or lifecycle trace |
+| `traceId` | OTel trace identifier |
 | `spanId` | OTel span identifier |
 | `pulse.session.id` | Claude Code session identifier |
 | `pulse.session.name` | Human-readable session name when available |
@@ -107,6 +100,7 @@ Each OTLP span includes Pulse attributes for:
 | `pulse install-hooks` | Install Claude Code hooks without changing config |
 | `pulse disconnect` | Remove Pulse hooks from Claude Code |
 | `pulse status` | Show config, connectivity, and hook status |
+| `pulse update` | Update Pulse; follow with `pulse install-hooks` to refresh hooks |
 | `pulse emit <type>` | Emit an OTLP span inside a trace (used by hooks) |
 
 ## CI / non-interactive setup
@@ -122,7 +116,6 @@ pulse connect \
 
 ```bash
 cat ~/.claude/settings.json | jq '.hooks'
-# or: cat ~/.claude/settings.local.json | jq '.hooks'
 ```
 
 ## Debugging
@@ -141,8 +134,8 @@ export PULSE_DEBUG_LOG=/path/to/file
 
 ## Viewing in dashboard
 
-- Open **Sessions** to view Claude Code sessions.
+- Open **Sessions** and filter Source to **Claude Code** when needed.
 - Click a session to inspect trace summaries.
-- Click a trace to inspect the span timeline with full input, output, error, and metadata payloads.
+- Click a trace to inspect its span tree, tool data, errors, and metadata.
 
 For CLI-wide troubleshooting, see [CLI Reference](/docs/cli/).

@@ -16,7 +16,8 @@ one OTel trace
   one provider-call span
 ```
 
-The span includes provider, model, token, cost, latency, status, session, trace name, prompt preview, and metadata attributes.
+The span includes provider, model, token, cost, latency, status, session, and
+metadata attributes.
 
 <Tabs>
   <TabItem label="TypeScript">
@@ -60,8 +61,7 @@ const client = observe(
   Provider.OpenAI,
   {
     sessionId: "conv-abc-123",
-    sessionName: "Support conversation",
-    traceName: "Answer customer question",
+    metadata: { feature: "support" },
   }
 );
 

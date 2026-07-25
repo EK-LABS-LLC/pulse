@@ -1,6 +1,6 @@
 ---
 title: OpenClaw
-description: Capture OpenClaw sessions and tool events in Pulse for timeline and cost analysis.
+description: Capture OpenClaw sessions and events in the unified Pulse timeline.
 ---
 
 ## Overview
@@ -16,31 +16,15 @@ Requires a running Pulse trace service and a configured Pulse CLI.
 1. Configure Pulse.
 
 ```bash
-pulse up
+pulse up --open
 # or: pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
 ```
 
-2. Open the local dashboard if you are using local mode.
+First-time local setup installs integrations for detected agents. To install or
+refresh the hook later:
 
 ```bash
-pulse dashboard
-```
-
-3. Connect OpenClaw hooks.
-
-```bash
-# If already connected to a server:
 pulse install-hooks
-
-# If not yet connected:
-pulse connect
-```
-
-If prompted to choose an integration, select `OpenClaw`.
-
-4. Confirm integration health.
-
-```bash
 pulse status
 ```
 
@@ -66,6 +50,7 @@ Pulse installs:
 | `pulse install-hooks` | Install or refresh OpenClaw hooks without changing config |
 | `pulse disconnect` | Remove the Pulse-managed OpenClaw hook package |
 | `pulse status` | Show config, connectivity, and hook status |
+| `pulse update` | Update Pulse; follow with `pulse install-hooks` to refresh the hook |
 
 ## Events captured
 
@@ -79,7 +64,9 @@ Pulse installs:
 
 ## Trace and span fields
 
-OpenClaw events are emitted as OTLP spans grouped by Pulse session. User prompt events start an `agent.turn` trace; lifecycle-only events use `agent.session_lifecycle`.
+OpenClaw events are emitted as OTLP spans grouped by Pulse session. User prompt
+events start an `agent.turn` trace. Lifecycle-only spans remain queryable but do
+not appear as traces or increase session trace totals.
 
 | Field | Description |
 | --- | --- |

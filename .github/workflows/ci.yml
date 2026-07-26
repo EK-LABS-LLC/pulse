@@ -90,6 +90,7 @@ jobs:
               - 'apps/server/**'
               - 'apps/dashboard/**'
               - 'packages/api-contracts/**'
+              - 'sdks/typescript/package.json'
               - 'package.json'
               - 'bun.lock'
               - '.dockerignore'
@@ -458,7 +459,29 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.release_tooling == 'true'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - run: bash -n tooling/release/*.sh
+      - name: Verify tag validation
+        run: |
+          set -euo pipefail
+          git tag ci-v0.0.1 origin/main
+          git tag ci-v0.0.2 origin/main
+          trap 'git tag -d ci-v0.0.1 ci-v0.0.2 >/dev/null 2>&1 || true' EXIT
+          bash tooling/release/validate-tag.sh ci-v0.0.2 ci- 0.0.2
+          if bash tooling/release/validate-tag.sh ci-v0.0.2 ci- 0.0.1; then
+            exit 1
+          fi
+          if bash tooling/release/validate-tag.sh ci-v0.0.1 ci- 0.0.1; then
+            exit 1
+          fi
+      - name: Verify legacy release bridges
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: EK-LABS-LLC/pulse
+        run: |
+          bash tooling/release/require-legacy-bridge.sh service 0.2.15
+          bash tooling/release/require-legacy-bridge.sh cli 0.2.16
 
   required:
     name: required

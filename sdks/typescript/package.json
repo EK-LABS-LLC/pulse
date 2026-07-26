@@ -1,0 +1,47 @@
+{
+  "name": "@eklabs/pulse-sdk",
+  "version": "0.2.9",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EK-LABS-LLC/trace-sdk-ts"
+  },
+  "homepage": "https://github.com/EK-LABS-LLC/trace-sdk-ts",
+  "bugs": {
+    "url": "https://github.com/EK-LABS-LLC/trace-sdk-ts/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "rm -rf dist && bun build src/index.ts --outfile dist/index.js --target node --format esm && bun run build:types",
+    "build:types": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "format": "bunx prettier --config ../.prettierrc --ignore-path ../.prettierignore --write \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
+    "create-api-key": "bun run scripts/create-api-key.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
+    "openai": "^6.16.0"
+  }
+}

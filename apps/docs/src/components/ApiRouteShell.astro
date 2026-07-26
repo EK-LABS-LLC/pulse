@@ -1,0 +1,78 @@
+---
+import MethodBadge from "./MethodBadge.astro";
+
+const routeGroups = [
+  {
+    label: "System",
+    routes: [{ id: "get-health", method: "GET", path: "/health" }],
+  },
+  {
+    label: "Ingestion",
+    routes: [
+      { id: "post-v1-traces-async", method: "POST", path: "/v1/traces/async" },
+      { id: "post-v1-traces-batch", method: "POST", path: "/v1/traces/batch" },
+      { id: "post-v1-spans-async", method: "POST", path: "/v1/spans/async" },
+      { id: "post-v1-spans-batch", method: "POST", path: "/v1/spans/batch" },
+    ],
+  },
+  {
+    label: "Traces",
+    routes: [
+      { id: "get-v1-traces", method: "GET", path: "/v1/traces" },
+      { id: "get-v1-traces-id", method: "GET", path: "/v1/traces/:id" },
+      { id: "get-v1-sessions-id", method: "GET", path: "/v1/sessions/:id" },
+      { id: "get-v1-analytics", method: "GET", path: "/v1/analytics" },
+    ],
+  },
+  {
+    label: "Spans",
+    routes: [
+      { id: "get-v1-spans", method: "GET", path: "/v1/spans" },
+      { id: "get-v1-spans-id", method: "GET", path: "/v1/spans/:id" },
+      {
+        id: "get-v1-sessions-id-spans",
+        method: "GET",
+        path: "/v1/sessions/:id/spans",
+      },
+      { id: "get-v1-analytics-spans", method: "GET", path: "/v1/analytics/spans" },
+    ],
+  },
+];
+
+const allRoutes = routeGroups.flatMap((group) => group.routes);
+---
+
+<div class="api-shell">
+  <div>
+    <div class="api-mobile-routes">
+      {
+        allRoutes.map((route) => (
+          <a href={`#${route.id}`}>
+            <MethodBadge method={route.method} />
+            <span class="path">{route.path}</span>
+          </a>
+        ))
+      }
+    </div>
+    <slot />
+  </div>
+
+  <aside class="api-endpoint-sidebar">
+    <nav>
+      <p class="label">Endpoints</p>
+      {
+        routeGroups.map((group) => (
+          <div class="group">
+            <p class="group-title">{group.label}</p>
+            {group.routes.map((route) => (
+              <a href={`#${route.id}`}>
+                <MethodBadge method={route.method} />
+                <span class="path">{route.path}</span>
+              </a>
+            ))}
+          </div>
+        ))
+      }
+    </nav>
+  </aside>
+</div>

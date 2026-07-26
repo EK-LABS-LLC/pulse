@@ -1,0 +1,111 @@
+---
+title: Dashboard UI
+description: Serve the Pulse dashboard from pulse-server with same-origin auth and API routing.
+---
+
+Pulse no longer runs the dashboard as a separate service. `pulse-server` serves the built dashboard UI from `/` and exposes the API and auth routes from the same origin.
+
+## Recommended model: same origin
+
+Use one browser origin for everything:
+
+- `/` -> Pulse dashboard UI
+- `/api/auth/*` -> Better Auth session routes
+- `/dashboard/api/*` -> dashboard control-plane routes
+- `/v1/*` -> ingest and query APIs
+- `/health` -> service health
+
+Example:
+
+```text
+https://pulse.example.com/
+```
+
+This is the default and recommended deployment model because it avoids most cookie and CORS issues.
+
+## Local usage
+
+For a managed local install:
+
+```bash
+pulse up --open
+```
+
+On first run, `pulse up` bootstraps local config without storing dashboard
+email/password credentials. The `--open` flag uses a one-time login URL.
+
+## Unified traces and sessions
+
+The dashboard derives both views from stored OTel spans:
+
+- **Traces** combines SDK calls and agent turns with a Source filter.
+- **Sessions** groups every trace sharing a session ID, including mixed-source
+  sessions.
+- **Trace detail** renders one span tree for every source. SDK traces also show
+  provider, model, token, cost, request, and response data.
+
+Session start/end lifecycle spans remain available as telemetry but do not
+create empty traces or inflate session totals.
+
+## Self-hosted server configuration
+
+Set `BETTER_AUTH_URL` to the public origin of your Pulse server:
+
+```bash
+export BETTER_AUTH_URL='https://pulse.example.com'
+```
+
+Optional:
+
+```bash
+export FRONTEND_URL='https://pulse.example.com'
+```
+
+`FRONTEND_URL` is only needed when you intentionally run the frontend on a different origin during frontend development.
+
+## Docker
+
+Run the server container directly. It already includes the built dashboard assets:
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e BETTER_AUTH_SECRET="$(openssl rand -hex 32)" \
+  -e ENCRYPTION_KEY="$(openssl rand -hex 32)" \
+  -e BETTER_AUTH_URL='http://localhost:3000' \
+  ghcr.io/ek-labs-llc/pulse-server:<tag>
+```
+
+Then open:
+
+```text
+http://localhost:3000/
+```
+
+## Optional split-origin frontend development
+
+For normal product deployments, do not split the frontend and API.
+
+If you are actively developing the frontend separately, set:
+
+```bash
+export BETTER_AUTH_URL='https://api.example.com'
+export FRONTEND_URL='https://app.example.com'
+```
+
+In that development-only setup:
+
+- the server still owns auth and API routes
+- the standalone frontend points API requests back to the server
+- production should return to the same-origin model
+
+## Dashboard asset discovery
+
+By default, `pulse-server` serves built dashboard assets from its bundled install paths.
+
+Advanced override:
+
+```bash
+export DASHBOARD_DIST_DIR='/path/to/dashboard/dist'
+```
+
+This is mainly useful for development or custom packaging flows.

@@ -1,0 +1,82 @@
+---
+title: Release Notes
+description: Pulse releases, behavior changes, and upgrade instructions.
+---
+
+## Unreleased — unified OTel traces and sessions
+
+- Traces and sessions are derived from OTel spans for SDK, Claude Code, Codex,
+  OpenCode, and OpenClaw traffic.
+- The dashboard uses one source-aware Traces view, one Sessions view, and one
+  span-tree detail flow.
+- Legacy direct-JSON trace endpoints and legacy trace/session tables are
+  removed. `POST /v1/traces` with OTLP HTTP JSON is the canonical ingest path.
+
+Update a local installation:
+
+```bash
+pulse update --yes
+pulse restart
+pulse install-hooks
+pulse status
+```
+
+Updates preserve `~/.pulse` configuration and local telemetry.
+
+## v0.2.9 (CLI Release)
+
+- Date: April 29, 2026
+- Focus: hooks installation
+
+Changes:
+
+- New command `pulse install-hooks` - Installs Claude Code hooks without changing trace URL/config
+  - Validates pulse config exists and has valid values (api_url, api_key, project_id)
+  - Prompts to run `pulse connect` if config is missing or incomplete
+  - Installs hooks for all detected tools (Claude Code, OpenCode, OpenClaw)
+- Hook detection covered both Claude settings files at this release. Current
+  versions install to `.claude/settings.json` and migrate older Pulse entries
+  out of `.claude/settings.local.json`.
+- Refactored shared hook installation logic from `connect.rs` to new `install_hooks.rs` module
+  - Both `pulse connect` and `pulse setup` now use the same `install_hooks()` function
+  - Eliminated ~70 lines of duplicated code
+
+Usage:
+
+```bash
+# Install hooks without changing config (new)
+pulse install-hooks
+
+# Connect and install hooks (existing, unchanged)
+pulse connect
+
+# Setup and install hooks (existing, unchanged)
+pulse setup
+```
+
+## v0.2.7 (Server and CLI Release)
+
+- Date: April 29, 2026
+- Focus: developer experience
+
+Changes:
+
+- `pulse-server` now serves the dashboard directly
+- `pulse up`, `pulse down`, `pulse restart`, and `pulse logs` now manage the local server lifecycle
+- `pulse connect` is the main path for connecting to an already running shared Pulse instance
+- local install and startup docs now follow the simpler `pulse up` -> `pulse dashboard` flow
+- upgrade docs now explain that reinstalling preserves `~/.pulse` data, including local traces and config
+
+Upgrade:
+
+- Local/self-hosted Pulse:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/pulse/main/apps/server/scripts/install.sh | bash -s -- pulse-server
+```
+
+- Remote/shared-instance CLI users:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/pulse/main/crates/pulse-cli/install.sh | sh
+```

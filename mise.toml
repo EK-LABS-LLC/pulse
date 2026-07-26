@@ -15,6 +15,10 @@ run = "just setup"
 description = "Build and lint the dashboard"
 run = "just dashboard-check"
 
+[tasks."docs:check"]
+description = "Build the documentation site"
+run = "just docs-check"
+
 [tasks."server:test"]
 description = "Run the server single-mode end-to-end suite"
 run = "just server-test-e2e"

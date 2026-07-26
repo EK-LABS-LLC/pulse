@@ -1,0 +1,10 @@
+---
+interface Props {
+  method: "GET" | "POST";
+}
+
+const { method } = Astro.props;
+const className = method === "GET" ? "method-get" : "method-post";
+---
+
+<span class={`method-badge ${className}`}>{method}</span>

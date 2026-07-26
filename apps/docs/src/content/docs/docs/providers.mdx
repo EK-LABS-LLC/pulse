@@ -1,0 +1,210 @@
+---
+title: Providers
+description: How to use observe() with each supported provider.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## observe(client, provider, options?)
+
+Wraps an LLM client and returns a traced version. The returned client keeps the same API as the original.
+
+Each observed LLM call is exported to Pulse as OTLP HTTP JSON:
+
+```text
+one OTel trace
+  one provider-call span
+```
+
+The span includes provider, model, token, cost, latency, status, session, and
+metadata attributes.
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+const traced = observe(client, Provider.OpenAI);
+const traced = observe(client, Provider.Anthropic);
+const traced = observe(client, Provider.OpenRouter);
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+traced = observe(client, Provider.OPENAI)
+traced = observe(client, Provider.ANTHROPIC)
+traced = observe(client, Provider.OPENROUTER)
+```
+
+  </TabItem>
+</Tabs>
+
+What gets patched:
+
+- OpenAI and OpenRouter patch `client.chat.completions.create`.
+- Anthropic patches `client.messages.create`.
+
+All other client methods remain untouched.
+
+## OpenAI
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+import OpenAI from "openai";
+import { observe, Provider } from "@eklabs/pulse-sdk";
+
+const client = observe(
+  new OpenAI({ apiKey: "sk-..." }),
+  Provider.OpenAI,
+  {
+    sessionId: "conv-abc-123",
+    metadata: { feature: "support" },
+  }
+);
+
+const res = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Hello" }],
+});
+
+const stream = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Hello" }],
+  stream: true,
+});
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+from openai import OpenAI
+from pulse_sdk import observe, Provider
+
+client = observe(
+  OpenAI(api_key="sk-..."),
+  Provider.OPENAI
+)
+
+res = client.chat.completions.create(
+  model="gpt-4o",
+  messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+  </TabItem>
+</Tabs>
+
+Both streaming and non-streaming calls are traced. For streams, the trace is recorded once the stream completes.
+
+## Anthropic
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+import Anthropic from "@anthropic-ai/sdk";
+import { observe, Provider } from "@eklabs/pulse-sdk";
+
+const client = observe(
+  new Anthropic({ apiKey: "sk-ant-..." }),
+  Provider.Anthropic
+);
+
+const res = await client.messages.create({
+  model: "claude-3-5-sonnet-20241022",
+  max_tokens: 1024,
+  messages: [{ role: "user", content: "Hello" }],
+});
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+from anthropic import Anthropic
+from pulse_sdk import observe, Provider
+
+client = observe(
+  Anthropic(api_key="sk-ant-..."),
+  Provider.ANTHROPIC
+)
+
+res = client.messages.create(
+  model="claude-3-5-sonnet-20241022",
+  max_tokens=1024,
+  messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+  </TabItem>
+</Tabs>
+
+Anthropic stop reasons are normalized:
+`end_turn -> stop`, `max_tokens -> length`, `stop_sequence -> stop`, `tool_use -> tool_calls`.
+
+## OpenRouter
+
+OpenRouter uses the OpenAI client library. Pass `Provider.OpenRouter` so Pulse stores the correct provider and OpenRouter cost fields.
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+import OpenAI from "openai";
+import { observe, Provider } from "@eklabs/pulse-sdk";
+
+const client = observe(
+  new OpenAI({
+    apiKey: "sk-or-...",
+    baseURL: "https://openrouter.ai/api/v1",
+  }),
+  Provider.OpenRouter
+);
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+from openai import OpenAI
+from pulse_sdk import observe, Provider
+
+client = observe(
+  OpenAI(
+    api_key="sk-or-...",
+    base_url="https://openrouter.ai/api/v1",
+  ),
+  Provider.OPENROUTER
+)
+```
+
+  </TabItem>
+</Tabs>
+
+When OpenRouter includes a `cost` field in the response, Pulse uses that value directly.
+
+## Pricing
+
+The SDK calculates cost automatically for known models.
+
+| Model | Input | Output |
+| --- | --- | --- |
+| `gpt-4o` | `$2.50 / 1M` | `$10.00 / 1M` |
+| `gpt-4o-mini` | `$0.15 / 1M` | `$0.60 / 1M` |
+| `gpt-4-turbo` | `$10.00 / 1M` | `$30.00 / 1M` |
+| `gpt-3.5-turbo` | `$0.50 / 1M` | `$1.50 / 1M` |
+| `claude-3-5-sonnet-20241022` | `$3.00 / 1M` | `$15.00 / 1M` |
+| `claude-3-5-haiku-20241022` | `$0.80 / 1M` | `$4.00 / 1M` |
+| `claude-3-opus-20240229` | `$15.00 / 1M` | `$75.00 / 1M` |
+
+Model aliases such as `gpt-4o-2024-11-20` resolve to base model pricing. Unknown models report `null` cost.
+
+## Error handling
+
+If an LLM call throws, the SDK captures an error trace and re-throws the original error.
+
+If trace sending fails (network error or service unavailable), the SDK logs a warning and continues. Tracing never breaks application behavior.

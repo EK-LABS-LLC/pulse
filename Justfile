@@ -11,7 +11,7 @@ setup:
 
 # Run every credential-free verification suite
 [group("workspace")]
-check: dashboard-check server-test-all cli-check sdk-ts-check sdk-py-check contracts-check tests-integrity
+check: dashboard-check docs-check server-test-all cli-check sdk-ts-check sdk-py-check contracts-check tests-integrity
 
 # Validate shared OTEL attributes
 [group("workspace")]
@@ -42,6 +42,24 @@ dashboard-check:
 [working-directory("apps/dashboard")]
 dashboard-format:
     bun run format
+
+# Start the documentation site
+[group("docs")]
+[working-directory("apps/docs")]
+docs-dev:
+    bun run dev
+
+# Build the documentation site
+[group("docs")]
+[working-directory("apps/docs")]
+docs-check:
+    bun run build
+
+# Preview the built documentation site
+[group("docs")]
+[working-directory("apps/docs")]
+docs-preview:
+    bun run preview
 
 # Install server dependencies
 [group("server")]

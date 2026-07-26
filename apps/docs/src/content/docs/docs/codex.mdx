@@ -1,0 +1,63 @@
+---
+title: Codex
+description: Capture Codex turns, tools, permissions, and subagents in Pulse.
+---
+
+## Quick start
+
+```bash
+pulse up --open
+# or: pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
+
+pulse install-hooks
+pulse status
+```
+
+Pulse writes its entries to `~/.codex/hooks.json` and preserves unrelated
+hooks. In Codex, run `/hooks` once to review and trust newly installed hooks.
+
+## Events captured
+
+| Codex event | Pulse event |
+| --- | --- |
+| `SessionStart` | `session_start` |
+| `UserPromptSubmit` | `user_prompt_submit` |
+| `PreToolUse` | `pre_tool_use` |
+| `PermissionRequest` | `permission_request` |
+| `PostToolUse` | `post_tool_use` |
+| `SubagentStart` | `subagent_start` |
+| `SubagentStop` | `subagent_stop` |
+| `Stop` | `stop` |
+
+Events are normalized into OTLP spans with `source: "codex"`:
+
+```text
+Session
+  agent.turn trace
+    prompt, tool, permission, subagent, and stop spans
+```
+
+Session lifecycle spans remain queryable but do not appear as traces or inflate
+session totals.
+
+## View and maintain
+
+Open **Sessions** or **Traces** and filter Source to **Codex**. Select a trace to
+inspect its span tree.
+
+After updating Pulse, refresh and verify the hooks:
+
+```bash
+pulse update
+pulse install-hooks
+pulse status
+```
+
+For raw integration diagnostics:
+
+```bash
+export PULSE_DEBUG=1
+```
+
+Debug events are written to `~/.pulse/debug.log`. See [CLI Reference](/docs/cli/)
+for configuration and troubleshooting.

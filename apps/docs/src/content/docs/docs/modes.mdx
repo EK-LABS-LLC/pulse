@@ -1,0 +1,65 @@
+---
+title: Single vs Scale Modes
+description: Choose the right Pulse server mode for your deployment.
+---
+
+Pulse ships one server binary (`pulse-server`) with two runtime modes:
+
+- `single` mode for the simplest local/self-hosted setup.
+- `scale` mode for Postgres-backed, higher-throughput deployments.
+
+## At a glance
+
+| Topic | Single mode (`PULSE_MODE=single`) | Scale mode (`PULSE_MODE=scale`) |
+| --- | --- | --- |
+| Database | Local SQLite file on one host | Postgres (`DATABASE_URL`) |
+| Runtime shape | One process can run API + listeners | One process or split API/listener processes |
+| Best for | Local dev, smaller workloads, simpler ops | Higher throughput, multi-node deployments |
+| Infra needs | No external DB required | Managed/self-hosted Postgres required |
+| Operational complexity | Lowest | Higher (DB ops, connection pools, scaling) |
+| Horizontal scaling | Limited | Designed for scale-out with shared Postgres |
+
+## When to choose single mode
+
+- You want the fastest path to first traces locally.
+- You are running one node and keeping operations simple.
+- You do not need shared database state across multiple service instances.
+
+## When to choose scale mode
+
+- You need higher sustained ingest throughput.
+- You want to run multiple Pulse service instances against one shared database.
+- You already operate Postgres (or can adopt it) in your environment.
+
+## Environment differences
+
+Single mode:
+
+```bash
+export PULSE_MODE=single
+export BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
+export ENCRYPTION_KEY="$(openssl rand -hex 32)"
+export BETTER_AUTH_URL='http://localhost:3000'
+```
+
+Scale mode:
+
+```bash
+export PULSE_MODE=scale
+export DATABASE_URL='postgresql://pulse:pulse@localhost:5432/pulse'
+export BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
+export ENCRYPTION_KEY="$(openssl rand -hex 32)"
+export BETTER_AUTH_URL='http://localhost:3000'
+```
+
+## Migration path
+
+1. Start in single mode for development and early validation.
+2. Provision Postgres and set `DATABASE_URL`.
+3. Switch to `PULSE_MODE=scale`.
+4. Run scale migrations before starting:
+
+```bash
+bun run db:migrate:scale
+pulse-server
+```

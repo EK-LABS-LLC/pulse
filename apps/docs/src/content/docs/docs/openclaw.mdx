@@ -1,0 +1,101 @@
+---
+title: OpenClaw
+description: Capture OpenClaw sessions and events in the unified Pulse timeline.
+---
+
+## Overview
+
+Pulse installs an OpenClaw hook package that forwards OpenClaw events to `pulse emit`.
+
+All spans are tagged with `source: "openclaw"`.
+
+## Quick start
+
+Requires a running Pulse trace service and a configured Pulse CLI.
+
+1. Configure Pulse.
+
+```bash
+pulse up --open
+# or: pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
+```
+
+First-time local setup installs integrations for detected agents. To install or
+refresh the hook later:
+
+```bash
+pulse install-hooks
+pulse status
+```
+
+## Integration behavior
+
+- Detection path: `~/.openclaw/`
+- Installed hook path: `~/.openclaw/hooks/pulse-hook/`
+
+Pulse installs:
+
+- `HOOK.md` (hook metadata)
+- `handler.ts` (event handler)
+
+`pulse connect` only modifies Pulse's hook directory and does not alter other OpenClaw hooks.
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `pulse up` | Start/bootstrap the managed local Pulse server |
+| `pulse dashboard` | Open the local dashboard with one-time local login |
+| `pulse connect` | Install or refresh OpenClaw hooks, or configure a remote Pulse target when flags are provided |
+| `pulse install-hooks` | Install or refresh OpenClaw hooks without changing config |
+| `pulse disconnect` | Remove the Pulse-managed OpenClaw hook package |
+| `pulse status` | Show config, connectivity, and hook status |
+| `pulse update` | Update Pulse; follow with `pulse install-hooks` to refresh the hook |
+
+## Events captured
+
+| OpenClaw event | Pulse event | Notes |
+| --- | --- | --- |
+| `command:new` | `session_start` | New session created |
+| `command:stop` | `stop` | Session stopped |
+| `command:reset` | `session_end` | `reason="reset"` |
+| `message:received` | `user_prompt_submit` | Captures prompt text |
+| `message:sent` | `notification` | Agent notification/message |
+
+## Trace and span fields
+
+OpenClaw events are emitted as OTLP spans grouped by Pulse session. User prompt
+events start an `agent.turn` trace. Lifecycle-only spans remain queryable but do
+not appear as traces or increase session trace totals.
+
+| Field | Description |
+| --- | --- |
+| `traceId` | OTel trace identifier |
+| `spanId` | OTel span identifier |
+| `pulse.session.id` | OpenClaw session identifier |
+| `pulse.session.name` | Human-readable session name when available |
+| `source` | `openclaw` |
+| `kind` | Event category |
+| `event_type` | Concrete event name |
+| `status` | `success` or `error` |
+| `tool_name` | Tool name when applicable |
+| `tool_input` | Tool input payload |
+| `tool_response` | Tool output payload |
+| `error` | Error object for failed events |
+| `metadata` | Integration and environment metadata |
+
+## Debugging
+
+For setup validation:
+
+```bash
+export PULSE_DEBUG=1
+```
+
+After running OpenClaw, inspect status and logs:
+
+```bash
+pulse status
+```
+
+For CLI-wide troubleshooting, see [CLI Reference](/docs/cli/).

@@ -1,0 +1,504 @@
+---
+title: CLI Reference
+description: Install, update, and operate Pulse for SDK and agent telemetry.
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## What is Pulse CLI?
+
+Pulse CLI (`pulse`) captures AI-agent activity as structured spans and ships it to your Pulse server.
+
+It supports two workflows:
+
+- local managed Pulse: the CLI starts and manages `pulse-server` for you
+- remote/shared Pulse: the CLI connects to an already running Pulse instance
+
+## Install
+
+Recommended (installs both `pulse-server` and `pulse`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/pulse/main/apps/server/scripts/install.sh | bash -s -- pulse-server
+```
+
+CLI-only installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/pulse/main/crates/pulse-cli/install.sh | sh
+```
+
+From source:
+
+```bash
+git clone https://github.com/EK-LABS-LLC/pulse
+cd pulse
+mise install
+just cli-install
+```
+
+Re-running either installer upgrades in place. It replaces the installed binaries and keeps your existing `~/.pulse` config and local data.
+
+## Getting started
+
+### Local managed Pulse
+
+Use this when Pulse should run on your machine.
+
+```bash
+pulse up
+pulse dashboard
+pulse status
+```
+
+Daily use:
+
+- `pulse up` starts `pulse-server` in the background
+- `pulse dashboard` opens the local dashboard through a one-time local login URL
+- `pulse logs --follow` tails the managed server log
+- `pulse down` stops the managed server
+
+### Remote/shared Pulse
+
+Use this when a Pulse server already exists at a URL you can reach.
+
+```bash
+pulse connect \
+  --api-url https://pulse.example.com \
+  --api-key pulse_sk_... \
+  --project-id my-project
+```
+
+Then verify:
+
+```bash
+pulse status
+```
+
+`pulse connect` saves a remote config and installs hooks locally. It does not start a server.
+
+## Updating
+
+Use the built-in updater:
+
+```bash
+pulse update
+pulse restart        # local mode, if the server was already running
+pulse install-hooks  # refresh agent integration files
+pulse status
+```
+
+Local mode updates `pulse-server`, dashboard assets, and the CLI. Remote mode
+updates only the local CLI. Updates preserve `~/.pulse` configuration and local
+data.
+
+For automation, skip the confirmation prompt:
+
+```bash
+pulse update --yes
+```
+
+`pulse up`, `pulse restart`, and `pulse dashboard` also check for newer
+releases in interactive terminals. A declined version is not offered again
+unless a newer version is published. Set `PULSE_SKIP_UPDATE_CHECK=1` to disable
+these startup checks.
+
+## Command reference
+
+| Command | Description |
+| --- | --- |
+| `pulse setup` | Manually bootstrap a local or remote Pulse account/project and save config |
+| `pulse up` | Start the managed local Pulse server in the background |
+| `pulse down` | Stop the managed local Pulse server |
+| `pulse restart` | Restart the managed local Pulse server |
+| `pulse logs` | Show or follow managed local server logs |
+| `pulse dashboard` | Open the current Pulse dashboard URL |
+| `pulse update` | Update the local CLI and, in local mode, the server/dashboard |
+| `pulse init` | Deprecated alias for `pulse connect` |
+| `pulse connect` | Configure a remote Pulse instance and install hooks |
+| `pulse install-hooks` | Install Pulse hooks without changing config (requires existing config) |
+| `pulse disconnect` | Remove all Pulse hooks from all agents |
+| `pulse status` | Show mode, connectivity, server state, and hook status |
+| `pulse emit <type>` | Send a span (used by hooks, not by users) |
+
+### `pulse setup`
+
+Manual local bootstrap:
+
+```bash
+pulse setup --local
+```
+
+Fully non-interactive:
+
+```bash
+pulse setup \
+  --api-url http://localhost:3000 \
+  --name "Your Name" \
+  --email you@example.com \
+  --password "change-me" \
+  --project-name "My Project"
+```
+
+Remote account bootstrap against an existing server:
+
+```bash
+pulse setup --api-url https://pulse.example.com --no-start-server
+```
+
+Show the full API key in setup output:
+
+```bash
+pulse setup --local --show-api-key
+```
+
+For normal local use, `pulse up` can perform first-time bootstrap automatically.
+
+### `pulse up`
+
+```bash
+pulse up
+
+# Start and open the dashboard
+pulse up --open
+```
+
+Starts `pulse-server` in the background, waits for `/health`, performs first-time local bootstrap when config is missing, and prints the dashboard URL, PID, and log path.
+
+### `pulse down`
+
+```bash
+pulse down
+```
+
+Stops the managed local `pulse-server`.
+
+### `pulse restart`
+
+```bash
+pulse restart
+
+# Restart and open the dashboard
+pulse restart --open
+```
+
+### `pulse logs`
+
+```bash
+# Show the most recent lines
+pulse logs
+
+# Follow logs continuously
+pulse logs --follow
+
+# Tail more lines before following
+pulse logs --lines 300 --follow
+```
+
+### `pulse dashboard`
+
+```bash
+# Open the configured dashboard
+pulse dashboard
+
+# Print the URL without opening a browser
+pulse dashboard --no-open
+```
+
+In local mode, this creates a one-time local login URL and opens the dashboard served by `pulse-server`. In remote mode, it opens the configured remote Pulse URL.
+
+### `pulse update`
+
+```bash
+pulse update
+
+# Non-interactive
+pulse update --yes
+```
+
+The updater compares installed versions with the latest GitHub releases. Local
+mode updates the server, bundled dashboard, and CLI; remote mode updates only
+the CLI. Restart a running local server with `pulse restart`.
+
+### `pulse init`
+
+```bash
+# Deprecated alias for `pulse connect`
+pulse init
+```
+
+### `pulse connect`
+
+```bash
+pulse connect \
+  --api-url https://pulse.example.com \
+  --api-key pulse_sk_... \
+  --project-id my-project
+```
+
+Interactive prompts work too:
+
+```bash
+pulse connect
+```
+
+This:
+
+- saves a remote-mode config to `~/.pulse/config.toml`
+- validates `/health` by default
+- installs hooks into detected agents unless `--no-hooks` is set
+
+### `pulse install-hooks`
+
+```bash
+pulse install-hooks
+```
+
+Installs Pulse hooks into detected agents without modifying your Pulse configuration. Use this when you are already connected to a Pulse server but don't have hooks installed.
+
+This command:
+
+- validates that `~/.pulse/config.toml` exists with valid `api_url`, `api_key`, and `project_id`
+- prompts to run `pulse connect` if config is missing or incomplete
+- installs hooks for all detected tools (Claude Code, OpenCode, OpenClaw)
+
+Use `pulse connect` when you need to both connect to a server AND install hooks.
+
+### `pulse disconnect`
+
+```bash
+pulse disconnect
+```
+
+Removes Pulse-managed hooks and plugins while leaving unrelated agent configuration alone.
+
+### `pulse status`
+
+```bash
+pulse status
+```
+
+Shows:
+
+- current mode (`local` or `remote`)
+- configured API URL and project
+- local server PID, health, and log path in local mode
+- remote connectivity in remote mode
+- hook status for each detected agent
+
+### `pulse emit <event_type>`
+
+Internal command called by integrations. Usually not called directly.
+
+```bash
+echo '{"session_id":"abc","tool_name":"Bash"}' | pulse emit pre_tool_use
+```
+
+Hot-path guarantees:
+
+- always exits with code `0`
+- no stdout or stderr output
+- 2-second HTTP timeout
+
+## Configuration
+
+Config file: `~/.pulse/config.toml`
+
+Local mode example:
+
+```toml
+mode = "local"
+api_url = "http://localhost:3000"
+project_id = "my-project"
+```
+
+Remote mode example:
+
+```toml
+mode = "remote"
+api_url = "https://pulse.example.com"
+api_key = "pulse_sk_..."
+project_id = "my-project"
+```
+
+| Field | Description |
+| --- | --- |
+| `mode` | `local` or `remote` |
+| `api_url` | Base URL of the current Pulse server |
+| `api_key` | Project API key used in remote mode |
+| `project_id` | Project identifier attached to emitted OTLP payloads |
+
+## Environment variables
+
+| Variable | Description |
+| --- | --- |
+| `PULSE_DEBUG` | Set `1` to log raw integration payloads |
+| `PULSE_DEBUG_LOG` | Override debug log path (`~/.pulse/debug.log` by default) |
+
+## Events and trace/span model
+
+Pulse CLI emits OTLP HTTP JSON to `POST /v1/traces`.
+
+Agent events are grouped as:
+
+```text
+Pulse session
+  agent.turn trace
+    user prompt, assistant, tool, subagent, and stop spans
+```
+
+Lifecycle-only session start/end events are stored as spans but excluded from
+the Traces list and session trace totals.
+
+Pulse integrations emit these normalized event types:
+
+| Event | Kind | Description |
+| --- | --- | --- |
+| `session_start` | `session` | Agent session begins |
+| `session_end` | `session` | Agent session ends |
+| `stop` | `session` | Agent stops execution |
+| `user_prompt_submit` | `user_prompt` | User sends prompt |
+| `assistant_message` | `llm_response` | Assistant response |
+| `pre_tool_use` | `tool_use` | Tool call about to run |
+| `post_tool_use` | `tool_use` | Tool call succeeded |
+| `post_tool_use_failure` | `tool_use` | Tool call failed or was interrupted |
+| `subagent_start` | `agent_run` | Child agent started |
+| `subagent_stop` | `agent_run` | Child agent finished |
+| `notification` | `notification` | Agent notification event |
+
+Example OTLP span attributes inside the emitted trace:
+
+```json
+{
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "spanId": "00f067aa0ba902b7",
+  "parentSpanId": "0af7651916cd43dd",
+  "name": "agent.tool",
+  "attributes": [
+    { "key": "pulse.session.id", "value": { "stringValue": "abc-123" } },
+    { "key": "pulse.session.name", "value": { "stringValue": "Implement auth fix" } },
+    { "key": "pulse.source", "value": { "stringValue": "claude_code" } },
+    { "key": "pulse.event.kind", "value": { "stringValue": "tool_use" } },
+    { "key": "pulse.event.type", "value": { "stringValue": "pre_tool_use" } },
+    { "key": "pulse.tool.name", "value": { "stringValue": "Bash" } }
+  ]
+}
+```
+
+Additional fields such as `tool_response`, `error`, `model`, `agent_name`, and `cwd` are included when available.
+
+## Agent integrations at a glance
+
+| Integration | Detection path | Pulse-managed files |
+| --- | --- | --- |
+| Claude Code | `~/.claude/` | Pulse entries in `~/.claude/settings.json` |
+| Codex | `~/.codex/` | Pulse entries in `~/.codex/hooks.json` |
+| Opencode | `~/.config/opencode/` | `~/.config/opencode/plugin/pulse-plugin.ts` |
+| OpenClaw | `~/.openclaw/` | `~/.openclaw/hooks/pulse-hook/` |
+
+Pulse only modifies Pulse-owned entries and files. Other hooks and plugins are preserved.
+
+## Troubleshooting
+
+### `Config missing`
+
+For local mode:
+
+```bash
+pulse up
+```
+
+For remote mode:
+
+```bash
+pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
+```
+
+### Local server not running
+
+```bash
+pulse up
+```
+
+Then inspect logs:
+
+```bash
+pulse logs --follow
+```
+
+### Agent not detected
+
+Pulse detection paths:
+
+- Claude Code: `~/.claude/`
+- Codex: `~/.codex/`
+- Opencode: `~/.config/opencode/`
+- OpenClaw: `~/.openclaw/`
+
+### Hooks installed but no spans
+
+1. Run `pulse status` and confirm Pulse is reachable.
+2. Enable debug logs with `PULSE_DEBUG=1`.
+3. Check `~/.pulse/debug.log` for incoming payloads.
+4. Verify API URL, API key, and project ID.
+
+### Stale integration plugin
+
+After CLI upgrades, run:
+
+```bash
+# If already connected to a server:
+pulse install-hooks
+
+# If not yet connected:
+pulse connect
+```
+
+## Architecture
+
+```text
+Claude Code or Codex hooks / OpenCode plugin / OpenClaw hook
+          -> pulse emit <event_type>
+          -> normalize payload into OTLP trace/span payload
+          -> POST /v1/traces (2s timeout)
+          -> Pulse server
+```
+
+Design choices:
+
+- non-blocking hooks
+- silent failure mode for integrations (`pulse emit` exits `0`)
+- idempotent connect and disconnect behavior
+- no runtime npm downloads for plugin content
+
+## Building from source
+
+```bash
+just cli-build
+just cli-release
+just cli-test
+just cli-install
+```
+
+## Running E2E tests
+
+Requires Docker or Podman and a reachable Pulse server.
+
+```bash
+just cli-e2e
+
+# Individual suites
+just cli-e2e-claude
+just cli-e2e-claude-tools
+just cli-e2e-opencode
+just cli-e2e-opencode-tools
+```
+
+## Integration docs
+
+<CardGrid>
+  <LinkCard title="Claude Code" href="/docs/claude-code/">Hook mapping and behavior.</LinkCard>
+  <LinkCard title="Codex" href="/docs/codex/">Hook mapping and trust setup.</LinkCard>
+  <LinkCard title="Opencode" href="/docs/opencode/">Plugin path and event mapping.</LinkCard>
+  <LinkCard title="OpenClaw" href="/docs/openclaw/">Hook directory and event mapping.</LinkCard>
+</CardGrid>

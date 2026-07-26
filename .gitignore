@@ -11,6 +11,7 @@
 *.local
 
 .venv/
+.astro/
 __pycache__/
 *.pyc
 

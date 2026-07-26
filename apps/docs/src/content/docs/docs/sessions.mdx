@@ -1,0 +1,202 @@
+---
+title: Sessions & Metadata
+description: Group traces into sessions and attach custom metadata.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Sessions
+
+A session groups related traces together, such as a user conversation, agent run, or batch job.
+
+Pulse uses this hierarchy:
+
+```text
+Session
+  Trace = one SDK call or agent turn
+    Span = one operation inside that trace
+```
+
+SDK and agent traffic use the same hierarchy. Assign a session ID and all traces
+with that ID appear together. Agent integrations supply their conversation
+session ID automatically.
+
+## Setting a session ID
+
+### At observe-time
+
+Pass `sessionId` in observe options. All calls through this client use this session.
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+const client = observe(
+  new OpenAI({ apiKey: "sk-..." }),
+  Provider.OpenAI,
+  {
+    sessionId: "conv-abc-123",
+    metadata: { feature: "refund-support" }
+  }
+);
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+client = observe(
+  OpenAI(api_key="sk-..."),
+  Provider.OPENAI,
+  {
+    "session_id": "conv-abc-123",
+    "metadata": { "feature": "refund-support" },
+  }
+)
+```
+
+  </TabItem>
+</Tabs>
+
+### Per-call override
+
+Pass `pulseSessionId` in the request body to override the observe-time session for one call.
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Hello" }],
+  pulseSessionId: "different-session-456",
+});
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+client.chat.completions.create(
+  model="gpt-4o",
+  messages=[{"role": "user", "content": "Hello"}],
+  pulse_session_id="different-session-456",
+)
+```
+
+  </TabItem>
+</Tabs>
+
+Per-call values take precedence. `pulseSessionId` is stripped before the request reaches the provider.
+
+## Metadata
+
+Attach arbitrary key-value data to traces for filtering by user, feature, environment, or any custom dimension.
+
+### At observe-time
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+const client = observe(
+  new OpenAI({ apiKey: "sk-..." }),
+  Provider.OpenAI,
+  {
+    metadata: {
+      userId: "user-123",
+      environment: "production",
+    },
+  }
+);
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+client = observe(
+  OpenAI(api_key="sk-..."),
+  Provider.OPENAI,
+  {
+    "metadata": {
+      "user_id": "user-123",
+      "environment": "production",
+    }
+  }
+)
+```
+
+  </TabItem>
+</Tabs>
+
+### Per-call extension
+
+Pass `pulseMetadata` in request body. It merges with observe-time metadata and per-call values win on conflicts.
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Summarize this" }],
+  pulseMetadata: {
+    feature: "summarizer",
+    version: "2.1",
+  },
+});
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+client.chat.completions.create(
+  model="gpt-4o",
+  messages=[{"role": "user", "content": "Summarize this"}],
+  pulse_metadata={
+    "feature": "summarizer",
+    "version": "2.1",
+  },
+)
+```
+
+  </TabItem>
+</Tabs>
+
+## ObserveOptions
+
+The third argument to `observe()`:
+
+| TypeScript / Python | Type | Description |
+| --- | --- | --- |
+| `sessionId` / `session_id` | `string` | Default session ID for all calls through the client. |
+| `metadata` | `Record<string, unknown>` | Metadata merged into every trace from this client. |
+
+## Per-call params
+
+These request fields are stripped before sending to the provider:
+
+| TypeScript / Python | Type | Description |
+| --- | --- | --- |
+| `pulseSessionId` / `pulse_session_id` | `string` | Override session ID for this call only. |
+| `pulseMetadata` / `pulse_metadata` | `Record<string, unknown>` | Merge additional metadata for this call. |
+
+## Viewing the unified hierarchy
+
+The **Sessions** page combines `sdk`, `claude_code`, `codex`, `opencode`, and
+`openclaw` sessions. Use the Source filter when you need one integration.
+
+Click a session to see every derived trace, then click a trace to inspect its
+source-aware span tree. SDK traces retain provider/model/token/cost metrics;
+agent traces summarize tools and edited files. Lifecycle-only spans do not
+create traces or inflate session totals.
+
+Via API:
+
+```bash
+GET /v1/sessions/:id
+```
+
+Returns all traces for the session. See [REST API](/docs/api/).

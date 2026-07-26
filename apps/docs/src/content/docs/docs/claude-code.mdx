@@ -1,0 +1,141 @@
+---
+title: Claude Code
+description: Capture tool calls, sessions, and agent events from Claude Code automatically.
+---
+
+## Overview
+
+Pulse CLI installs Claude Code hooks that forward events to `pulse emit`, which converts events into OTLP spans grouped into agent-turn traces and sends them to your Pulse trace service.
+
+## Quick start
+
+Requires:
+
+- running Pulse trace service
+- Claude Code installed
+- Pulse CLI installed
+
+1. Configure Pulse.
+
+```bash
+pulse up --open
+# or: pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
+```
+
+First-time local setup installs hooks for detected agents. To install or refresh
+them later:
+
+```bash
+pulse install-hooks
+pulse status
+```
+
+## Hooks installed
+
+Detection path: `~/.claude/`
+
+Modified file: `~/.claude/settings.json` (`hooks` key)
+
+Pulse preserves unrelated hooks and migrates older Pulse entries out of
+`settings.local.json`.
+
+`pulse connect` installs 10 async hooks:
+
+| Claude Code event | Pulse event |
+| --- | --- |
+| `PreToolUse` | `pre_tool_use` |
+| `PostToolUse` | `post_tool_use` |
+| `PostToolUseFailure` | `post_tool_use_failure` |
+| `SessionStart` | `session_start` |
+| `SessionEnd` | `session_end` |
+| `Stop` | `stop` |
+| `SubagentStart` | `subagent_start` |
+| `SubagentStop` | `subagent_stop` |
+| `UserPromptSubmit` | `user_prompt_submit` |
+| `Notification` | `notification` |
+
+All hooks run with async behavior so Claude Code is never blocked by Pulse.
+
+## Trace and span schema
+
+Claude Code activity is stored as:
+
+```text
+Pulse session
+  agent.turn trace
+    user prompt, assistant, tool, subagent, and stop spans
+```
+
+Standalone session start/end spans are retained as lifecycle telemetry but do
+not appear as traces or increase session trace totals.
+
+Each OTLP span includes Pulse attributes for:
+
+| Field | Description |
+| --- | --- |
+| `traceId` | OTel trace identifier |
+| `spanId` | OTel span identifier |
+| `pulse.session.id` | Claude Code session identifier |
+| `pulse.session.name` | Human-readable session name when available |
+| `source` | Always `claude_code` |
+| `kind` | `tool_use`, `session`, `agent_run`, `user_prompt`, `notification` |
+| `event_type` | Specific event, for example `post_tool_use` |
+| `status` | `success` or `error` |
+| `tool_name` | Tool name for tool events |
+| `tool_input` | Tool input payload |
+| `tool_response` | Tool response payload |
+| `error` | Error details for failures |
+| `cwd` | Working directory |
+| `model` | Model name if present |
+| `agent_name` | Subagent type for subagent events |
+| `metadata` | `cli_version`, `project_id`, and event-specific data |
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `pulse up` | Start/bootstrap the managed local Pulse server |
+| `pulse dashboard` | Open the local dashboard with one-time local login |
+| `pulse connect` | Install Claude Code hooks, or configure a remote Pulse target when flags are provided |
+| `pulse install-hooks` | Install Claude Code hooks without changing config |
+| `pulse disconnect` | Remove Pulse hooks from Claude Code |
+| `pulse status` | Show config, connectivity, and hook status |
+| `pulse update` | Update Pulse; follow with `pulse install-hooks` to refresh hooks |
+| `pulse emit <type>` | Emit an OTLP span inside a trace (used by hooks) |
+
+## CI / non-interactive setup
+
+```bash
+pulse connect \
+  --api-url https://pulse.example.com \
+  --api-key pulse_sk_your_key \
+  --project-id my-project
+```
+
+## Manual verification
+
+```bash
+cat ~/.claude/settings.json | jq '.hooks'
+```
+
+## Debugging
+
+```bash
+export PULSE_DEBUG=1
+```
+
+Writes raw payloads to `~/.pulse/debug.log`.
+
+Override log path:
+
+```bash
+export PULSE_DEBUG_LOG=/path/to/file
+```
+
+## Viewing in dashboard
+
+- Open **Sessions** and filter Source to **Claude Code** when needed.
+- Click a session to inspect trace summaries.
+- Click a trace to inspect its span tree, tool data, errors, and metadata.
+
+For CLI-wide troubleshooting, see [CLI Reference](/docs/cli/).

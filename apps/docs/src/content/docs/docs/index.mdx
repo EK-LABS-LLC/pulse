@@ -1,0 +1,210 @@
+---
+title: Quickstart
+description: Install Pulse and see SDK and agent telemetry in one OTel view.
+---
+
+import { Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## Install and open Pulse
+
+`pulse-server` includes the API and dashboard. The installer also adds the
+`pulse` CLI.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/pulse/main/apps/server/scripts/install.sh | bash -s -- pulse-server
+pulse up --open
+pulse status
+```
+
+On first run, `pulse up` starts the server, creates a local project and API key,
+installs integrations for detected agents, and writes `~/.pulse/config.toml`.
+The `--open` flag opens the dashboard through a one-time local login URL.
+
+For an existing shared Pulse server, install the CLI and connect instead:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EK-LABS-LLC/pulse/main/crates/pulse-cli/install.sh | sh
+pulse connect \
+  --api-url https://pulse.example.com \
+  --api-key pulse_sk_... \
+  --project-id my-project
+pulse status
+```
+
+## Unified OTel view
+
+Pulse stores spans once and derives the dashboard hierarchy from them:
+
+```text
+Session
+  Trace (one SDK call or agent turn)
+    Span (one operation)
+```
+
+The **Traces** and **Sessions** pages show SDK, Claude Code, Codex, OpenCode,
+and OpenClaw traffic together. Use the Source filter to narrow either view.
+Session lifecycle markers remain stored as spans but do not create empty traces
+or inflate session totals.
+
+## Update Pulse
+
+```bash
+pulse update
+pulse restart        # local installs: restart a running server
+pulse install-hooks  # refresh detected agent integrations
+pulse status
+```
+
+For local mode, `pulse update` updates the server, dashboard, and CLI. For
+remote mode, it updates only the local CLI. Existing `~/.pulse` configuration
+and local data are preserved. See [CLI Reference](/docs/cli/#pulse-update) for
+non-interactive updates and update-check behavior.
+
+## Add SDK tracing
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```bash
+bun add @eklabs/pulse-sdk
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```bash
+pip install pulse-trace-sdk
+```
+
+  </TabItem>
+</Tabs>
+
+The TypeScript SDK supports Bun and Node.js. The Python SDK supports Python 3.10+.
+
+## CLI integrations (Claude Code, Opencode, OpenClaw)
+
+If you want Pulse to capture coding-agent events in addition to SDK traces:
+
+```bash
+# Local managed Pulse
+pulse up
+pulse dashboard
+
+# Or connect to a shared Pulse instance:
+# pulse connect --api-url https://pulse.example.com --api-key pulse_sk_... --project-id my-project
+
+# Verify config, connectivity, and integration status
+pulse status
+```
+
+See [CLI Reference](/docs/cli/) for full command and config details.
+
+## Initialize
+
+Call `initPulse()` once at application startup using the API key created during `pulse up`, `pulse setup`, or `pulse connect`.
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+import { initPulse } from "@eklabs/pulse-sdk";
+
+initPulse({
+  apiKey: "pulse_sk_...",
+});
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+from pulse_sdk import init_pulse
+
+init_pulse({
+  "api_key": "pulse_sk_...",
+})
+```
+
+  </TabItem>
+</Tabs>
+
+This starts background trace batches and registers shutdown handlers to flush remaining traces on exit.
+
+## Wrap your client
+
+Use `observe()` to wrap your LLM client. The returned client behaves identically and tracing is captured as a side effect.
+
+<Tabs>
+  <TabItem label="TypeScript">
+
+```ts
+import { initPulse, observe, Provider } from "@eklabs/pulse-sdk";
+import OpenAI from "openai";
+
+initPulse({ apiKey: "pulse_sk_..." });
+
+const client = observe(
+  new OpenAI({ apiKey: "sk-..." }),
+  Provider.OpenAI
+);
+
+const res = await client.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Hello" }],
+});
+```
+
+  </TabItem>
+  <TabItem label="Python">
+
+```python
+from pulse_sdk import init_pulse, observe, Provider
+from openai import OpenAI
+
+init_pulse({ "api_key": "pulse_sk_..." })
+
+client = observe(
+  OpenAI(api_key="sk-..."),
+  Provider.OPENAI
+)
+
+res = client.chat.completions.create(
+  model="gpt-4o",
+  messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+  </TabItem>
+</Tabs>
+
+## What gets captured
+
+| Field | Description |
+| --- | --- |
+| Request and response bodies | Full prompt and completion |
+| Token counts | Input and output tokens |
+| Latency | End-to-end request duration in milliseconds |
+| Cost | Provider-reported or SDK-estimated when model pricing is available |
+| Model | Requested and actual model used |
+| Status | `success` or `error` |
+| Provider | `openai`, `anthropic`, or `openrouter` |
+
+## Supported providers
+
+| Provider | Client | Enum |
+| --- | --- | --- |
+| OpenAI | `openai` | `Provider.OpenAI` |
+| Anthropic | `@anthropic-ai/sdk` | `Provider.Anthropic` |
+| OpenRouter | `openai` | `Provider.OpenRouter` |
+
+See [Providers](/docs/providers/) for detailed usage.
+
+## Next steps
+
+<CardGrid>
+  <LinkCard title="CLI Reference" href="/docs/cli/">Install, connect, debug, and operate Pulse CLI integrations.</LinkCard>
+  <LinkCard title="Release Notes" href="/docs/releases/">Track notable product changes and upgrade notes.</LinkCard>
+  <LinkCard title="Configuration" href="/docs/config/">Tune batching, flush intervals, and validation rules.</LinkCard>
+  <LinkCard title="Sessions & Metadata" href="/docs/sessions/">Group traces and attach user or feature metadata.</LinkCard>
+  <LinkCard title="REST API" href="/docs/api/">Query traces, spans, sessions, and analytics programmatically.</LinkCard>
+</CardGrid>

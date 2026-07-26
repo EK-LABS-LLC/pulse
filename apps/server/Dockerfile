@@ -4,9 +4,13 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/server/package.json ./apps/server/
 COPY apps/dashboard/package.json ./apps/dashboard/
+COPY apps/docs/package.json ./apps/docs/
 COPY packages/api-contracts/package.json ./packages/api-contracts/
 COPY sdks/typescript/package.json ./sdks/typescript/
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile \
+    --filter './apps/server' \
+    --filter './apps/dashboard' \
+    --filter './packages/api-contracts'
 
 COPY . .
 RUN bun run --cwd apps/server build:pulse

@@ -6,6 +6,8 @@
 **/.env.*
 **/dist
 **/node_modules
+apps/docs/**
+!apps/docs/package.json
 apps/server/drizzle
 apps/server/tests
 target

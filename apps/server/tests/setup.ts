@@ -1,0 +1,352 @@
+const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:3000";
+
+export { BASE_URL };
+
+const TEST_USER_EMAIL =
+  process.env.TEST_USER_EMAIL || "integration-suite@pulse.test";
+const TEST_USER_PASSWORD =
+  process.env.TEST_USER_PASSWORD || "IntegrationPass!123";
+const TEST_USER_NAME = process.env.TEST_USER_NAME || "Integration Suite User";
+
+/**
+ * Test project data for cleanup tracking
+ */
+interface TestProject {
+  id: string;
+  apiKey: string;
+}
+
+const testProjects: TestProject[] = [];
+const projectApiKeys = new Map<string, string>();
+let testUserSessionCookie: string | null = null;
+let ensureUserSessionInFlight: Promise<string> | null = null;
+
+function extractSessionCookie(setCookieHeader: string | null): string | null {
+  if (!setCookieHeader) return null;
+  const match = setCookieHeader.match(/better-auth\.session_token=([^;]+)/);
+  if (!match) return null;
+  return `better-auth.session_token=${match[1]}`;
+}
+
+async function sessionFetch(
+  path: string,
+  sessionCookie: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  return fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Cookie: sessionCookie,
+    },
+  });
+}
+
+export async function dashboardFetch(
+  path: string,
+  projectId: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  const sessionCookie = await ensureTestUserSession();
+  return sessionFetch(path, sessionCookie, {
+    ...options,
+    headers: {
+      ...options.headers,
+      "X-Project-Id": projectId,
+    },
+  });
+}
+
+async function signInTestUser(): Promise<string | null> {
+  const signInResponse = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: TEST_USER_EMAIL,
+      password: TEST_USER_PASSWORD,
+    }),
+  });
+
+  if (!signInResponse.ok) {
+    return null;
+  }
+
+  return extractSessionCookie(signInResponse.headers.get("set-cookie"));
+}
+
+async function signUpTestUser(): Promise<void> {
+  const bootstrapProject = `Bootstrap ${crypto.randomUUID().slice(0, 8)}`;
+  const signUpResponse = await fetch(`${BASE_URL}/dashboard/api/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: TEST_USER_NAME,
+      email: TEST_USER_EMAIL,
+      password: TEST_USER_PASSWORD,
+      projectName: bootstrapProject,
+    }),
+  });
+
+  if (!signUpResponse.ok) {
+    const text = await signUpResponse.text();
+    throw new Error(
+      `Failed to sign up shared test user (${signUpResponse.status}): ${text}`,
+    );
+  }
+}
+
+async function ensureTestUserSession(): Promise<string> {
+  if (testUserSessionCookie) {
+    return testUserSessionCookie;
+  }
+
+  if (ensureUserSessionInFlight) {
+    return ensureUserSessionInFlight;
+  }
+
+  ensureUserSessionInFlight = (async () => {
+    const existingSession = await signInTestUser();
+    if (existingSession) {
+      testUserSessionCookie = existingSession;
+      return existingSession;
+    }
+
+    await signUpTestUser();
+
+    const sessionAfterSignup = await signInTestUser();
+    if (!sessionAfterSignup) {
+      throw new Error("Failed to sign in shared test user after signup");
+    }
+
+    testUserSessionCookie = sessionAfterSignup;
+    return sessionAfterSignup;
+  })();
+
+  try {
+    return await ensureUserSessionInFlight;
+  } finally {
+    ensureUserSessionInFlight = null;
+  }
+}
+
+/**
+ * Create a test project with API key
+ */
+export async function createTestProject(
+  name: string = "Test Project",
+): Promise<TestProject> {
+  console.log(`[setup] Creating test project: "${name}"`);
+  const sessionCookie = await ensureTestUserSession();
+
+  const createProjectResponse = await sessionFetch(
+    "/dashboard/api/projects",
+    sessionCookie,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name }),
+    },
+  );
+
+  if (!createProjectResponse.ok) {
+    const text = await createProjectResponse.text();
+    throw new Error(
+      `Failed to create test project (${createProjectResponse.status}): ${text}`,
+    );
+  }
+
+  const projectData = (await createProjectResponse.json()) as {
+    projectId: string;
+    apiKey: string;
+  };
+  const testProject = { id: projectData.projectId, apiKey: projectData.apiKey };
+  testProjects.push(testProject);
+  projectApiKeys.set(testProject.id, testProject.apiKey);
+
+  console.log(
+    `[setup] Project created: ${projectData.projectId} (tracking ${testProjects.length} projects)`,
+  );
+  return testProject;
+}
+
+/**
+ * Create test traces for a project.
+ *
+ * There is no direct trace-ingest endpoint anymore: traces are derived from
+ * SDK spans (kind="llm_call") ingested through the OTLP endpoint. This sends
+ * one OTLP export containing `count` llm_call spans sharing a session, then
+ * polls until the derived traces are queryable (span ingestion is async, via
+ * the span WAL).
+ */
+export async function createTestTraces(
+  projectId: string,
+  count: number = 10,
+  sessionId?: string,
+): Promise<string[]> {
+  const apiKey = projectApiKeys.get(projectId);
+  if (!apiKey) {
+    throw new Error(`No API key found for project ${projectId}`);
+  }
+
+  const sid = sessionId ?? crypto.randomUUID();
+  const providers = ["openai", "anthropic", "openrouter"];
+  const traceIds = Array.from({ length: count }, () => crypto.randomUUID());
+
+  const spans = traceIds.map((traceId, i) => {
+    const latencyMs = 100 + Math.floor(Math.random() * 500);
+    const startNs = BigInt(Date.now() - i * 60000) * 1_000_000n; // 1 minute apart
+    const endNs = startNs + BigInt(latencyMs) * 1_000_000n;
+    const isError = i === 0; // First one is error
+
+    return {
+      spanId: crypto.randomUUID().replace(/-/g, "").slice(0, 16),
+      name: "provider_call",
+      startTimeUnixNano: startNs.toString(),
+      endTimeUnixNano: endNs.toString(),
+      attributes: [
+        { key: "pulse.source", value: { stringValue: "sdk" } },
+        { key: "pulse.kind", value: { stringValue: "llm_call" } },
+        { key: "pulse.event_type", value: { stringValue: "provider_call" } },
+        { key: "pulse.session_id", value: { stringValue: sid } },
+        { key: "pulse.trace_id", value: { stringValue: traceId } },
+        {
+          key: "gen_ai.provider.name",
+          value: { stringValue: providers[i % 3] },
+        },
+        { key: "gen_ai.request.model", value: { stringValue: "gpt-4o" } },
+        {
+          key: "gen_ai.usage.input_tokens",
+          value: { intValue: String(100 + i * 10) },
+        },
+        {
+          key: "gen_ai.usage.output_tokens",
+          value: { intValue: String(200 + i * 20) },
+        },
+        { key: "pulse.cost_cents", value: { doubleValue: 0.5 + i * 0.1 } },
+      ],
+      status: { code: isError ? 2 : 1 },
+    };
+  });
+
+  const ingestResponse = await authFetch("/v1/traces", apiKey, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ resourceSpans: [{ scopeSpans: [{ spans }] }] }),
+  });
+
+  if (!ingestResponse.ok) {
+    const text = await ingestResponse.text();
+    throw new Error(
+      `Failed to ingest test traces (${ingestResponse.status}): ${text}`,
+    );
+  }
+
+  const query = `/v1/traces?session_id=${encodeURIComponent(sid)}&limit=${count}`;
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const listResponse = await authFetch(query, apiKey);
+    if (listResponse.ok) {
+      const listData = (await listResponse.json()) as { total: number };
+      if (listData.total >= count) {
+        return traceIds;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  throw new Error(
+    `Timed out waiting for ${count} derived traces to appear for session ${sid}`,
+  );
+}
+
+/**
+ * Create test spans for a project
+ */
+export async function createTestSpans(
+  projectId: string,
+  count: number = 10,
+  sessionId?: string,
+): Promise<string[]> {
+  const apiKey = projectApiKeys.get(projectId);
+  if (!apiKey) {
+    throw new Error(`No API key found for project ${projectId}`);
+  }
+
+  const sid = sessionId ?? crypto.randomUUID();
+  const spans = Array.from({ length: count }, (_, i) => {
+    const kind =
+      i % 5 === 0 ? "session" : i % 2 === 0 ? "tool_use" : "agent_run";
+    const isError = i === 0;
+
+    return {
+      span_id: crypto.randomUUID(),
+      session_id: sid,
+      timestamp: new Date(Date.now() - i * 60000).toISOString(),
+      duration_ms: 100 + i * 10,
+      source: "claude_code" as const,
+      kind,
+      event_type:
+        kind === "tool_use"
+          ? "post_tool_use"
+          : kind === "agent_run"
+            ? "subagent_stop"
+            : "session_update",
+      status: isError ? ("error" as const) : ("success" as const),
+      tool_name: kind === "tool_use" ? "Bash" : undefined,
+      agent_name: kind === "agent_run" ? "Plan" : undefined,
+      metadata: { i },
+    };
+  });
+
+  const ingestResponse = await authFetch("/v1/spans/batch", apiKey, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(spans),
+  });
+
+  if (!ingestResponse.ok) {
+    const text = await ingestResponse.text();
+    throw new Error(
+      `Failed to ingest test spans (${ingestResponse.status}): ${text}`,
+    );
+  }
+
+  return spans.map((s) => s.span_id);
+}
+
+/**
+ * Clean up all test data
+ */
+export async function cleanupTestData(): Promise<void> {
+  console.log(
+    `[setup] Cleanup skipped (${testProjects.length} projects). API-only tests do not use direct DB cleanup.`,
+  );
+  testProjects.length = 0;
+  projectApiKeys.clear();
+  console.log("[setup] Cleanup complete");
+}
+
+/**
+ * Make authenticated request
+ */
+export async function authFetch(
+  path: string,
+  apiKey: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  const method = options.method || "GET";
+  const keyPreview = apiKey.slice(0, 15) + "...";
+  console.log(`[authFetch] ${method} ${path} (key: ${keyPreview})`);
+
+  const response = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+
+  console.log(`[authFetch] ${method} ${path} -> ${response.status}`);
+  return response;
+}

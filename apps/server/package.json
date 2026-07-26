@@ -1,0 +1,50 @@
+{
+  "name": "trace-service",
+  "version": "0.2.16",
+  "module": "pulse.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run pulse.ts",
+    "dev:single": "bun run pulse.ts",
+    "dev:scale": "PULSE_MODE=scale bun run pulse.ts",
+    "build:dashboard-assets": "rm -rf dist/dashboard && mkdir -p dist/dashboard && cd dashboard && bun run build && cp -R dist/. ../dist/dashboard/",
+    "db:generate": "bunx drizzle-kit generate",
+    "db:migrate": "bun run scripts/migrate.ts",
+    "db:migrate:scale": "bunx drizzle-kit push --config=drizzle.scale.config.ts",
+    "db:push": "bunx drizzle-kit push",
+    "db:studio": "bunx drizzle-kit studio",
+    "db:seed": "bun run scripts/seed.ts",
+    "db:reset": "bun run scripts/reset.ts",
+    "db:snapshot": "bunx drizzle-kit generate",
+    "build:pulse": "bun run build:dashboard-assets && bun build ./pulse.ts --compile --outfile ./dist/pulse-server",
+    "build:pulse-scale": "bun run build:pulse",
+    "release:artifacts": "bun run scripts/release.ts",
+    "test": "bash scripts/run-e2e.sh single",
+    "test:live": "bun test --env-file=.env.test",
+    "test:watch": "bun test --watch --env-file=.env.test",
+    "format": "bunx prettier --write \"**/*.{ts,tsx,js,json}\""
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.2.0",
+    "@types/bun": "latest",
+    "@types/uuid": "^11.0.0",
+    "drizzle-kit": "^0.31.8"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@types/node": "^25.6.0",
+    "better-auth": "^1.6.23",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.28",
+    "postgres": "^3.4.7",
+    "uuid": "^13.0.2",
+    "zod": "^4.3.6"
+  },
+  "overrides": {
+    "defu": "^6.1.7",
+    "uuid": "^13.0.2"
+  }
+}

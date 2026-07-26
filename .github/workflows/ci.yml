@@ -24,6 +24,8 @@ jobs:
       sdk_ts: ${{ steps.filter.outputs.sdk_ts }}
       sdk_py: ${{ steps.filter.outputs.sdk_py }}
       contracts: ${{ steps.filter.outputs.contracts }}
+      service_image: ${{ steps.filter.outputs.service_image }}
+      release_tooling: ${{ steps.filter.outputs.release_tooling }}
       service_release: ${{ steps.filter.outputs.service_release }}
       cli_release: ${{ steps.filter.outputs.cli_release }}
       sdk_ts_release: ${{ steps.filter.outputs.sdk_ts_release }}
@@ -84,17 +86,39 @@ jobs:
               - 'tooling/contracts/**'
               - '.github/workflows/ci.yml'
               - 'mise.toml'
+            service_image:
+              - 'apps/server/**'
+              - 'apps/dashboard/**'
+              - 'packages/api-contracts/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.dockerignore'
+              - '.github/workflows/ci.yml'
+            release_tooling:
+              - 'tooling/release/**'
+              - '.github/workflows/release-*.yml'
+              - '.github/workflows/ci.yml'
             service_release:
               - 'apps/server/**'
               - 'apps/dashboard/**'
               - 'packages/api-contracts/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.dockerignore'
             cli_release:
               - 'crates/pulse-cli/src/**'
               - 'crates/pulse-cli/Cargo.toml'
+              - 'crates/pulse-cli/Cargo.lock'
               - 'crates/pulse-cli/install.sh'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
             sdk_ts_release:
               - 'sdks/typescript/src/**'
               - 'sdks/typescript/package.json'
+              - 'sdks/typescript/tsconfig.json'
+              - 'sdks/typescript/tsconfig.build.json'
+              - 'package.json'
+              - 'bun.lock'
             sdk_py_release:
               - 'sdks/python/src/**'
               - 'sdks/python/pyproject.toml'
@@ -338,6 +362,28 @@ jobs:
           tail -n 200 /tmp/pulse-server-smoke.log
           exit 1
 
+  server-image:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.service_image == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --tag pulse-server:ci --file apps/server/Dockerfile .
+      - name: Smoke-test service image
+        run: |
+          set -euo pipefail
+          container="pulse-server-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker run --detach --name "${container}" --publish 127.0.0.1:8765:3000 pulse-server:ci
+          trap 'docker rm --force "${container}" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8765/health; then
+              exit 0
+            fi
+            sleep 0.5
+          done
+          docker logs "${container}"
+          exit 1
+
   cli:
     runs-on: ubuntu-latest
     needs: [changes, test-integrity]
@@ -406,6 +452,14 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv run --script tooling/contracts/check.py
 
+  release-tooling:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.release_tooling == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n tooling/release/*.sh
+
   required:
     name: required
     runs-on: ubuntu-latest
@@ -423,10 +477,12 @@ jobs:
       - server-bootstrap-single
       - server-bootstrap-scale
       - server-release-artifacts
+      - server-image
       - cli
       - sdk-ts
       - sdk-py
       - contracts
+      - release-tooling
     steps:
       - name: Require selected jobs
         env:

@@ -20,8 +20,8 @@ case "${component}" in
       pulse-linux-arm64.tar.gz
     )
     ;;
-  service)
-    prefix="service-"
+  server)
+    prefix="server-"
     legacy_repo="EK-LABS-LLC/trace-service"
     assets=(
       checksums.txt

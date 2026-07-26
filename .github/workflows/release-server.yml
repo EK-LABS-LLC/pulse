@@ -1,12 +1,12 @@
-name: Release Service
+name: Release Server
 
 on:
   push:
-    tags: ["service-v*"]
+    tags: ["server-v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing service-vX.Y.Z tag
+        description: Existing server-vX.Y.Z tag
         required: true
         type: string
 
@@ -33,10 +33,10 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin main
-          version="${TAG#service-v}"
+          version="${TAG#server-v}"
           manifest="$(jq -r .version apps/server/package.json)"
-          bash tooling/release/validate-tag.sh "${TAG}" service- "${manifest}"
-          bash tooling/release/require-legacy-bridge.sh service "${manifest}"
+          bash tooling/release/validate-tag.sh "${TAG}" server- "${manifest}"
+          bash tooling/release/require-legacy-bridge.sh server "${manifest}"
           {
             echo "tag=${TAG}"
             echo "version=${version}"
@@ -95,7 +95,7 @@ jobs:
         working-directory: apps/server
       - uses: actions/upload-artifact@v4
         with:
-          name: service-${{ matrix.os }}-${{ matrix.arch }}
+          name: server-${{ matrix.os }}-${{ matrix.arch }}
           path: apps/server/dist/pulse-server-${{ matrix.os }}-${{ matrix.arch }}
           if-no-files-found: error
 
@@ -110,7 +110,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
-          pattern: service-*
+          pattern: server-*
           merge-multiple: true
       - uses: actions/download-artifact@v4
         with:
@@ -126,7 +126,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.validate.outputs.tag }}
         run: |
-          previous="$(git tag --list 'service-v*' --sort=-v:refname | grep -Fxv "${TAG}" | head -n1 || true)"
+          previous="$(git tag --list 'server-v*' --sort=-v:refname | grep -Fxv "${TAG}" | head -n1 || true)"
+          if [[ -z "${previous}" ]]; then
+            previous="$(git tag --list 'service-v*' --sort=-v:refname | head -n1 || true)"
+          fi
           args=(release create "${TAG}" dist/pulse-server-* dist/pulse-dashboard-assets.tar.gz dist/checksums.txt --verify-tag --latest=false --generate-notes)
           if [[ -n "${previous}" ]]; then
             args+=(--notes-start-tag "${previous}")

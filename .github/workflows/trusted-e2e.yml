@@ -1,0 +1,91 @@
+name: Trusted E2E
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trusted-e2e
+  cancel-in-progress: false
+
+jobs:
+  providers:
+    runs-on: ubuntu-latest
+    environment: trusted-e2e
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      PULSE_API_KEY: ${{ secrets.PULSE_API_KEY }}
+      PULSE_API_URL: ${{ secrets.PULSE_API_URL }}
+      PULSE_PROJECT_ID: ${{ vars.PULSE_PROJECT_ID }}
+      TRACE_SERVICE_URL: ${{ secrets.PULSE_API_URL }}
+      TEST_SERVER_URL: http://127.0.0.1:3001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.5"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Validate protected inputs
+        run: |
+          set -euo pipefail
+          test -n "${ANTHROPIC_API_KEY}"
+          test -n "${OPENAI_API_KEY}"
+          test -n "${PULSE_API_KEY}"
+          test -n "${PULSE_API_URL}"
+          test -n "${PULSE_PROJECT_ID}"
+      - run: bun install --frozen-lockfile
+      - run: uv sync --frozen
+        working-directory: sdks/python
+      - name: Run CLI provider suites
+        working-directory: crates/pulse-cli
+        run: |
+          set -euo pipefail
+          umask 077
+          {
+            printf 'ANTHROPIC_API_KEY=%s\n' "${ANTHROPIC_API_KEY}"
+            printf 'OPENAI_API_KEY=%s\n' "${OPENAI_API_KEY}"
+            printf 'PULSE_API_KEY=%s\n' "${PULSE_API_KEY}"
+            printf 'PULSE_API_URL=%s\n' "${PULSE_API_URL}"
+            printf 'PULSE_PROJECT_ID=%s\n' "${PULSE_PROJECT_ID}"
+          } > e2e/.env
+          trap 'docker compose -f e2e/docker-compose.yml down --remove-orphans' EXIT
+          for service in e2e e2e-cc-tools e2e-opencode e2e-oc-tools e2e-codex e2e-codex-tools; do
+            docker compose -f e2e/docker-compose.yml run --rm "${service}"
+          done
+      - name: Run TypeScript SDK provider suite
+        working-directory: sdks/typescript
+        run: |
+          set -euo pipefail
+          TEST_SERVER_PORT=3001 bun run tests/test-server.ts > "${RUNNER_TEMP}/sdk-ts-server.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "${server_pid}" 2>/dev/null || true; wait "${server_pid}" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            if curl -fsS "${TEST_SERVER_URL}/health" >/dev/null; then
+              bun test tests/e2e.test.ts
+              exit
+            fi
+            sleep 1
+          done
+          tail -n 100 "${RUNNER_TEMP}/sdk-ts-server.log"
+          exit 1
+      - name: Run Python SDK provider suite
+        working-directory: sdks/python
+        run: |
+          set -euo pipefail
+          SDK_SERVER_PORT=3001 uv run --frozen python tests/test_server.py > "${RUNNER_TEMP}/sdk-py-server.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "${server_pid}" 2>/dev/null || true; wait "${server_pid}" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            if curl -fsS "${TEST_SERVER_URL}/health" >/dev/null; then
+              uv run --frozen pytest -c /dev/null --rootdir=. -p no:cacheprovider tests/test_sdk.py tests/test_server.py
+              exit
+            fi
+            sleep 1
+          done
+          tail -n 100 "${RUNNER_TEMP}/sdk-py-server.log"
+          exit 1

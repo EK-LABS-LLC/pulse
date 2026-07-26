@@ -6,7 +6,7 @@ version_from_package_json() {
 }
 
 latest_tag_version() {
-  git tag --list 'v[0-9]*' --sort=-v:refname | head -n 1 | sed 's/^v//'
+  git tag --list 'service-v[0-9]*' --sort=-v:refname | head -n 1 | sed 's/^service-v//'
 }
 
 version_gt() {
@@ -47,8 +47,8 @@ if [[ -z "$current_version" || -z "$latest_release_version" ]]; then
 fi
 
 if ! version_gt "$current_version" "$latest_release_version"; then
-  echo "::error::trace-service version must be bumped above latest release v$latest_release_version before merging this PR. Current version is $current_version." >&2
+  echo "::error::trace-service version must be bumped above latest release service-v$latest_release_version before merging this PR. Current version is $current_version." >&2
   exit 1
 fi
 
-echo "trace-service version OK: latest release v$latest_release_version -> $current_version."
+echo "trace-service version OK: latest release service-v$latest_release_version -> $current_version."

@@ -1,0 +1,11 @@
+{
+  "name": "pulse",
+  "private": true,
+  "packageManager": "bun@1.3.5",
+  "workspaces": [
+    "apps/dashboard",
+    "apps/server",
+    "packages/api-contracts",
+    "sdks/typescript"
+  ]
+}

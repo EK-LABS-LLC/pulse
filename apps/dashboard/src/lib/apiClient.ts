@@ -1,4 +1,12 @@
 import { getApiBaseUrl } from "./runtime-config";
+import type {
+  AgentSessionSort,
+  AnalyticsGroupBy,
+  SpanAnalyticsGroupBy,
+  SpanKind,
+  SpanSource,
+  TraceStatus,
+} from "@pulse/api-contracts";
 
 const SELECTED_PROJECT_KEY = "pulse_selected_project";
 
@@ -48,7 +56,7 @@ export interface Trace {
   modelRequested: string | null;
   modelUsed: string | null;
   latencyMs: number;
-  status: "success" | "error";
+  status: TraceStatus;
   costCents: number | null;
   sessionId?: string;
   metadata?: Record<string, unknown>;
@@ -73,18 +81,6 @@ export interface SessionTraceSummaries {
   spans?: Span[];
 }
 
-export type SpanSource =
-  "claude_code" | "codex" | "opencode" | "openclaw" | "sdk";
-
-export type SpanKind =
-  | "llm_call"
-  | "tool_use"
-  | "agent_run"
-  | "session"
-  | "user_prompt"
-  | "llm_response"
-  | "notification";
-
 export interface Span {
   spanId: string;
   traceId?: string;
@@ -95,7 +91,7 @@ export interface Span {
   source: SpanSource;
   kind: SpanKind;
   eventType: string;
-  status: "success" | "error";
+  status: TraceStatus;
   toolUseId?: string;
   toolName?: string;
   toolInput?: unknown;
@@ -114,9 +110,6 @@ export interface SpansResponse {
   total: number;
 }
 
-export type AgentSessionSort =
-  "recent" | "oldest" | "duration" | "errors" | "volume";
-
 export interface GetAgentSessionsParams {
   date_from?: string;
   date_to?: string;
@@ -130,7 +123,7 @@ export interface ApiAgentSessionSummary {
   sessionId: string;
   firstTimestamp: string;
   lastTimestamp: string;
-  status: "success" | "error";
+  status: TraceStatus;
   durationMs: number;
   agentRuns: number;
   toolCalls: number;
@@ -170,7 +163,7 @@ export interface GetSpansParams {
 export interface GetAnalyticsParams {
   date_from?: string;
   date_to?: string;
-  group_by?: "day" | "hour" | "model" | "provider";
+  group_by?: AnalyticsGroupBy;
 }
 
 export interface CostOverTimeByProvider {
@@ -234,7 +227,7 @@ export interface SpansAnalyticsResponse {
 export interface GetSpansAnalyticsParams {
   date_from: string;
   date_to: string;
-  group_by?: "day" | "hour";
+  group_by?: SpanAnalyticsGroupBy;
 }
 
 export interface AnalyticsResponse {

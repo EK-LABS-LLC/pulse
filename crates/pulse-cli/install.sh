@@ -1,7 +1,10 @@
 #!/bin/sh
 set -e
 
-REPO="EK-LABS-LLC/trace-cli"
+DEFAULT_REPO="EK-LABS-LLC/pulse"
+LEGACY_REPO="EK-LABS-LLC/trace-cli"
+REPO="${PULSE_REPO:-$DEFAULT_REPO}"
+TAG_PREFIX="cli-"
 BINARY_NAME="pulse"
 INSTALL_DIR="${PULSE_INSTALL_DIR:-$HOME/.local/bin}"
 
@@ -42,20 +45,46 @@ detect_arch() {
 
 resolve_version() {
   if [ -n "$PULSE_VERSION" ]; then
-    echo "$PULSE_VERSION"
+    case "$PULSE_VERSION" in
+      cli-v*) VERSION="$PULSE_VERSION" ;;
+      v*)
+        if [ "$REPO" = "$DEFAULT_REPO" ]; then
+          REPO="$LEGACY_REPO"
+        fi
+        VERSION="$PULSE_VERSION"
+        ;;
+      *) VERSION="$PULSE_VERSION" ;;
+    esac
     return
   fi
 
   local latest
+  local tag_pattern
+  if [ "$REPO" = "$LEGACY_REPO" ]; then
+    tag_pattern="^v[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*$"
+  else
+    tag_pattern="^${TAG_PREFIX}v[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*$"
+  fi
   latest=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" \
-    "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
-    | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
+    "https://api.github.com/repos/${REPO}/releases?per_page=100" 2>/dev/null \
+    | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' \
+    | grep "$tag_pattern" \
+    | head -1)
 
-  if [ -z "$latest" ]; then
-    err "Could not determine latest version. Set PULSE_VERSION=vX.Y.Z to install a specific version."
+  if [ -z "$latest" ] && [ "$REPO" = "$DEFAULT_REPO" ]; then
+    REPO="$LEGACY_REPO"
+    latest=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" \
+      "https://api.github.com/repos/${REPO}/releases?per_page=100" 2>/dev/null \
+      | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' \
+      | grep "^v[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*$" \
+      | head -1)
   fi
 
-  echo "$latest"
+  if [ -z "$latest" ]; then
+    err "Could not determine latest version. Set PULSE_VERSION=cli-vX.Y.Z to install a specific version."
+  fi
+
+  VERSION="$latest"
 }
 
 # --- main ---
@@ -65,7 +94,7 @@ main() {
 
   OS=$(detect_os)
   ARCH=$(detect_arch)
-  VERSION=$(resolve_version)
+  resolve_version
   ARTIFACT="${BINARY_NAME}-${OS}-${ARCH}"
 
   info "Version:  ${VERSION}"

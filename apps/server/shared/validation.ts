@@ -1,4 +1,12 @@
 import { z } from "zod";
+import {
+  AGENT_SESSION_SORTS,
+  ANALYTICS_GROUPS,
+  SPAN_ANALYTICS_GROUPS,
+  SPAN_KINDS,
+  SPAN_SOURCES,
+  TRACE_STATUSES,
+} from "@pulse/api-contracts";
 
 /**
  * Provider schema - accepts only specific provider values
@@ -8,18 +16,12 @@ export const providerSchema = z.enum(["openai", "anthropic", "openrouter"]);
 /**
  * Status enum for trace status
  */
-export const statusSchema = z.enum(["success", "error"]);
+export const statusSchema = z.enum(TRACE_STATUSES);
 
 /**
  * Source identifies which CLI tool produced the span.
  */
-export const spanSourceSchema = z.enum([
-  "claude_code",
-  "codex",
-  "opencode",
-  "openclaw",
-  "sdk",
-]);
+export const spanSourceSchema = z.enum(SPAN_SOURCES);
 
 /**
  * Query params schema for GET /v1/traces
@@ -39,7 +41,7 @@ export const traceQuerySchema = z.object({
 /**
  * Group by options for analytics aggregation
  */
-export const groupBySchema = z.enum(["day", "hour", "model", "provider"]);
+export const groupBySchema = z.enum(ANALYTICS_GROUPS);
 
 /**
  * Query params schema for GET /v1/analytics
@@ -50,7 +52,7 @@ export const analyticsQuerySchema = z.object({
   group_by: groupBySchema.optional(),
 });
 
-export const spanAnalyticsGroupBySchema = z.enum(["day", "hour"]);
+export const spanAnalyticsGroupBySchema = z.enum(SPAN_ANALYTICS_GROUPS);
 
 export const spanAnalyticsQuerySchema = z.object({
   date_from: z.string().datetime({ offset: true }),
@@ -69,15 +71,7 @@ export const spanAnalyticsQuerySchema = z.object({
  * llm_response    - assistant/model emitted a response message
  * notification    - agent emitted a notification
  */
-export const spanKindSchema = z.enum([
-  "llm_call",
-  "tool_use",
-  "agent_run",
-  "session",
-  "user_prompt",
-  "llm_response",
-  "notification",
-]);
+export const spanKindSchema = z.enum(SPAN_KINDS);
 
 /**
  * Span validation schema for incoming agent event data.
@@ -214,13 +208,7 @@ export const spanQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-export const agentSessionSortSchema = z.enum([
-  "recent",
-  "oldest",
-  "duration",
-  "errors",
-  "volume",
-]);
+export const agentSessionSortSchema = z.enum(AGENT_SESSION_SORTS);
 
 export const agentSessionQuerySchema = z.object({
   source: spanSourceSchema.optional(),

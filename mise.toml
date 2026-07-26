@@ -1,0 +1,80 @@
+min_version = "2026.7.5"
+
+[tools]
+bun = "1.3.5"
+python = "3.12"
+rust = "stable"
+uv = "0.11.28"
+
+[tasks.setup]
+description = "Install all workspace dependencies"
+run = [
+  "bun install --frozen-lockfile",
+  "uv sync --project sdks/python --python 3.12 --frozen",
+]
+
+[tasks."dashboard:check"]
+description = "Build and lint the dashboard"
+run = [
+  "bun run --cwd apps/dashboard build",
+  "bun run --cwd apps/dashboard lint",
+]
+
+[tasks."server:test"]
+description = "Run the server single-mode end-to-end suite"
+dir = "apps/server"
+run = "make test-e2e"
+
+[tasks."server:test:all"]
+description = "Run all server end-to-end modes"
+dir = "apps/server"
+run = [
+  "make test-e2e",
+  "make test-e2e-split",
+  "make test-e2e-scale",
+  "make test-e2e-scale-split",
+]
+
+[tasks."cli:check"]
+description = "Format-check and test the CLI"
+run = [
+  "cmp Cargo.lock crates/pulse-cli/Cargo.lock",
+  "cargo fmt --check --package pulse",
+  "cargo test --package pulse",
+]
+
+[tasks."sdk-ts:check"]
+description = "Build, typecheck, and test the TypeScript SDK"
+run = [
+  "bun run --cwd sdks/typescript build",
+  "bun run --cwd sdks/typescript typecheck",
+  "bun test --cwd sdks/typescript tests/pricing.test.ts tests/sdk-spans.test.ts tests/transport.test.ts",
+]
+
+[tasks."sdk-py:check"]
+description = "Test the Python SDK"
+dir = "sdks/python"
+run = "uv run --python 3.12 --frozen pytest -c /dev/null --rootdir=. -p no:cacheprovider tests/test_spans.py tests/test_transport.py"
+
+[tasks."contracts:check"]
+description = "Validate shared OTEL attributes"
+run = "uv run --script tooling/contracts/check.py"
+
+[tasks."tests:integrity"]
+description = "Verify immutable test content and guard behavior"
+run = [
+  "uv run --locked --script tooling/test-integrity/check.py --self-test",
+  "uv run --locked --script tooling/test-integrity/check.py",
+]
+
+[tasks.check]
+description = "Run every credential-free verification suite"
+depends = [
+  "dashboard:check",
+  "server:test:all",
+  "cli:check",
+  "sdk-ts:check",
+  "sdk-py:check",
+  "contracts:check",
+  "tests:integrity",
+]

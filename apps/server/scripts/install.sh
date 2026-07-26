@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="${PULSE_REPO:-EK-LABS-LLC/trace-service}"
-CLI_REPO="${PULSE_CLI_REPO:-EK-LABS-LLC/trace-cli}"
+DEFAULT_REPO="EK-LABS-LLC/pulse"
+LEGACY_SERVER_REPO="EK-LABS-LLC/trace-service"
+LEGACY_CLI_REPO="EK-LABS-LLC/trace-cli"
+REPO="${PULSE_REPO:-$DEFAULT_REPO}"
+CLI_REPO="${PULSE_CLI_REPO:-$DEFAULT_REPO}"
+SERVER_TAG_PREFIX="service-"
+CLI_TAG_PREFIX="cli-"
 BINARY="pulse-server"
 VERSION="${PULSE_VERSION:-latest}"
 CLI_VERSION="${PULSE_CLI_VERSION:-latest}"
@@ -115,8 +120,13 @@ INSTALL_METADATA="${INSTALL_DIR}/.pulse-install.toml"
 
 # Resolve release tag + verify artifact integrity against checksums.
 fetch_tag() {
-  local api_url="https://api.github.com/repos/${REPO}/releases/latest"
-  curl -fsSL "$api_url" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
+  local repo="$1"
+  local prefix="$2"
+  local api_url="https://api.github.com/repos/${repo}/releases?per_page=100"
+  curl -fsSL "$api_url" \
+    | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' \
+    | grep "^${prefix}v[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*$" \
+    | head -n1
 }
 
 sha256_file() {
@@ -129,13 +139,24 @@ sha256_file() {
 }
 
 if [[ "$VERSION" == "latest" ]]; then
-  TAG="$(fetch_tag)"
+  SERVER_LOOKUP_PREFIX="$SERVER_TAG_PREFIX"
+  if [[ "$REPO" == "$LEGACY_SERVER_REPO" ]]; then
+    SERVER_LOOKUP_PREFIX=""
+  fi
+  TAG="$(fetch_tag "$REPO" "$SERVER_LOOKUP_PREFIX" || true)"
+  if [[ -z "$TAG" && "$REPO" == "$DEFAULT_REPO" ]]; then
+    REPO="$LEGACY_SERVER_REPO"
+    TAG="$(fetch_tag "$REPO" "")"
+  fi
   if [[ -z "$TAG" ]]; then
     echo "Could not resolve latest release tag from ${REPO}"
     exit 1
   fi
 else
   TAG="$VERSION"
+  if [[ "$TAG" == v* && "$REPO" == "$DEFAULT_REPO" ]]; then
+    REPO="$LEGACY_SERVER_REPO"
+  fi
 fi
 
 # Download + verify server binary (supports new and legacy asset names).
@@ -225,14 +246,31 @@ fi
 # Optionally install the CLI so users have a ready-to-use local setup.
 if [[ "$INSTALL_CLI" == "1" ]]; then
   if [[ "$CLI_VERSION" == "latest" ]]; then
-    CLI_INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/${CLI_REPO}/main/install.sh"
+    CLI_LOOKUP_PREFIX="$CLI_TAG_PREFIX"
+    if [[ "$CLI_REPO" == "$LEGACY_CLI_REPO" ]]; then
+      CLI_LOOKUP_PREFIX=""
+    fi
+    CLI_TAG="$(fetch_tag "$CLI_REPO" "$CLI_LOOKUP_PREFIX" || true)"
+    if [[ -z "$CLI_TAG" && "$CLI_REPO" == "$DEFAULT_REPO" ]]; then
+      CLI_REPO="$LEGACY_CLI_REPO"
+      CLI_TAG="$(fetch_tag "$CLI_REPO" "")"
+    fi
     echo "Installing pulse CLI (latest)..."
-    curl -fsSL "$CLI_INSTALL_SCRIPT_URL" | PULSE_INSTALL_DIR="$INSTALL_DIR" sh
   else
-    CLI_INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/${CLI_REPO}/${CLI_VERSION}/install.sh"
+    CLI_TAG="$CLI_VERSION"
+    if [[ "$CLI_TAG" == v* && "$CLI_REPO" == "$DEFAULT_REPO" ]]; then
+      CLI_REPO="$LEGACY_CLI_REPO"
+    fi
     echo "Installing pulse CLI (${CLI_VERSION})..."
-    curl -fsSL "$CLI_INSTALL_SCRIPT_URL" | PULSE_INSTALL_DIR="$INSTALL_DIR" PULSE_VERSION="$CLI_VERSION" sh
   fi
+  if [[ "$CLI_REPO" == "$DEFAULT_REPO" ]]; then
+    CLI_INSTALL_PATH="crates/pulse-cli/install.sh"
+  else
+    CLI_INSTALL_PATH="install.sh"
+  fi
+  CLI_INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/${CLI_REPO}/${CLI_TAG}/${CLI_INSTALL_PATH}"
+  curl -fsSL "$CLI_INSTALL_SCRIPT_URL" |
+    PULSE_REPO="$CLI_REPO" PULSE_INSTALL_DIR="$INSTALL_DIR" PULSE_VERSION="$CLI_TAG" sh
 fi
 
 if [[ ":${PATH}:" != *":${INSTALL_DIR}:"* ]]; then

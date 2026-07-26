@@ -1,0 +1,44 @@
+name: Release TypeScript SDK
+
+on:
+  push:
+    tags: ["sdk-ts-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing sdk-ts-vX.Y.Z tag
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+      - name: Validate tag
+        env:
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          bash tooling/release/validate-tag.sh "${TAG}" sdk-ts- "$(jq -r .version sdks/typescript/package.json)"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.5"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+      - run: bun install --frozen-lockfile
+      - run: bun run --cwd sdks/typescript build
+      - run: bun run --cwd sdks/typescript typecheck
+      - run: npm publish --access public
+        working-directory: sdks/typescript

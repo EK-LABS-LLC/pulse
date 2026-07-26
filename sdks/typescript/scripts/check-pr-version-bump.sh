@@ -6,7 +6,7 @@ version_from_package_json() {
 }
 
 latest_tag_version() {
-  git tag --list 'v[0-9]*' --sort=-v:refname | head -n 1 | sed 's/^v//'
+  git tag --list 'sdk-ts-v[0-9]*' --sort=-v:refname | head -n 1 | sed 's/^sdk-ts-v//'
 }
 
 version_gt() {
@@ -42,8 +42,8 @@ current_version="$(version_from_package_json package.json)"
 latest_release_version="$(latest_tag_version)"
 
 if [[ -n "$latest_release_version" ]] && ! version_gt "$current_version" "$latest_release_version"; then
-  echo "::error::TypeScript SDK version must be bumped above latest release v$latest_release_version before merging this PR. Current version is $current_version." >&2
+  echo "::error::TypeScript SDK version must be bumped above latest release sdk-ts-v$latest_release_version before merging this PR. Current version is $current_version." >&2
   exit 1
 fi
 
-echo "TypeScript SDK version OK: latest release v$latest_release_version -> $current_version."
+echo "TypeScript SDK version OK: latest release sdk-ts-v$latest_release_version -> $current_version."

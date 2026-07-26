@@ -40,5 +40,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .data/*.db-wal
 .data/wal.test/
 .data/wal-spans.test/
+.data/wal*.bootstrap/
 .data/wal/p*/
 .data/wal-spans/p*/

@@ -266,17 +266,17 @@ On tag push (`v*`), `.github/workflows/release-image.yml` publishes multi-arch i
 For scale-mode tests/dev, start only Postgres:
 
 ```bash
-make up
-make test-e2e-scale
-make down
+just server-up
+just server-test-e2e-scale
+just server-down
 ```
 
 Equivalent explicit commands:
 
 ```bash
-make scale-up
-make test-e2e-scale
-make scale-down
+just server-scale-up
+just server-test-e2e-scale
+just server-scale-down
 ```
 
 ## SDK usage
@@ -362,6 +362,6 @@ bun test --env-file=.env.test
 End-to-end harness (starts service automatically):
 
 ```bash
-make test-e2e
-make test-e2e-scale
+just server-test-e2e
+just server-test-e2e-scale
 ```

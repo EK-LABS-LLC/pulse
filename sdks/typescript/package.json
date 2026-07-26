@@ -33,7 +33,7 @@
     "build": "rm -rf dist && bun build src/index.ts --outfile dist/index.js --target node --format esm && bun run build:types",
     "build:types": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "format": "bunx prettier --config ../.prettierrc --ignore-path ../.prettierignore --write \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
+    "format": "bunx prettier --ignore-path ../../.prettierignore --write \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
     "create-api-key": "bun run scripts/create-api-key.ts"
   },
   "devDependencies": {

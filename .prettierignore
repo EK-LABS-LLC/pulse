@@ -1,0 +1,5 @@
+.data
+coverage
+dist
+node_modules
+target

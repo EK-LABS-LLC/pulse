@@ -6,6 +6,7 @@
 
 Date: 2026-07-25 CDT; Status: In Progress; PR: TBD
 Changed: Bumped CLI package version to 0.2.17.
+Changed: CLI development and version commands now use root Just recipes and the root workspace Cargo lockfile.
 Changed: Update and installer discovery supports `cli-v*` and `server-v*` monorepo releases with a legacy-release bridge for existing installations.
 Fixed: Release bridging validates the latest legacy CLI assets, and installer or updater fallback now occurs only when a complete paginated GitHub lookup finds no namespaced release.
 

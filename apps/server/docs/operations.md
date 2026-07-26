@@ -101,19 +101,19 @@ Binary output: `dist/pulse-server`.
 Spin up local Postgres container:
 
 ```bash
-make scale-up
+just server-scale-up
 ```
 
 Run scale e2e:
 
 ```bash
-make test-e2e-scale
+just server-test-e2e-scale
 ```
 
 Tear down:
 
 ```bash
-make scale-down
+just server-scale-down
 ```
 
 ## Release Artifacts

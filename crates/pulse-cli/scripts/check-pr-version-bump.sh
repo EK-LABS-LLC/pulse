@@ -39,7 +39,6 @@ version_gt() {
 }
 
 current_version="$(version_from_toml Cargo.toml)"
-cmp ../../Cargo.lock Cargo.lock
 lock_version="$(awk '
   $0 == "name = \"pulse\"" { in_pulse = 1; next }
   in_pulse && /^version = / { gsub(/"/, "", $3); print $3; exit }

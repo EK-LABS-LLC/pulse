@@ -327,9 +327,9 @@ Each hook emission sends an OTLP JSON payload with `resourceSpans[].scopeSpans[]
 ### Build
 
 ```bash
-make build          # debug build
-make release        # release build
-make install        # release build + copy to ~/.local/bin/pulse
+just cli-build      # debug build
+just cli-release    # release build
+just cli-install    # release build + copy to ~/.local/bin/pulse
 ```
 
 Or with cargo directly:
@@ -342,7 +342,7 @@ cargo install --path .
 ### Test
 
 ```bash
-make test           # unit + integration tests
+just cli-test       # unit + integration tests
 ```
 
 ### E2E Tests
@@ -355,18 +355,18 @@ cp e2e/.env.example e2e/.env
 # Fill in ANTHROPIC_API_KEY, OPENAI_API_KEY, PULSE_API_URL, PULSE_API_KEY
 
 # 2. Run all suites
-make e2e
+just cli-e2e
 
 # Or run individually
-make e2e-claude            # Claude Code basic session
-make e2e-claude-tools      # Claude Code with tool calls + subagents
-make e2e-opencode          # OpenCode basic session
-make e2e-opencode-tools    # OpenCode with tool calls
-make e2e-codex             # Codex basic session
-make e2e-codex-tools       # Codex with tool calls
+just cli-e2e-claude            # Claude Code basic session
+just cli-e2e-claude-tools      # Claude Code with tool calls + subagents
+just cli-e2e-opencode          # OpenCode basic session
+just cli-e2e-opencode-tools    # OpenCode with tool calls
+just cli-e2e-codex             # Codex basic session
+just cli-e2e-codex-tools       # Codex with tool calls
 
 # Tear down
-make e2e-down
+just cli-e2e-down
 ```
 
 ## Releasing

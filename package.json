@@ -7,5 +7,14 @@
     "apps/server",
     "packages/api-contracts",
     "sdks/typescript"
-  ]
+  ],
+  "overrides": {
+    "brace-expansion": "^1.1.13",
+    "defu": "^6.1.7",
+    "flatted": "^3.4.0",
+    "picomatch": "^4.0.5",
+    "postcss": "^8.5.16",
+    "rollup": "^4.62.2",
+    "uuid": "^13.0.2"
+  }
 }

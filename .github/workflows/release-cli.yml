@@ -35,7 +35,6 @@ jobs:
           lock="$(awk '$0 == "name = \"pulse\"" { found=1; next } found && /^version = / { gsub(/"/, "", $3); print $3; exit }' Cargo.lock)"
           bash tooling/release/validate-tag.sh "${TAG}" cli- "${manifest}"
           bash tooling/release/require-legacy-bridge.sh cli "${manifest}"
-          cmp Cargo.lock crates/pulse-cli/Cargo.lock
           test "${lock}" = "${version}"
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
 

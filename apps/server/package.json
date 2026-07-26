@@ -23,7 +23,7 @@
     "test": "bash scripts/run-e2e.sh single",
     "test:live": "bun test --env-file=.env.test",
     "test:watch": "bun test --watch --env-file=.env.test",
-    "format": "bunx prettier --write \"**/*.{ts,tsx,js,json}\""
+    "format": "bunx prettier --ignore-path ../../.prettierignore --write \"**/*.{ts,tsx,js,json}\""
   },
   "devDependencies": {
     "@faker-js/faker": "^10.2.0",
@@ -44,9 +44,5 @@
     "postgres": "^3.4.7",
     "uuid": "^13.0.2",
     "zod": "^4.3.6"
-  },
-  "overrides": {
-    "defu": "^6.1.7",
-    "uuid": "^13.0.2"
   }
 }

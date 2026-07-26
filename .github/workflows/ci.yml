@@ -41,24 +41,31 @@ jobs:
               - 'apps/dashboard/**'
               - 'packages/api-contracts/**'
               - 'contracts/otel/**'
+              - 'Justfile'
+              - '.npmrc'
               - 'package.json'
               - 'bun.lock'
               - 'mise.toml'
+              - 'tsconfig.base.json'
               - '.github/workflows/ci.yml'
               - '.github/workflows/release-server.yml'
               - 'tooling/test-integrity/**'
             dashboard:
               - 'apps/dashboard/**'
               - 'packages/api-contracts/**'
+              - 'Justfile'
+              - '.npmrc'
               - 'package.json'
               - 'bun.lock'
               - 'mise.toml'
+              - 'tsconfig.base.json'
               - '.github/workflows/ci.yml'
               - 'tooling/test-integrity/**'
             cli:
               - 'crates/pulse-cli/**'
               - '.cargo/**'
               - 'contracts/otel/**'
+              - 'Justfile'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'mise.toml'
@@ -68,15 +75,19 @@ jobs:
             sdk_ts:
               - 'sdks/typescript/**'
               - 'contracts/otel/**'
+              - 'Justfile'
+              - '.npmrc'
               - 'package.json'
               - 'bun.lock'
               - 'mise.toml'
+              - 'tsconfig.base.json'
               - '.github/workflows/ci.yml'
               - '.github/workflows/release-sdk-typescript.yml'
               - 'tooling/test-integrity/**'
             sdk_py:
               - 'sdks/python/**'
               - 'contracts/otel/**'
+              - 'Justfile'
               - 'mise.toml'
               - '.github/workflows/ci.yml'
               - '.github/workflows/release-sdk-python.yml'
@@ -84,6 +95,7 @@ jobs:
             contracts:
               - 'contracts/**'
               - 'tooling/contracts/**'
+              - 'Justfile'
               - '.github/workflows/ci.yml'
               - 'mise.toml'
             server_image:
@@ -91,8 +103,10 @@ jobs:
               - 'apps/dashboard/**'
               - 'packages/api-contracts/**'
               - 'sdks/typescript/package.json'
+              - '.npmrc'
               - 'package.json'
               - 'bun.lock'
+              - 'tsconfig.base.json'
               - '.dockerignore'
               - '.github/workflows/ci.yml'
             release_tooling:
@@ -103,13 +117,14 @@ jobs:
               - 'apps/server/**'
               - 'apps/dashboard/**'
               - 'packages/api-contracts/**'
+              - '.npmrc'
               - 'package.json'
               - 'bun.lock'
               - '.dockerignore'
+              - 'tsconfig.base.json'
             cli_release:
               - 'crates/pulse-cli/src/**'
               - 'crates/pulse-cli/Cargo.toml'
-              - 'crates/pulse-cli/Cargo.lock'
               - 'crates/pulse-cli/install.sh'
               - 'Cargo.toml'
               - 'Cargo.lock'
@@ -118,8 +133,10 @@ jobs:
               - 'sdks/typescript/package.json'
               - 'sdks/typescript/tsconfig.json'
               - 'sdks/typescript/tsconfig.build.json'
+              - '.npmrc'
               - 'package.json'
               - 'bun.lock'
+              - 'tsconfig.base.json'
             sdk_py_release:
               - 'sdks/python/src/**'
               - 'sdks/python/pyproject.toml'
@@ -392,7 +409,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cmp Cargo.lock crates/pulse-cli/Cargo.lock
       - run: cargo fmt --check --package pulse
       - run: cargo test --package pulse
       - run: cargo build --release --package pulse

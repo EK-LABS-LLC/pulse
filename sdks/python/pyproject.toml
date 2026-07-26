@@ -14,7 +14,8 @@ authors = [
 dependencies = [
   "requests>=2.32.0",
 ]
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pulse_sdk"]

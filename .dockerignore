@@ -1,0 +1,11 @@
+.git
+.github
+.venv
+**/.data
+**/.env
+**/.env.*
+**/dist
+**/node_modules
+apps/server/drizzle
+apps/server/tests
+target

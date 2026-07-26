@@ -15,10 +15,16 @@ use crate::{
     error::{PulseError, Result},
 };
 
-const CLI_REPO: &str = "EK-LABS-LLC/trace-cli";
-const SERVER_REPO: &str = "EK-LABS-LLC/trace-service";
-const CLI_INSTALL_PATH: &str = "install.sh";
-const SERVER_INSTALL_PATH: &str = "scripts/install.sh";
+const CLI_REPO: &str = "EK-LABS-LLC/pulse";
+const SERVER_REPO: &str = "EK-LABS-LLC/pulse";
+const LEGACY_CLI_REPO: &str = "EK-LABS-LLC/trace-cli";
+const LEGACY_SERVER_REPO: &str = "EK-LABS-LLC/trace-service";
+const CLI_TAG_PREFIX: &str = "cli-";
+const SERVER_TAG_PREFIX: &str = "server-";
+const CLI_INSTALL_PATH: &str = "crates/pulse-cli/install.sh";
+const SERVER_INSTALL_PATH: &str = "apps/server/scripts/install.sh";
+const LEGACY_CLI_INSTALL_PATH: &str = "install.sh";
+const LEGACY_SERVER_INSTALL_PATH: &str = "scripts/install.sh";
 const SERVER_BINARY: &str = "pulse-server";
 const INSTALL_METADATA_FILE: &str = ".pulse-install.toml";
 const UPDATE_STATE_FILE: &str = "update-state.toml";
@@ -151,9 +157,9 @@ pub async fn maybe_prompt_update() {
 
 async fn update_status() -> Result<UpdateStatus> {
     let local_managed = is_local_managed();
-    let latest_cli = latest_release(CLI_REPO).await?;
+    let latest_cli = latest_component_release(CLI_REPO, CLI_TAG_PREFIX, LEGACY_CLI_REPO).await?;
     let latest_server = if local_managed {
-        latest_release(SERVER_REPO).await?
+        latest_component_release(SERVER_REPO, SERVER_TAG_PREFIX, LEGACY_SERVER_REPO).await?
     } else {
         String::new()
     };
@@ -172,21 +178,50 @@ async fn update_status() -> Result<UpdateStatus> {
     })
 }
 
-async fn latest_release(repo: &str) -> Result<String> {
-    let url = format!("https://api.github.com/repos/{repo}/releases/latest");
-    let release = Client::builder()
-        .timeout(Duration::from_secs(2))
-        .build()?
-        .get(url)
-        .header("Accept", "application/vnd.github.v3+json")
-        .header("User-Agent", "pulse-cli")
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<GitHubRelease>()
-        .await?;
+async fn latest_component_release(repo: &str, prefix: &str, legacy_repo: &str) -> Result<String> {
+    if let Some(release) = latest_release(repo, prefix).await? {
+        return Ok(release);
+    }
 
-    Ok(release.tag_name)
+    latest_release(legacy_repo, "")
+        .await?
+        .ok_or_else(|| PulseError::message(format!("no release found in {legacy_repo}")))
+}
+
+async fn latest_release(repo: &str, prefix: &str) -> Result<Option<String>> {
+    const PER_PAGE: usize = 100;
+
+    let client = Client::builder().timeout(Duration::from_secs(2)).build()?;
+    let mut page = 1_u32;
+
+    loop {
+        let url =
+            format!("https://api.github.com/repos/{repo}/releases?per_page={PER_PAGE}&page={page}");
+        let releases = client
+            .get(url)
+            .header("Accept", "application/vnd.github.v3+json")
+            .header("User-Agent", "pulse-cli")
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<Vec<GitHubRelease>>()
+            .await?;
+        let last_page = releases.len() < PER_PAGE;
+
+        if let Some(release) = releases.into_iter().find(|release| {
+            release.tag_name.starts_with(prefix) && parse_version(&release.tag_name).is_some()
+        }) {
+            return Ok(Some(release.tag_name));
+        }
+
+        if last_page {
+            return Ok(None);
+        }
+
+        page = page
+            .checked_add(1)
+            .ok_or_else(|| PulseError::message("GitHub release pagination overflow"))?;
+    }
 }
 
 fn print_update_summary(status: &UpdateStatus) {
@@ -206,22 +241,44 @@ fn print_update_summary(status: &UpdateStatus) {
 fn install_updates(status: &UpdateStatus) -> Result<()> {
     if status.local_managed {
         println!("Updating Pulse server, dashboard assets, and CLI...");
-        let install_url =
-            raw_installer_url(SERVER_REPO, &status.latest_server, SERVER_INSTALL_PATH)?;
+        let (repo, path) = server_release_source(&status.latest_server);
+        let install_url = raw_installer_url(repo, &status.latest_server, path)?;
         run_shell_install(&format!(
-            "curl -fsSL {install_url} | bash -s -- pulse-server --version {} --cli-version {}",
-            status.latest_server, status.latest_cli
+            "curl -fsSL {install_url} | bash -s -- pulse-server --version {} --server-only",
+            status.latest_server
         ))?;
+        install_cli_release(&status.latest_cli)?;
         println!("Update complete. If Pulse server is already running, run `pulse restart`.");
         return Ok(());
     }
 
     println!("Updating Pulse CLI...");
-    let install_url = raw_installer_url(CLI_REPO, &status.latest_cli, CLI_INSTALL_PATH)?;
+    install_cli_release(&status.latest_cli)
+}
+
+fn install_cli_release(tag: &str) -> Result<()> {
+    let (repo, path) = cli_release_source(tag);
+    let install_url = raw_installer_url(repo, tag, path)?;
     run_shell_install(&format!(
         "curl -fsSL {install_url} | PULSE_VERSION={} sh",
-        status.latest_cli
+        tag
     ))
+}
+
+fn cli_release_source(tag: &str) -> (&'static str, &'static str) {
+    if tag.starts_with(CLI_TAG_PREFIX) {
+        (CLI_REPO, CLI_INSTALL_PATH)
+    } else {
+        (LEGACY_CLI_REPO, LEGACY_CLI_INSTALL_PATH)
+    }
+}
+
+fn server_release_source(tag: &str) -> (&'static str, &'static str) {
+    if tag.starts_with(SERVER_TAG_PREFIX) {
+        (SERVER_REPO, SERVER_INSTALL_PATH)
+    } else {
+        (LEGACY_SERVER_REPO, LEGACY_SERVER_INSTALL_PATH)
+    }
 }
 
 fn raw_installer_url(repo: &str, tag: &str, path: &str) -> Result<String> {
@@ -332,6 +389,11 @@ fn current_version() -> &'static str {
 }
 
 fn normalize_version(value: &str) -> &str {
+    for prefix in [CLI_TAG_PREFIX, SERVER_TAG_PREFIX] {
+        if let Some(version) = value.strip_prefix(prefix) {
+            return version.strip_prefix('v').unwrap_or(version);
+        }
+    }
     value.strip_prefix('v').unwrap_or(value)
 }
 

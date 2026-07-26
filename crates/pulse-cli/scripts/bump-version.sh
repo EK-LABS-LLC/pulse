@@ -4,7 +4,7 @@ set -euo pipefail
 version="${1:-}"
 
 if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "Usage: make bump VERSION=x.y.z" >&2
+  echo "Usage: just cli-bump x.y.z" >&2
   exit 2
 fi
 
@@ -29,7 +29,7 @@ awk -v version="$version" '
     next
   }
   { print }
-' Cargo.lock > "$tmp"
-mv "$tmp" Cargo.lock
+' ../../Cargo.lock > "$tmp"
+mv "$tmp" ../../Cargo.lock
 
 echo "Updated CLI version to $version."

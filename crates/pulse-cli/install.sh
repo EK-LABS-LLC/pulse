@@ -1,7 +1,10 @@
 #!/bin/sh
 set -e
 
-REPO="EK-LABS-LLC/trace-cli"
+DEFAULT_REPO="EK-LABS-LLC/pulse"
+LEGACY_REPO="EK-LABS-LLC/trace-cli"
+REPO="${PULSE_REPO:-$DEFAULT_REPO}"
+TAG_PREFIX="cli-"
 BINARY_NAME="pulse"
 INSTALL_DIR="${PULSE_INSTALL_DIR:-$HOME/.local/bin}"
 
@@ -40,22 +43,136 @@ detect_arch() {
 
 # --- resolve version ---
 
+parse_release_page() {
+  response_file="$1"
+  parsed_file="$2"
+
+  if command -v jq >/dev/null 2>&1; then
+    jq -r '
+      if type != "array" or any(.[]; (.tag_name | type) != "string") then
+        error("invalid GitHub releases response")
+      else
+        length, (.[] | .tag_name)
+      end
+    ' "$response_file" > "$parsed_file"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -c '
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as source:
+    releases = json.load(source)
+if not isinstance(releases, list) or any(
+    not isinstance(release, dict) or not isinstance(release.get("tag_name"), str)
+    for release in releases
+):
+    raise ValueError("invalid GitHub releases response")
+print(len(releases))
+for release in releases:
+    print(release["tag_name"])
+' "$response_file" > "$parsed_file"
+  else
+    printf 'Resolving the latest release requires jq or python3.\n' >&2
+    return 2
+  fi
+}
+
+fetch_latest_tag() {
+  repo="$1"
+  tag_pattern="$2"
+  page=1
+
+  while true; do
+    response="${TMPDIR}/releases-${page}.json"
+    if ! content_type=$(curl -fsSL \
+      -H "Accept: application/vnd.github+json" \
+      -o "$response" \
+      -w '%{content_type}' \
+      "https://api.github.com/repos/${repo}/releases?per_page=100&page=${page}"); then
+      printf 'GitHub release lookup failed for %s\n' "$repo" >&2
+      return 2
+    fi
+
+    case "$content_type" in
+      application/json*) ;;
+      *)
+        printf 'GitHub returned an unexpected response for %s: %s\n' \
+          "$repo" "${content_type:-unknown content type}" >&2
+        return 2
+        ;;
+    esac
+
+    parsed="${TMPDIR}/release-tags-${page}.txt"
+    if ! parse_release_page "$response" "$parsed"; then
+      printf 'GitHub returned invalid release JSON for %s\n' "$repo" >&2
+      return 2
+    fi
+
+    release_count=$(sed -n '1p' "$parsed")
+    if [ "$release_count" -eq 0 ]; then
+      return 3
+    fi
+
+    tags="${TMPDIR}/release-tags-${page}.txt"
+    latest=$(sed '1d' "$tags" |
+      grep "$tag_pattern" |
+      head -n1 || true)
+    if [ -n "$latest" ]; then
+      printf '%s\n' "$latest"
+      return 0
+    fi
+
+    page=$((page + 1))
+  done
+}
+
 resolve_version() {
   if [ -n "$PULSE_VERSION" ]; then
-    echo "$PULSE_VERSION"
+    case "$PULSE_VERSION" in
+      cli-v*) VERSION="$PULSE_VERSION" ;;
+      v*)
+        if [ "$REPO" = "$DEFAULT_REPO" ]; then
+          REPO="$LEGACY_REPO"
+        fi
+        VERSION="$PULSE_VERSION"
+        ;;
+      *) VERSION="$PULSE_VERSION" ;;
+    esac
     return
   fi
 
-  local latest
-  latest=$(curl -fsSL -H "Accept: application/vnd.github.v3+json" \
-    "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
-    | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
-
-  if [ -z "$latest" ]; then
-    err "Could not determine latest version. Set PULSE_VERSION=vX.Y.Z to install a specific version."
+  if [ "$REPO" = "$LEGACY_REPO" ]; then
+    tag_pattern="^v[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*$"
+  else
+    tag_pattern="^${TAG_PREFIX}v[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*$"
   fi
 
-  echo "$latest"
+  if latest=$(fetch_latest_tag "$REPO" "$tag_pattern"); then
+    :
+  else
+    lookup_status=$?
+    if [ "$lookup_status" -eq 3 ] && [ "$REPO" = "$DEFAULT_REPO" ]; then
+      REPO="$LEGACY_REPO"
+      if latest=$(fetch_latest_tag "$REPO" \
+        "^v[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*$"); then
+        :
+      else
+        lookup_status=$?
+        if [ "$lookup_status" -eq 3 ]; then
+          err "No legacy release is available from ${REPO}."
+        fi
+        err "Could not query GitHub releases for ${REPO}."
+      fi
+    elif [ "$lookup_status" -eq 3 ]; then
+      err "No matching release is available from ${REPO}."
+    else
+      err "Could not query GitHub releases for ${REPO}."
+    fi
+  fi
+
+  if [ -z "$latest" ]; then
+    err "Could not determine latest version. Set PULSE_VERSION=cli-vX.Y.Z to install a specific version."
+  fi
+
+  VERSION="$latest"
 }
 
 # --- main ---
@@ -65,7 +182,9 @@ main() {
 
   OS=$(detect_os)
   ARCH=$(detect_arch)
-  VERSION=$(resolve_version)
+  TMPDIR=$(mktemp -d)
+  trap 'rm -rf "$TMPDIR"' EXIT
+  resolve_version
   ARTIFACT="${BINARY_NAME}-${OS}-${ARCH}"
 
   info "Version:  ${VERSION}"
@@ -76,9 +195,6 @@ main() {
   # download
   URL="https://github.com/${REPO}/releases/download/${VERSION}/${ARTIFACT}.tar.gz"
   info "Downloading ${URL}"
-
-  TMPDIR=$(mktemp -d)
-  trap 'rm -rf "$TMPDIR"' EXIT
 
   if ! curl -fsSL "$URL" -o "${TMPDIR}/${ARTIFACT}.tar.gz"; then
     err "Download failed. Check that version ${VERSION} exists and has a ${OS}/${ARCH} binary."

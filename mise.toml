@@ -1,0 +1,48 @@
+min_version = "2026.7.5"
+
+[tools]
+bun = "1.3.5"
+just = "1.56.0"
+python = "3.12"
+rust = "stable"
+uv = "0.11.28"
+
+[tasks.setup]
+description = "Install all workspace dependencies"
+run = "just setup"
+
+[tasks."dashboard:check"]
+description = "Build and lint the dashboard"
+run = "just dashboard-check"
+
+[tasks."server:test"]
+description = "Run the server single-mode end-to-end suite"
+run = "just server-test-e2e"
+
+[tasks."server:test:all"]
+description = "Run all server end-to-end modes"
+run = "just server-test-all"
+
+[tasks."cli:check"]
+description = "Format-check and test the CLI"
+run = "just cli-check"
+
+[tasks."sdk-ts:check"]
+description = "Build, typecheck, and test the TypeScript SDK"
+run = "just sdk-ts-check"
+
+[tasks."sdk-py:check"]
+description = "Test the Python SDK"
+run = "just sdk-py-check"
+
+[tasks."contracts:check"]
+description = "Validate shared OTEL attributes"
+run = "just contracts-check"
+
+[tasks."tests:integrity"]
+description = "Verify immutable test content and guard behavior"
+run = "just tests-integrity"
+
+[tasks.check]
+description = "Run every credential-free verification suite"
+run = "just check"

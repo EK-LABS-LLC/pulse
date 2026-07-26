@@ -1,0 +1,579 @@
+name: Pulse CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      server: ${{ steps.filter.outputs.server }}
+      dashboard: ${{ steps.filter.outputs.dashboard }}
+      cli: ${{ steps.filter.outputs.cli }}
+      sdk_ts: ${{ steps.filter.outputs.sdk_ts }}
+      sdk_py: ${{ steps.filter.outputs.sdk_py }}
+      contracts: ${{ steps.filter.outputs.contracts }}
+      server_image: ${{ steps.filter.outputs.server_image }}
+      release_tooling: ${{ steps.filter.outputs.release_tooling }}
+      server_release: ${{ steps.filter.outputs.server_release }}
+      cli_release: ${{ steps.filter.outputs.cli_release }}
+      sdk_ts_release: ${{ steps.filter.outputs.sdk_ts_release }}
+      sdk_py_release: ${{ steps.filter.outputs.sdk_py_release }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            server:
+              - 'apps/server/**'
+              - 'apps/dashboard/**'
+              - 'packages/api-contracts/**'
+              - 'contracts/otel/**'
+              - 'Justfile'
+              - '.npmrc'
+              - 'package.json'
+              - 'bun.lock'
+              - 'mise.toml'
+              - 'tsconfig.base.json'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/release-server.yml'
+              - 'tooling/test-integrity/**'
+            dashboard:
+              - 'apps/dashboard/**'
+              - 'packages/api-contracts/**'
+              - 'Justfile'
+              - '.npmrc'
+              - 'package.json'
+              - 'bun.lock'
+              - 'mise.toml'
+              - 'tsconfig.base.json'
+              - '.github/workflows/ci.yml'
+              - 'tooling/test-integrity/**'
+            cli:
+              - 'crates/pulse-cli/**'
+              - '.cargo/**'
+              - 'contracts/otel/**'
+              - 'Justfile'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'mise.toml'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/release-cli.yml'
+              - 'tooling/test-integrity/**'
+            sdk_ts:
+              - 'sdks/typescript/**'
+              - 'contracts/otel/**'
+              - 'Justfile'
+              - '.npmrc'
+              - 'package.json'
+              - 'bun.lock'
+              - 'mise.toml'
+              - 'tsconfig.base.json'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/release-sdk-typescript.yml'
+              - 'tooling/test-integrity/**'
+            sdk_py:
+              - 'sdks/python/**'
+              - 'contracts/otel/**'
+              - 'Justfile'
+              - 'mise.toml'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/release-sdk-python.yml'
+              - 'tooling/test-integrity/**'
+            contracts:
+              - 'contracts/**'
+              - 'tooling/contracts/**'
+              - 'Justfile'
+              - '.github/workflows/ci.yml'
+              - 'mise.toml'
+            server_image:
+              - 'apps/server/**'
+              - 'apps/dashboard/**'
+              - 'packages/api-contracts/**'
+              - 'sdks/typescript/package.json'
+              - '.npmrc'
+              - 'package.json'
+              - 'bun.lock'
+              - 'tsconfig.base.json'
+              - '.dockerignore'
+              - '.github/workflows/ci.yml'
+            release_tooling:
+              - 'tooling/release/**'
+              - '.github/workflows/release-*.yml'
+              - '.github/workflows/ci.yml'
+            server_release:
+              - 'apps/server/**'
+              - 'apps/dashboard/**'
+              - 'packages/api-contracts/**'
+              - '.npmrc'
+              - 'package.json'
+              - 'bun.lock'
+              - '.dockerignore'
+              - 'tsconfig.base.json'
+            cli_release:
+              - 'crates/pulse-cli/src/**'
+              - 'crates/pulse-cli/Cargo.toml'
+              - 'crates/pulse-cli/install.sh'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+            sdk_ts_release:
+              - 'sdks/typescript/src/**'
+              - 'sdks/typescript/package.json'
+              - 'sdks/typescript/tsconfig.json'
+              - 'sdks/typescript/tsconfig.build.json'
+              - '.npmrc'
+              - 'package.json'
+              - 'bun.lock'
+              - 'tsconfig.base.json'
+            sdk_py_release:
+              - 'sdks/python/src/**'
+              - 'sdks/python/pyproject.toml'
+
+  test-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+      - name: Run trusted test-integrity guard
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          guard_dir="${RUNNER_TEMP}/test-integrity"
+          mkdir -p "${guard_dir}"
+          for file in check.py check.py.lock baseline.json self_test.py; do
+            if ! git cat-file -e "${BASE_SHA}:tooling/test-integrity/${file}" 2>/dev/null; then
+              echo "Trusted test-integrity file missing from ${BASE_SHA}: ${file}" >&2
+              exit 1
+            fi
+            git show "${BASE_SHA}:tooling/test-integrity/${file}" > "${guard_dir}/${file}"
+          done
+          uv run --locked --script "${guard_dir}/check.py" --self-test
+          uv run --locked --script "${guard_dir}/check.py" \
+            --root "${GITHUB_WORKSPACE}" \
+            --manifest "${guard_dir}/baseline.json"
+
+  server-version:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.server_release == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check server version
+        working-directory: apps/server
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git cat-file -e "${BASE_SHA}:apps/server/package.json" 2>/dev/null; then
+            ./scripts/check-pr-version-bump.sh
+          else
+            echo "Initial monorepo import; version baseline starts after cutover."
+          fi
+
+  cli-version:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.cli_release == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check CLI version
+        working-directory: crates/pulse-cli
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git cat-file -e "${BASE_SHA}:crates/pulse-cli/Cargo.toml" 2>/dev/null; then
+            ./scripts/check-pr-version-bump.sh
+          else
+            echo "Initial monorepo import; version baseline starts after cutover."
+          fi
+
+  sdk-ts-version:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.sdk_ts_release == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check TypeScript SDK version
+        working-directory: sdks/typescript
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git cat-file -e "${BASE_SHA}:sdks/typescript/package.json" 2>/dev/null; then
+            ./scripts/check-pr-version-bump.sh
+          else
+            echo "Initial monorepo import; version baseline starts after cutover."
+          fi
+
+  sdk-py-version:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.sdk_py_release == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check Python SDK version
+        working-directory: sdks/python
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git cat-file -e "${BASE_SHA}:sdks/python/pyproject.toml" 2>/dev/null; then
+            ./scripts/check-pr-version-bump.sh
+          else
+            echo "Initial monorepo import; version baseline starts after cutover."
+          fi
+
+  dashboard:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.dashboard == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.5"
+      - run: bun install --frozen-lockfile
+      - run: bun run --cwd apps/dashboard build
+      - run: bun run --cwd apps/dashboard lint
+
+  server-single:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        split: ["0", "1"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.5"
+      - run: bun install --frozen-lockfile
+      - run: SPLIT=${{ matrix.split }} bash scripts/run-e2e.sh single
+        working-directory: apps/server
+
+  server-scale:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        split: ["0", "1"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.5"
+      - run: bun install --frozen-lockfile
+      - run: SPLIT=${{ matrix.split }} bash scripts/run-e2e.sh scale
+        working-directory: apps/server
+
+  server-bootstrap-single:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
+    env:
+      BETTER_AUTH_SECRET: bootstrap-single-secret-abcdefghijklmnopqrstuvwxyz123456
+      ENCRYPTION_KEY: bootstrap-single-key-abcdefghijklmnopqrstuvwxyz1234567890
+      BETTER_AUTH_URL: http://localhost:3100
+      FRONTEND_URL: http://localhost:3100
+      NODE_ENV: test
+      PORT: "3100"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.5"
+      - run: bun install --frozen-lockfile
+      - run: bash tests/bootstrap/single.sh
+        working-directory: apps/server
+
+  server-bootstrap-scale:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
+    env:
+      PULSE_MODE: scale
+      DATABASE_URL: postgresql://pulse:pulse@localhost:5432/pulse
+      BETTER_AUTH_SECRET: bootstrap-scale-secret-abcdefghijklmnopqrstuvwxyz123456
+      ENCRYPTION_KEY: bootstrap-scale-key-abcdefghijklmnopqrstuvwxyz1234567890
+      BETTER_AUTH_URL: http://localhost:3200
+      FRONTEND_URL: http://localhost:3200
+      NODE_ENV: test
+      PORT: "3200"
+      WAL_DIR: .data/wal.scale.bootstrap
+      WAL_SPAN_DIR: .data/wal-spans.scale.bootstrap
+      TRACE_WAL_PARTITIONS: "1"
+      SPAN_WAL_PARTITIONS: "1"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pulse
+          POSTGRES_PASSWORD: pulse
+          POSTGRES_DB: pulse
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pulse -d pulse"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.5"
+      - run: bun install --frozen-lockfile
+      - run: bash tests/bootstrap/scale.sh
+        working-directory: apps/server
+
+  server-release-artifacts:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.5"
+      - run: bun install --frozen-lockfile
+      - run: bun run --cwd apps/server release:artifacts
+      - name: Smoke-test compiled server
+        working-directory: apps/server
+        run: |
+          set -euo pipefail
+          data_dir="$(mktemp -d)"
+          PULSE_HOME="${data_dir}" \
+          DATABASE_PATH="${data_dir}/pulse.db" \
+          WAL_SPAN_DIR="${data_dir}/wal-spans" \
+          PORT=8765 \
+          ./dist/pulse-server > /tmp/pulse-server-smoke.log 2>&1 &
+          pid=$!
+          trap 'kill "${pid}" 2>/dev/null || true; wait "${pid}" 2>/dev/null || true; rm -rf "${data_dir}"' EXIT
+          for _ in $(seq 1 40); do
+            curl -fsS http://127.0.0.1:8765/health && exit 0
+            sleep 0.5
+          done
+          tail -n 200 /tmp/pulse-server-smoke.log
+          exit 1
+
+  server-image:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server_image == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --tag pulse-server:ci --file apps/server/Dockerfile .
+      - name: Smoke-test service image
+        run: |
+          set -euo pipefail
+          container="pulse-server-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker run --detach --name "${container}" --publish 127.0.0.1:8765:3000 pulse-server:ci
+          trap 'docker rm --force "${container}" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8765/health; then
+              exit 0
+            fi
+            sleep 0.5
+          done
+          docker logs "${container}"
+          exit 1
+
+  cli:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.cli == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo fmt --check --package pulse
+      - run: cargo test --package pulse
+      - run: cargo build --release --package pulse
+      - run: ./target/release/pulse --version
+
+  sdk-ts:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.sdk_ts == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.5"
+      - run: bun install --frozen-lockfile
+      - run: bun run --cwd sdks/typescript build
+      - run: bun run --cwd sdks/typescript typecheck
+      - run: bun test tests/pricing.test.ts tests/sdk-spans.test.ts tests/transport.test.ts
+        working-directory: sdks/typescript
+
+  sdk-py:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.sdk_py == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+        working-directory: sdks/python
+      - run: uv run --frozen pytest -c /dev/null --rootdir=. -p no:cacheprovider tests/test_spans.py tests/test_transport.py
+        working-directory: sdks/python
+      - run: uv build
+        working-directory: sdks/python
+      - run: uv run --with twine twine check dist/*
+        working-directory: sdks/python
+      - name: Smoke-test wheel
+        working-directory: sdks/python
+        run: |
+          uv venv "${RUNNER_TEMP}/pulse-sdk-wheel"
+          uv pip install --python "${RUNNER_TEMP}/pulse-sdk-wheel/bin/python" dist/*.whl
+          "${RUNNER_TEMP}/pulse-sdk-wheel/bin/python" -c \
+            'import importlib.metadata, pathlib, pulse_sdk, tomllib; expected = tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"]; assert importlib.metadata.version("pulse-trace-sdk") == expected'
+
+  contracts:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.server == 'true' ||
+      needs.changes.outputs.cli == 'true' ||
+      needs.changes.outputs.sdk_ts == 'true' ||
+      needs.changes.outputs.sdk_py == 'true' ||
+      needs.changes.outputs.contracts == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run --script tooling/contracts/check.py
+
+  release-tooling:
+    runs-on: ubuntu-latest
+    needs: [changes, test-integrity]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.release_tooling == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash -n tooling/release/*.sh
+      - name: Verify tag validation
+        run: |
+          set -euo pipefail
+          git tag ci-v0.0.1 origin/main
+          git tag ci-v0.0.2 origin/main
+          trap 'git tag -d ci-v0.0.1 ci-v0.0.2 >/dev/null 2>&1 || true' EXIT
+          bash tooling/release/validate-tag.sh ci-v0.0.2 ci- 0.0.2
+          if bash tooling/release/validate-tag.sh ci-v0.0.2 ci- 0.0.1; then
+            exit 1
+          fi
+          if bash tooling/release/validate-tag.sh ci-v0.0.1 ci- 0.0.1; then
+            exit 1
+          fi
+      - name: Verify legacy release bridges
+        run: |
+          set -euo pipefail
+          gh() {
+            local endpoint=""
+            for arg in "$@"; do
+              if [[ "${arg}" == repos/* ]]; then
+                endpoint="${arg}"
+              fi
+            done
+            case "${endpoint}" in
+              "repos/EK-LABS-LLC/pulse/releases?per_page=100")
+                printf '%s\n' '[]'
+                ;;
+              "repos/EK-LABS-LLC/trace-cli/releases?per_page=100")
+                printf '%s\n' \
+                  '[{"id":214,"tag_name":"v0.2.14","draft":false,"prerelease":false}]' \
+                  '[{"id":216,"tag_name":"v0.2.16","draft":false,"prerelease":false}]'
+                ;;
+              "repos/EK-LABS-LLC/trace-service/releases?per_page=100")
+                printf '%s\n' \
+                  '[{"id":213,"tag_name":"v0.2.13","draft":false,"prerelease":false}]' \
+                  '[{"id":215,"tag_name":"v0.2.15","draft":false,"prerelease":false}]'
+                ;;
+              "repos/EK-LABS-LLC/trace-cli/releases/216/assets?per_page=100")
+                if [[ "${MOCK_ASSETS}" == "missing" ]]; then
+                  printf '%s\n' '[]'
+                else
+                  printf '%s\n' \
+                    '[{"name":"pulse-darwin-amd64.tar.gz"},{"name":"pulse-darwin-arm64.tar.gz"}]' \
+                    '[{"name":"pulse-linux-amd64.tar.gz"},{"name":"pulse-linux-arm64.tar.gz"}]'
+                fi
+                ;;
+              "repos/EK-LABS-LLC/trace-service/releases/215/assets?per_page=100")
+                if [[ "${MOCK_ASSETS}" == "missing" ]]; then
+                  printf '%s\n' '[]'
+                else
+                  printf '%s\n' \
+                    '[{"name":"checksums.txt"},{"name":"pulse-dashboard-assets.tar.gz"},{"name":"pulse-server-darwin-amd64"}]' \
+                    '[{"name":"pulse-server-darwin-arm64"},{"name":"pulse-server-linux-amd64"},{"name":"pulse-server-linux-arm64"}]'
+                fi
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+          export -f gh
+          export GITHUB_REPOSITORY=EK-LABS-LLC/pulse
+          MOCK_ASSETS=complete bash tooling/release/require-legacy-bridge.sh server 0.2.16
+          MOCK_ASSETS=complete bash tooling/release/require-legacy-bridge.sh cli 0.2.17
+          if MOCK_ASSETS=complete bash tooling/release/require-legacy-bridge.sh cli 0.2.16; then
+            exit 1
+          fi
+          if MOCK_ASSETS=missing bash tooling/release/require-legacy-bridge.sh server 0.2.16; then
+            exit 1
+          fi
+
+  required:
+    name: required
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - changes
+      - test-integrity
+      - server-version
+      - cli-version
+      - sdk-ts-version
+      - sdk-py-version
+      - dashboard
+      - server-single
+      - server-scale
+      - server-bootstrap-single
+      - server-bootstrap-scale
+      - server-release-artifacts
+      - server-image
+      - cli
+      - sdk-ts
+      - sdk-py
+      - contracts
+      - release-tooling
+    steps:
+      - name: Require selected jobs
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: jq -e 'all(.[]; .result == "success" or .result == "skipped")' <<<"${NEEDS_JSON}"

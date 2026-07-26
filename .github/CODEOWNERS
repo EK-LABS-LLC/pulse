@@ -5,7 +5,9 @@
 /tooling/release/ @theworksofvon
 /contracts/ @theworksofvon
 /.cargo/ @theworksofvon
-/apps/server/Makefile @theworksofvon
+/Justfile @theworksofvon
+/mise.toml @theworksofvon
+/tsconfig.base.json @theworksofvon
 /apps/server/.env.test @theworksofvon
 /apps/server/lib/*.test.ts @theworksofvon
 /apps/server/services/derived-traces.test.ts @theworksofvon

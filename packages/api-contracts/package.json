@@ -1,0 +1,8 @@
+{
+  "name": "@pulse/api-contracts",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

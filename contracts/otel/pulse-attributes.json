@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "attributes": [
+    { "name": "pulse.agent.name", "type": "string" },
+    { "name": "pulse.cli.hooks", "type": "string" },
+    { "name": "pulse.correlation.status", "type": "string" },
+    { "name": "pulse.cost_cents", "type": "number" },
+    { "name": "pulse.cwd", "type": "string" },
+    { "name": "pulse.error", "type": "json" },
+    { "name": "pulse.event_type", "type": "string" },
+    { "name": "pulse.is_interrupt", "type": "boolean" },
+    { "name": "pulse.kind", "type": "string" },
+    { "name": "pulse.metadata", "type": "json" },
+    { "name": "pulse.model", "type": "string" },
+    { "name": "pulse.output_text", "type": "string" },
+    { "name": "pulse.project.id", "type": "string" },
+    { "name": "pulse.provider", "type": "string" },
+    { "name": "pulse.request", "type": "json" },
+    { "name": "pulse.response", "type": "json" },
+    { "name": "pulse.session_id", "type": "string" },
+    { "name": "pulse.session_name", "type": "string" },
+    { "name": "pulse.source", "type": "string" },
+    { "name": "pulse.tool.id", "type": "string" },
+    { "name": "pulse.tool.input", "type": "json" },
+    { "name": "pulse.tool.name", "type": "string" },
+    { "name": "pulse.tool.response", "type": "json" },
+    { "name": "pulse.trace_id", "type": "string" }
+  ]
+}

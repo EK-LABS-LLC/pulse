@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Prepare Monorepo Cutover
+
+Date: 2026-07-25 CDT; Status: In Progress; PR: TBD
+Changed: Server and dashboard builds now use the shared Pulse workspace and API contracts while remaining independently deployable.
+Changed: Repository development commands now use root Just recipes and shared root tooling configuration.
+Changed: Installer discovery supports `server-v*` and `cli-v*` monorepo releases and falls back to existing trace-service and trace-cli releases during cutover.
+Fixed: Release bridging validates the latest legacy service assets, and installer fallback now occurs only when a complete paginated GitHub lookup finds no namespaced release.
+Fixed: Container builds use the monorepo root ignore rules without copying server migrations or tests into the build context.
+
 ### Unify Traces And Sessions On Spans
 
 Date: 2026-07-21 21:30 CDT; Status: Completed; PR: #18 https://github.com/EK-LABS-LLC/trace-service/pull/18

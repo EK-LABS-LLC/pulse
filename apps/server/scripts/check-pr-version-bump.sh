@@ -5,8 +5,13 @@ version_from_package_json() {
   sed -nE 's/^[[:space:]]*"version":[[:space:]]*"([^"]+)".*/\1/p' "$1" | head -n 1
 }
 
-latest_tag_version() {
-  git tag --list 'v[0-9]*' --sort=-v:refname | head -n 1 | sed 's/^v//'
+latest_tag() {
+  local tag
+  tag="$(git tag --list 'server-v[0-9]*' --sort=-v:refname | head -n 1)"
+  if [[ -z "$tag" ]]; then
+    tag="$(git tag --list 'service-v[0-9]*' --sort=-v:refname | head -n 1)"
+  fi
+  printf '%s\n' "$tag"
 }
 
 version_gt() {
@@ -39,16 +44,18 @@ version_gt() {
 }
 
 current_version="$(version_from_package_json package.json)"
-latest_release_version="$(latest_tag_version)"
+latest_release_tag="$(latest_tag)"
+latest_release_version="${latest_release_tag#server-v}"
+latest_release_version="${latest_release_version#service-v}"
 
 if [[ -z "$current_version" || -z "$latest_release_version" ]]; then
-  echo "::error::Could not resolve trace-service versions. current=$current_version latest_release=$latest_release_version" >&2
+  echo "::error::Could not resolve Pulse server versions. current=$current_version latest_release=$latest_release_version" >&2
   exit 1
 fi
 
 if ! version_gt "$current_version" "$latest_release_version"; then
-  echo "::error::trace-service version must be bumped above latest release v$latest_release_version before merging this PR. Current version is $current_version." >&2
+  echo "::error::Pulse server version must be bumped above latest release $latest_release_tag before merging this PR. Current version is $current_version." >&2
   exit 1
 fi
 
-echo "trace-service version OK: latest release v$latest_release_version -> $current_version."
+echo "Pulse server version OK: latest release $latest_release_tag -> $current_version."

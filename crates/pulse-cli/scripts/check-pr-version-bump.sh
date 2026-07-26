@@ -6,7 +6,7 @@ version_from_toml() {
 }
 
 latest_tag_version() {
-  git tag --list 'v[0-9]*' --sort=-v:refname | head -n 1 | sed 's/^v//'
+  git tag --list 'cli-v[0-9]*' --sort=-v:refname | head -n 1 | sed 's/^cli-v//'
 }
 
 version_gt() {
@@ -42,7 +42,7 @@ current_version="$(version_from_toml Cargo.toml)"
 lock_version="$(awk '
   $0 == "name = \"pulse\"" { in_pulse = 1; next }
   in_pulse && /^version = / { gsub(/"/, "", $3); print $3; exit }
-' Cargo.lock)"
+' ../../Cargo.lock)"
 
 if [[ "$current_version" != "$lock_version" ]]; then
   echo "::error::Cargo.toml version ($current_version) does not match Cargo.lock version ($lock_version)." >&2
@@ -52,8 +52,8 @@ fi
 latest_release_version="$(latest_tag_version)"
 
 if [[ -n "$latest_release_version" ]] && ! version_gt "$current_version" "$latest_release_version"; then
-  echo "::error::CLI version must be bumped above latest release v$latest_release_version before merging this PR. Current version is $current_version." >&2
+  echo "::error::CLI version must be bumped above latest release cli-v$latest_release_version before merging this PR. Current version is $current_version." >&2
   exit 1
 fi
 
-echo "CLI version OK: latest release v$latest_release_version -> $current_version."
+echo "CLI version OK: latest release cli-v$latest_release_version -> $current_version."

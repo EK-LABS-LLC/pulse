@@ -4,7 +4,7 @@ set -euo pipefail
 version="${1:-}"
 
 if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "Usage: make bump VERSION=x.y.z" >&2
+  echo "Usage: just sdk-py-bump x.y.z" >&2
   exit 2
 fi
 

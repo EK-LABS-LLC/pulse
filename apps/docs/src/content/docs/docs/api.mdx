@@ -175,8 +175,8 @@ Returns `{ sessionId: string, spans: [...] }` or `404`.
 
 | Name | Type | Required | Description |
 | --- | --- | --- | --- |
-| `date_from` | `string` | Yes | Start of date range. |
-| `date_to` | `string` | Yes | End of date range. |
+| `date_from` | `string` | Yes | Start of date range as an ISO 8601/RFC 3339 datetime with an explicit timezone offset, for example `2026-07-26T00:00:00-05:00`. |
+| `date_to` | `string` | Yes | End of date range as an ISO 8601/RFC 3339 datetime with an explicit timezone offset, for example `2026-07-27T00:00:00-05:00`. |
 | `group_by` | `string` | No | Optional grouping dimension. |
 
 </section>

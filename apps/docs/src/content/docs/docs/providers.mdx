@@ -23,18 +23,18 @@ metadata attributes.
   <TabItem label="TypeScript">
 
 ```ts
-const traced = observe(client, Provider.OpenAI);
-const traced = observe(client, Provider.Anthropic);
-const traced = observe(client, Provider.OpenRouter);
+const openaiTraced = observe(openaiClient, Provider.OpenAI);
+const anthropicTraced = observe(anthropicClient, Provider.Anthropic);
+const openRouterTraced = observe(openRouterClient, Provider.OpenRouter);
 ```
 
   </TabItem>
   <TabItem label="Python">
 
 ```python
-traced = observe(client, Provider.OPENAI)
-traced = observe(client, Provider.ANTHROPIC)
-traced = observe(client, Provider.OPENROUTER)
+openai_traced = observe(openai_client, Provider.OPENAI)
+anthropic_traced = observe(anthropic_client, Provider.ANTHROPIC)
+openrouter_traced = observe(openrouter_client, Provider.OPENROUTER)
 ```
 
   </TabItem>

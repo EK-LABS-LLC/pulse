@@ -6,6 +6,7 @@
 
 Date: 2026-07-26 CDT; Status: In Progress
 Changed: Docs now build and run from `apps/docs` through the shared Pulse workspace and CI.
+Fixed: Corrected API links, SDK field names and examples, analytics timestamps, runtime support, Docker persistence, and font loading.
 
 ### Document OTel Trace Model
 

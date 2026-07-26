@@ -169,19 +169,19 @@ client.chat.completions.create(
 
 The third argument to `observe()`:
 
-| Field | Type | Description |
+| TypeScript / Python | Type | Description |
 | --- | --- | --- |
-| `sessionId` | `string` | Default session ID for all calls through the client. |
+| `sessionId` / `session_id` | `string` | Default session ID for all calls through the client. |
 | `metadata` | `Record<string, unknown>` | Metadata merged into every trace from this client. |
 
 ## Per-call params
 
 These request fields are stripped before sending to the provider:
 
-| Field | Type | Description |
+| TypeScript / Python | Type | Description |
 | --- | --- | --- |
-| `pulseSessionId` | `string` | Override session ID for this call only. |
-| `pulseMetadata` | `Record<string, unknown>` | Merge additional metadata for this call. |
+| `pulseSessionId` / `pulse_session_id` | `string` | Override session ID for this call only. |
+| `pulseMetadata` / `pulse_metadata` | `Record<string, unknown>` | Merge additional metadata for this call. |
 
 ## Viewing the unified hierarchy
 

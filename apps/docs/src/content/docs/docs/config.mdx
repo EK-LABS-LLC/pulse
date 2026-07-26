@@ -45,12 +45,12 @@ init_pulse({
 
 ## Options
 
-| Option | Type | Required | Description |
+| TypeScript / Python | Type | Required | Description |
 | --- | --- | --- | --- |
-| `apiKey` | `string` | Yes | Your Pulse API key. Must start with `pulse_sk_`. |
-| `apiUrl` | `string` | No | Pulse server URL. Default: `http://localhost:3000` |
-| `batchSize` | `number` | No | Number of traces to buffer before flushing. Range: `1-100`. Default: `10` |
-| `flushInterval` | `number` | No | Milliseconds between periodic flushes. Minimum: `1000`. Default: `5000` |
+| `apiKey` / `api_key` | `string` | Yes | Your Pulse API key. Must start with `pulse_sk_`. |
+| `apiUrl` / `api_url` | `string` | No | Pulse server URL. Default: `http://localhost:3000` |
+| `batchSize` / `batch_size` | `number` | No | Number of traces to buffer before flushing. Range: `1-100`. Default: `10` |
+| `flushInterval` / `flush_interval` | `number` | No | Milliseconds between periodic flushes. Minimum: `1000`. Default: `5000` |
 | `enabled` | `boolean` | No | Enable or disable tracing. Default: `true` |
 
 ## Batching behavior

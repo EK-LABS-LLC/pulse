@@ -69,6 +69,7 @@ Run the server container directly. It already includes the built dashboard asset
 
 ```bash
 docker run --rm -p 3000:3000 \
+  --mount type=volume,source=pulse-home,target=/root/.pulse \
   -e BETTER_AUTH_SECRET="$(openssl rand -hex 32)" \
   -e ENCRYPTION_KEY="$(openssl rand -hex 32)" \
   -e BETTER_AUTH_URL='http://localhost:3000' \

@@ -482,6 +482,24 @@ jobs:
         run: |
           bash tooling/release/require-legacy-bridge.sh service 0.2.15
           bash tooling/release/require-legacy-bridge.sh cli 0.2.16
+      - name: Verify legacy bridge rejection
+        run: |
+          set -euo pipefail
+          gh() {
+            if [[ "$*" == *"releases?per_page=100"* ]]; then
+              printf '0\n'
+            elif [[ "${MOCK_ASSETS}" == "complete" ]]; then
+              printf '%s\n' '{"assets":[{"name":"checksums.txt"},{"name":"pulse-dashboard-assets.tar.gz"},{"name":"pulse-server-darwin-amd64"},{"name":"pulse-server-darwin-arm64"},{"name":"pulse-server-linux-amd64"},{"name":"pulse-server-linux-arm64"}]}'
+            else
+              printf '%s\n' '{"assets":[]}'
+            fi
+          }
+          export -f gh
+          export GITHUB_REPOSITORY=EK-LABS-LLC/pulse
+          MOCK_ASSETS=complete bash tooling/release/require-legacy-bridge.sh service 0.2.15
+          if MOCK_ASSETS=missing bash tooling/release/require-legacy-bridge.sh service 0.2.15; then
+            exit 1
+          fi
 
   required:
     name: required

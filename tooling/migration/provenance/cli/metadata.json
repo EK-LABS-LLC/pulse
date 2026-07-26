@@ -1,0 +1,15 @@
+{
+  "source_repository": "EK-LABS-LLC/trace-cli",
+  "source_branch": "main",
+  "source_commit": "96e283e86459be1518a3c98fbe72039eac73ae94",
+  "source_tree": "dfbbe2ccd7e020039f217b8bddcbdce8e846555d",
+  "source_commit_count": 60,
+  "source_tag_count": 14,
+  "destination": "crates/pulse-cli",
+  "tag_prefix": "cli-",
+  "rewritten_tip": "9be6313e50326b4a26c5dd245dcee8ec0b4ef577",
+  "filter_repo_version": "2.47.0",
+  "filter_repo_revision": "a40bce548d2c",
+  "preserve_commit_hash_references": true,
+  "provisional": false
+}

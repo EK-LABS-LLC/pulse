@@ -1,0 +1,15 @@
+{
+  "source_repository": "EK-LABS-LLC/trace-sdk-ts",
+  "source_branch": "main",
+  "source_commit": "53f51d10c69759c8735fc321a5121bab29b333d4",
+  "source_tree": "54450efee1719778b0da2b78dda80acde56aad98",
+  "source_commit_count": 22,
+  "source_tag_count": 7,
+  "destination": "sdks/typescript",
+  "tag_prefix": "sdk-ts-",
+  "rewritten_tip": "e1a1d68cc529001591ecfc935dabc1a6d91848bb",
+  "filter_repo_version": "2.47.0",
+  "filter_repo_revision": "a40bce548d2c",
+  "preserve_commit_hash_references": true,
+  "provisional": false
+}

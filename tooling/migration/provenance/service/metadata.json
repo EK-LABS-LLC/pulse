@@ -1,0 +1,15 @@
+{
+  "source_repository": "EK-LABS-LLC/trace-service",
+  "source_branch": "main",
+  "source_commit": "f25b44a7152287a1afd32922566f0e01bb2c9b79",
+  "source_tree": "7793294b2bb14c21875155d75929a64de21ddb84",
+  "source_commit_count": 109,
+  "source_tag_count": 17,
+  "destination": "apps/server",
+  "tag_prefix": "service-",
+  "rewritten_tip": "978a11826de55813b05c8273c8870d2c292d8017",
+  "filter_repo_version": "2.47.0",
+  "filter_repo_revision": "a40bce548d2c",
+  "preserve_commit_hash_references": true,
+  "provisional": false
+}

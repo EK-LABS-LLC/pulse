@@ -1,0 +1,14 @@
+{
+  "source_repository": "EK-LABS-LLC/trace-sdk-py",
+  "source_branch": "main",
+  "source_commit": "6fb938ebd5bcc269b4032489aa839e84d31a87cd",
+  "source_tree": "d665c80a1d5e3210f4b32b5a308f197f2c66fd07",
+  "source_commit_count": 25,
+  "source_tag_count": 5,
+  "destination": "sdks/python",
+  "tag_prefix": "sdk-py-",
+  "rewritten_tip": "4a09b5f70f65cf5852dd73b2d7177f5ff4ac96e2",
+  "filter_repo_version": "2.47.0",
+  "filter_repo_revision": "a40bce548d2c",
+  "preserve_commit_hash_references": true
+}

@@ -34,8 +34,9 @@ jobs:
           set -euo pipefail
           git fetch origin main
           version="${TAG#service-v}"
-          bash tooling/release/validate-tag.sh "${TAG}" service- "$(jq -r .version apps/server/package.json)"
-          bash tooling/release/require-legacy-bridge.sh service "${version}"
+          manifest="$(jq -r .version apps/server/package.json)"
+          bash tooling/release/validate-tag.sh "${TAG}" service- "${manifest}"
+          bash tooling/release/require-legacy-bridge.sh service "${manifest}"
           {
             echo "tag=${TAG}"
             echo "version=${version}"

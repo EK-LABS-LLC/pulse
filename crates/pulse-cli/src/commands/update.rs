@@ -179,33 +179,49 @@ async fn update_status() -> Result<UpdateStatus> {
 }
 
 async fn latest_component_release(repo: &str, prefix: &str, legacy_repo: &str) -> Result<String> {
-    match latest_release(repo, prefix).await {
-        Ok(release) => Ok(release),
-        Err(_) => latest_release(legacy_repo, "").await,
+    if let Some(release) = latest_release(repo, prefix).await? {
+        return Ok(release);
     }
+
+    latest_release(legacy_repo, "")
+        .await?
+        .ok_or_else(|| PulseError::message(format!("no release found in {legacy_repo}")))
 }
 
-async fn latest_release(repo: &str, prefix: &str) -> Result<String> {
-    let url = format!("https://api.github.com/repos/{repo}/releases?per_page=100");
-    let releases = Client::builder()
-        .timeout(Duration::from_secs(2))
-        .build()?
-        .get(url)
-        .header("Accept", "application/vnd.github.v3+json")
-        .header("User-Agent", "pulse-cli")
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<Vec<GitHubRelease>>()
-        .await?;
+async fn latest_release(repo: &str, prefix: &str) -> Result<Option<String>> {
+    const PER_PAGE: usize = 100;
 
-    releases
-        .into_iter()
-        .find(|release| {
+    let client = Client::builder().timeout(Duration::from_secs(2)).build()?;
+    let mut page = 1_u32;
+
+    loop {
+        let url =
+            format!("https://api.github.com/repos/{repo}/releases?per_page={PER_PAGE}&page={page}");
+        let releases = client
+            .get(url)
+            .header("Accept", "application/vnd.github.v3+json")
+            .header("User-Agent", "pulse-cli")
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<Vec<GitHubRelease>>()
+            .await?;
+        let last_page = releases.len() < PER_PAGE;
+
+        if let Some(release) = releases.into_iter().find(|release| {
             release.tag_name.starts_with(prefix) && parse_version(&release.tag_name).is_some()
-        })
-        .map(|release| release.tag_name)
-        .ok_or_else(|| PulseError::message(format!("no {prefix} release found in {repo}")))
+        }) {
+            return Ok(Some(release.tag_name));
+        }
+
+        if last_page {
+            return Ok(None);
+        }
+
+        page = page
+            .checked_add(1)
+            .ok_or_else(|| PulseError::message("GitHub release pagination overflow"))?;
+    }
 }
 
 fn print_update_summary(status: &UpdateStatus) {

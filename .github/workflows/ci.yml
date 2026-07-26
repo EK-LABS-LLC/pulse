@@ -476,28 +476,60 @@ jobs:
             exit 1
           fi
       - name: Verify legacy release bridges
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: EK-LABS-LLC/pulse
-        run: |
-          bash tooling/release/require-legacy-bridge.sh service 0.2.15
-          bash tooling/release/require-legacy-bridge.sh cli 0.2.16
-      - name: Verify legacy bridge rejection
         run: |
           set -euo pipefail
           gh() {
-            if [[ "$*" == *"releases?per_page=100"* ]]; then
-              printf '0\n'
-            elif [[ "${MOCK_ASSETS}" == "complete" ]]; then
-              printf '%s\n' '{"assets":[{"name":"checksums.txt"},{"name":"pulse-dashboard-assets.tar.gz"},{"name":"pulse-server-darwin-amd64"},{"name":"pulse-server-darwin-arm64"},{"name":"pulse-server-linux-amd64"},{"name":"pulse-server-linux-arm64"}]}'
-            else
-              printf '%s\n' '{"assets":[]}'
-            fi
+            local endpoint=""
+            for arg in "$@"; do
+              if [[ "${arg}" == repos/* ]]; then
+                endpoint="${arg}"
+              fi
+            done
+            case "${endpoint}" in
+              "repos/EK-LABS-LLC/pulse/releases?per_page=100")
+                printf '%s\n' '[]'
+                ;;
+              "repos/EK-LABS-LLC/trace-cli/releases?per_page=100")
+                printf '%s\n' \
+                  '[{"id":214,"tag_name":"v0.2.14","draft":false,"prerelease":false}]' \
+                  '[{"id":216,"tag_name":"v0.2.16","draft":false,"prerelease":false}]'
+                ;;
+              "repos/EK-LABS-LLC/trace-service/releases?per_page=100")
+                printf '%s\n' \
+                  '[{"id":213,"tag_name":"v0.2.13","draft":false,"prerelease":false}]' \
+                  '[{"id":215,"tag_name":"v0.2.15","draft":false,"prerelease":false}]'
+                ;;
+              "repos/EK-LABS-LLC/trace-cli/releases/216/assets?per_page=100")
+                if [[ "${MOCK_ASSETS}" == "missing" ]]; then
+                  printf '%s\n' '[]'
+                else
+                  printf '%s\n' \
+                    '[{"name":"pulse-darwin-amd64.tar.gz"},{"name":"pulse-darwin-arm64.tar.gz"}]' \
+                    '[{"name":"pulse-linux-amd64.tar.gz"},{"name":"pulse-linux-arm64.tar.gz"}]'
+                fi
+                ;;
+              "repos/EK-LABS-LLC/trace-service/releases/215/assets?per_page=100")
+                if [[ "${MOCK_ASSETS}" == "missing" ]]; then
+                  printf '%s\n' '[]'
+                else
+                  printf '%s\n' \
+                    '[{"name":"checksums.txt"},{"name":"pulse-dashboard-assets.tar.gz"},{"name":"pulse-server-darwin-amd64"}]' \
+                    '[{"name":"pulse-server-darwin-arm64"},{"name":"pulse-server-linux-amd64"},{"name":"pulse-server-linux-arm64"}]'
+                fi
+                ;;
+              *)
+                return 1
+                ;;
+            esac
           }
           export -f gh
           export GITHUB_REPOSITORY=EK-LABS-LLC/pulse
-          MOCK_ASSETS=complete bash tooling/release/require-legacy-bridge.sh service 0.2.15
-          if MOCK_ASSETS=missing bash tooling/release/require-legacy-bridge.sh service 0.2.15; then
+          MOCK_ASSETS=complete bash tooling/release/require-legacy-bridge.sh service 0.2.16
+          MOCK_ASSETS=complete bash tooling/release/require-legacy-bridge.sh cli 0.2.17
+          if MOCK_ASSETS=complete bash tooling/release/require-legacy-bridge.sh cli 0.2.16; then
+            exit 1
+          fi
+          if MOCK_ASSETS=missing bash tooling/release/require-legacy-bridge.sh service 0.2.16; then
             exit 1
           fi
 

@@ -119,14 +119,86 @@ DASHBOARD_DIR="${INSTALL_DIR}/dashboard"
 INSTALL_METADATA="${INSTALL_DIR}/.pulse-install.toml"
 
 # Resolve release tag + verify artifact integrity against checksums.
+parse_release_page() {
+  local response="$1"
+  local parsed="$2"
+
+  if command -v jq >/dev/null 2>&1; then
+    jq -r '
+      if type != "array" or any(.[]; (.tag_name | type) != "string") then
+        error("invalid GitHub releases response")
+      else
+        length, (.[] | .tag_name)
+      end
+    ' "$response" > "$parsed"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -c '
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as source:
+    releases = json.load(source)
+if not isinstance(releases, list) or any(
+    not isinstance(release, dict) or not isinstance(release.get("tag_name"), str)
+    for release in releases
+):
+    raise ValueError("invalid GitHub releases response")
+print(len(releases))
+for release in releases:
+    print(release["tag_name"])
+' "$response" > "$parsed"
+  else
+    echo "Resolving the latest release requires jq or python3." >&2
+    return 2
+  fi
+}
+
 fetch_tag() {
   local repo="$1"
   local prefix="$2"
-  local api_url="https://api.github.com/repos/${repo}/releases?per_page=100"
-  curl -fsSL "$api_url" \
-    | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' \
-    | grep "^${prefix}v[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*$" \
-    | head -n1
+  local page=1
+  local response
+  local content_type
+  local tags
+  local tag
+
+  while true; do
+    response="${TMP_DIR}/releases-${page}.json"
+    if ! content_type="$(curl -fsSL \
+      -H "Accept: application/vnd.github+json" \
+      -o "$response" \
+      -w '%{content_type}' \
+      "https://api.github.com/repos/${repo}/releases?per_page=100&page=${page}")"; then
+      echo "Failed to query GitHub releases for ${repo}" >&2
+      return 2
+    fi
+
+    case "$content_type" in
+      application/json*) ;;
+      *)
+        echo "GitHub returned an unexpected response for ${repo}: ${content_type:-unknown content type}" >&2
+        return 2
+        ;;
+    esac
+
+    tags="${TMP_DIR}/release-tags-${page}.txt"
+    if ! parse_release_page "$response" "$tags"; then
+      echo "GitHub returned invalid release JSON for ${repo}" >&2
+      return 2
+    fi
+
+    if [[ "$(sed -n '1p' "$tags")" == "0" ]]; then
+      return 3
+    fi
+
+    tag="$(sed '1d' "$tags" |
+      grep "^${prefix}v[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*$" |
+      head -n1 || true)"
+    if [[ -n "$tag" ]]; then
+      printf '%s\n' "$tag"
+      return 0
+    fi
+
+    page=$((page + 1))
+  done
 }
 
 sha256_file() {
@@ -143,10 +215,27 @@ if [[ "$VERSION" == "latest" ]]; then
   if [[ "$REPO" == "$LEGACY_SERVER_REPO" ]]; then
     SERVER_LOOKUP_PREFIX=""
   fi
-  TAG="$(fetch_tag "$REPO" "$SERVER_LOOKUP_PREFIX" || true)"
-  if [[ -z "$TAG" && "$REPO" == "$DEFAULT_REPO" ]]; then
-    REPO="$LEGACY_SERVER_REPO"
-    TAG="$(fetch_tag "$REPO" "")"
+  if TAG="$(fetch_tag "$REPO" "$SERVER_LOOKUP_PREFIX")"; then
+    :
+  else
+    LOOKUP_STATUS=$?
+    if [[ "$LOOKUP_STATUS" == "3" && "$REPO" == "$DEFAULT_REPO" ]]; then
+      REPO="$LEGACY_SERVER_REPO"
+      if TAG="$(fetch_tag "$REPO" "")"; then
+        :
+      else
+        LOOKUP_STATUS=$?
+        if [[ "$LOOKUP_STATUS" == "3" ]]; then
+          echo "No release tag found for ${REPO}" >&2
+        fi
+        exit 1
+      fi
+    elif [[ "$LOOKUP_STATUS" == "3" ]]; then
+      echo "No matching release tag found for ${REPO}" >&2
+      exit 1
+    else
+      exit 1
+    fi
   fi
   if [[ -z "$TAG" ]]; then
     echo "Could not resolve latest release tag from ${REPO}"
@@ -250,10 +339,27 @@ if [[ "$INSTALL_CLI" == "1" ]]; then
     if [[ "$CLI_REPO" == "$LEGACY_CLI_REPO" ]]; then
       CLI_LOOKUP_PREFIX=""
     fi
-    CLI_TAG="$(fetch_tag "$CLI_REPO" "$CLI_LOOKUP_PREFIX" || true)"
-    if [[ -z "$CLI_TAG" && "$CLI_REPO" == "$DEFAULT_REPO" ]]; then
-      CLI_REPO="$LEGACY_CLI_REPO"
-      CLI_TAG="$(fetch_tag "$CLI_REPO" "")"
+    if CLI_TAG="$(fetch_tag "$CLI_REPO" "$CLI_LOOKUP_PREFIX")"; then
+      :
+    else
+      LOOKUP_STATUS=$?
+      if [[ "$LOOKUP_STATUS" == "3" && "$CLI_REPO" == "$DEFAULT_REPO" ]]; then
+        CLI_REPO="$LEGACY_CLI_REPO"
+        if CLI_TAG="$(fetch_tag "$CLI_REPO" "")"; then
+          :
+        else
+          LOOKUP_STATUS=$?
+          if [[ "$LOOKUP_STATUS" == "3" ]]; then
+            echo "No release tag found for ${CLI_REPO}" >&2
+          fi
+          exit 1
+        fi
+      elif [[ "$LOOKUP_STATUS" == "3" ]]; then
+        echo "No matching release tag found for ${CLI_REPO}" >&2
+        exit 1
+      else
+        exit 1
+      fi
     fi
     echo "Installing pulse CLI (latest)..."
   else

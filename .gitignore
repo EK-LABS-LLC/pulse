@@ -1,0 +1,7 @@
+.DS_Store
+.mise.local.toml
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+target/

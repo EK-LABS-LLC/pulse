@@ -1,0 +1,553 @@
+{
+  "version": 1,
+  "artifact_count": 78,
+  "aggregate_sha256": "bb96270e8224f350600ee1e642726390159ccdab516d7108cb7eaf7fa752fa54",
+  "artifacts": [
+    {
+      "kind": "cli-cargo-test",
+      "path": "crates/pulse-cli/tests/http_test.rs",
+      "mode": "100644",
+      "bytes": 4207,
+      "sha256": "460801e78474bc8885b468cad495daaea502f55a11f39fd738288d145677d4a2"
+    },
+    {
+      "kind": "cli-cargo-test",
+      "path": "crates/pulse-cli/tests/span_test.rs",
+      "mode": "100644",
+      "bytes": 10349,
+      "sha256": "6efdaa3361650c5b85cde9c6aa8aa24edfded8c51c4f54b9390ba8915548c508"
+    },
+    {
+      "kind": "cli-e2e",
+      "path": "crates/pulse-cli/e2e/.env.example",
+      "mode": "100644",
+      "bytes": 131,
+      "sha256": "090e76be607f8166e62237b067e577029ec71450bc8d21d7f45d3198c9504021"
+    },
+    {
+      "kind": "cli-e2e",
+      "path": "crates/pulse-cli/e2e/Dockerfile",
+      "mode": "100644",
+      "bytes": 552,
+      "sha256": "eccdb9cc2eded2f5d018477b8651d2e836be17a861e08a7baff9615b37c6c33d"
+    },
+    {
+      "kind": "cli-e2e",
+      "path": "crates/pulse-cli/e2e/Dockerfile.codex",
+      "mode": "100644",
+      "bytes": 565,
+      "sha256": "c3ff42c13e02c5f93fab36f58a9ee58ef91ac6d876aae0cfa8e4299258877dd5"
+    },
+    {
+      "kind": "cli-e2e",
+      "path": "crates/pulse-cli/e2e/Dockerfile.opencode",
+      "mode": "100644",
+      "bytes": 715,
+      "sha256": "32c8b2a2f5781af4c998ee2432080d679fba13d8c0dbc79b9c162f3b803d249c"
+    },
+    {
+      "kind": "cli-e2e",
+      "path": "crates/pulse-cli/e2e/claude-tools-e2e.sh",
+      "mode": "100755",
+      "bytes": 10792,
+      "sha256": "555d86f3fcb7d0b7748df145d69e1780ef61edaf7f99bd98d362bd391c9ccb76"
+    },
+    {
+      "kind": "cli-e2e",
+      "path": "crates/pulse-cli/e2e/codex-e2e.sh",
+      "mode": "100644",
+      "bytes": 5000,
+      "sha256": "0057f8fc6f4fb978c8ca38066b719233db4a615962e7df7aab792192f9351683"
+    },
+    {
+      "kind": "cli-e2e",
+      "path": "crates/pulse-cli/e2e/codex-tools-e2e.sh",
+      "mode": "100644",
+      "bytes": 6193,
+      "sha256": "f0e087c7d1246a0c9f1d466f9a6b2bdc73919cc287266b638dcb6fa9354c94f3"
+    },
+    {
+      "kind": "cli-e2e",
+      "path": "crates/pulse-cli/e2e/docker-compose.yml",
+      "mode": "100644",
+      "bytes": 1192,
+      "sha256": "fe2785a9cba77901d79c495f6caa7dbf275e55a4f3d7f8b073c4b558829b67f3"
+    },
+    {
+      "kind": "cli-e2e",
+      "path": "crates/pulse-cli/e2e/opencode-e2e.sh",
+      "mode": "100755",
+      "bytes": 12066,
+      "sha256": "bd706950b5d99e55fbdd3854eaa648bdbf0b66eb5633397fe1f72b2348069449"
+    },
+    {
+      "kind": "cli-e2e",
+      "path": "crates/pulse-cli/e2e/opencode-tools-e2e.sh",
+      "mode": "100755",
+      "bytes": 9435,
+      "sha256": "91c29d1ab078a748725087cd59460a0df1027d9129e75b20b8ac412c36064436"
+    },
+    {
+      "kind": "cli-e2e",
+      "path": "crates/pulse-cli/e2e/run.sh",
+      "mode": "100644",
+      "bytes": 12543,
+      "sha256": "40b66b6192b87e655cffdb400607de116be953403eaa01179b09f2f2d375e75f"
+    },
+    {
+      "kind": "python-pytest",
+      "path": "sdks/python/tests/test_sdk.py",
+      "mode": "100644",
+      "bytes": 4603,
+      "sha256": "97e61535aea5a231e3f8a4de111f6f2e8bfac68455744ebab2131e2e58737185"
+    },
+    {
+      "kind": "python-pytest",
+      "path": "sdks/python/tests/test_server.py",
+      "mode": "100644",
+      "bytes": 2864,
+      "sha256": "31be6c8c2dc5c43c511a0888270b6e8c549c2aa9a61a006d26f7c7d8271e041e"
+    },
+    {
+      "kind": "python-pytest",
+      "path": "sdks/python/tests/test_spans.py",
+      "mode": "100644",
+      "bytes": 3928,
+      "sha256": "d6f132309a58c622759f6b701d8b13e7ee59b25913ca552134a4ef33552f85a5"
+    },
+    {
+      "kind": "python-pytest",
+      "path": "sdks/python/tests/test_transport.py",
+      "mode": "100644",
+      "bytes": 5748,
+      "sha256": "e4b850eb49ac22901331f2b6e8e5838f341e325bdb3125a2b9461071275e89b1"
+    },
+    {
+      "kind": "rust-cfg-test",
+      "path": "crates/pulse-cli/src/commands/emit.rs#0",
+      "mode": "inline",
+      "bytes": 654,
+      "sha256": "b1d84095d8e3bddf2146b8cde3484a6a2e4bd1fcbcf5d65b03c98a5a79e08d48"
+    },
+    {
+      "kind": "rust-cfg-test",
+      "path": "crates/pulse-cli/src/commands/local.rs#0",
+      "mode": "inline",
+      "bytes": 673,
+      "sha256": "71fb35a6aed6ad27e1600aad7763b11fc7cb5e9068a81260ed6f6bade334830b"
+    },
+    {
+      "kind": "rust-cfg-test",
+      "path": "crates/pulse-cli/src/commands/update.rs#0",
+      "mode": "inline",
+      "bytes": 4035,
+      "sha256": "2738011252db2e3a3f318b01d27d9c242f31fbbeca0ff8db31f67cbe30cd3539"
+    },
+    {
+      "kind": "rust-cfg-test",
+      "path": "crates/pulse-cli/src/config.rs#0",
+      "mode": "inline",
+      "bytes": 1649,
+      "sha256": "04ec00c6588a378ee75af4bb23cb4665a866bdec3c44855f726bb8f2732502e2"
+    },
+    {
+      "kind": "rust-cfg-test",
+      "path": "crates/pulse-cli/src/hooks/claude_code.rs#0",
+      "mode": "inline",
+      "bytes": 6985,
+      "sha256": "dee6dc11ebe4d51f7c8ff5a378d1307c198f79655332031e2c522b753a4963f7"
+    },
+    {
+      "kind": "rust-cfg-test",
+      "path": "crates/pulse-cli/src/hooks/codex.rs#0",
+      "mode": "inline",
+      "bytes": 5992,
+      "sha256": "fdf81825d5975dc17721a0d10628c8083fea25031934a2da6f3d9e4753369f72"
+    },
+    {
+      "kind": "rust-cfg-test",
+      "path": "crates/pulse-cli/src/hooks/openclaw.rs#0",
+      "mode": "inline",
+      "bytes": 3586,
+      "sha256": "41438e28d719922fd24dcd4e7005362ece22d7fbf83202facbcc008e80c9e4ba"
+    },
+    {
+      "kind": "rust-cfg-test",
+      "path": "crates/pulse-cli/src/hooks/opencode.rs#0",
+      "mode": "inline",
+      "bytes": 3252,
+      "sha256": "e93b218feaf1b912df952abfafd1c21ad61fb974abebc5f896bd7848ccd6c90f"
+    },
+    {
+      "kind": "rust-cfg-test",
+      "path": "crates/pulse-cli/src/main.rs#0",
+      "mode": "inline",
+      "bytes": 903,
+      "sha256": "02f8ad97d99a4946e0342020c856c254c050ce5f6bf4a0dcb83d1a08e5541601"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/http_test.rs#0",
+      "mode": "inline",
+      "bytes": 568,
+      "sha256": "03837da865e7c497136ebab008e702b758536597e023f9605e3706439105f17a"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/http_test.rs#1",
+      "mode": "inline",
+      "bytes": 768,
+      "sha256": "cd2864ca6328a74d96d4e1b8c00ca6da6ffc5fe871eb533053669c12f2051418"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/http_test.rs#2",
+      "mode": "inline",
+      "bytes": 368,
+      "sha256": "e0b3555752362e94b6b5c4ca9810d885df34b1cfdccbfebc272b04fc5ec0d8b6"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/http_test.rs#3",
+      "mode": "inline",
+      "bytes": 374,
+      "sha256": "b43755d1ff348860b8cba9cc34aa949b66e961c67472471fa7e055fc09ade47a"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/http_test.rs#4",
+      "mode": "inline",
+      "bytes": 942,
+      "sha256": "bf042e63eb010579981807cab0c5c783b10f674bdc774dbb682b6805bc942ac9"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#0",
+      "mode": "inline",
+      "bytes": 976,
+      "sha256": "2625266aee9e76cc131ce550070b8b2fb805e4a1460e94e958256b5ee047bc8e"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#1",
+      "mode": "inline",
+      "bytes": 407,
+      "sha256": "81fce1440bc882b1d017297a08b5c9bee5286a99608d92d2e54cdf6bfabd6474"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#10",
+      "mode": "inline",
+      "bytes": 393,
+      "sha256": "e5932d6a050b55fb4ad12c0d2cfa893b31744ef85fac1c8a88efd9979ed3ffe8"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#11",
+      "mode": "inline",
+      "bytes": 292,
+      "sha256": "454622bdf2d14a1e84b831fb8f2a4e1bc1baf41300036f90d9270d182dc11e79"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#12",
+      "mode": "inline",
+      "bytes": 308,
+      "sha256": "c76ea565a80d90ccada7679f123e44042ed84e605cb3166f8ede5503d8f86fbf"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#13",
+      "mode": "inline",
+      "bytes": 351,
+      "sha256": "c64a443329d6b225b0d7bcddb818bab05e50c56fec7bba913d976913f86ab5bf"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#14",
+      "mode": "inline",
+      "bytes": 803,
+      "sha256": "ebb05af94ca78d95df5388e8f8af3552ff10f350940e48323d736bd2420f7daa"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#15",
+      "mode": "inline",
+      "bytes": 610,
+      "sha256": "5326299005adc5d400ec844ccdbcc5fdea3c2fbb4c6f240db3f073a3746cc97d"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#16",
+      "mode": "inline",
+      "bytes": 220,
+      "sha256": "5025998cbab27ee16a362cfc1e0e37fbb923fe9ddcf697d7ca4027e9f65d0bae"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#17",
+      "mode": "inline",
+      "bytes": 303,
+      "sha256": "7b3a0f51f39fe5d866cf4d0ee2510363bf939e727de8b585edcebfcd5a8e2cbb"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#18",
+      "mode": "inline",
+      "bytes": 436,
+      "sha256": "2238e4e547ab72d158e29050c05040782c5f9e3b47ceb4f494bc8a37114034fc"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#19",
+      "mode": "inline",
+      "bytes": 1791,
+      "sha256": "37549ed42fe76159a7fff37cdeb473caf007974b22d96ebe8021c42a23cd4eff"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#2",
+      "mode": "inline",
+      "bytes": 627,
+      "sha256": "e07cf8827f7f1541abcd9dd69903641670dd84c13fdbcd2a0636dc9b7e954d48"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#3",
+      "mode": "inline",
+      "bytes": 323,
+      "sha256": "19c03747849636050cb4708ad30e2dece4a57cf5372c45477b58dccb1cd237f6"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#4",
+      "mode": "inline",
+      "bytes": 258,
+      "sha256": "63e9ddf47e904c7be901561bdb69273203356e706513b7316ae17932aef64193"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#5",
+      "mode": "inline",
+      "bytes": 505,
+      "sha256": "e8b10915bdea14da85436d9f68a8db3c650c766126abb1462dfe94cb8e695bd3"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#6",
+      "mode": "inline",
+      "bytes": 576,
+      "sha256": "60aeb01cf0eee4ec7591b94956014c651e43bfb9cf9e1b49333519631bb2ac0d"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#7",
+      "mode": "inline",
+      "bytes": 527,
+      "sha256": "80ae71913e35f4beba6b533322eff07cf966d6756c349b10694ee584d1e3381d"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#8",
+      "mode": "inline",
+      "bytes": 282,
+      "sha256": "e1bffd0f21053c34ac18c2803520891a8499bbdf10d15d36befb46597a766550"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/span_test.rs#9",
+      "mode": "inline",
+      "bytes": 275,
+      "sha256": "7f6159ba52d2bfb51098c82a2b1abbac1ee52fcadb9c7ec7676839a118ca68d9"
+    },
+    {
+      "kind": "server-bootstrap-test",
+      "path": "apps/server/tests/bootstrap/scale.sh",
+      "mode": "100644",
+      "bytes": 2385,
+      "sha256": "27f48352f4a4b7b54a36e77e0dd50720fa114d1aa0c1d667dabbf81d70a4a91c"
+    },
+    {
+      "kind": "server-bootstrap-test",
+      "path": "apps/server/tests/bootstrap/single.sh",
+      "mode": "100644",
+      "bytes": 2655,
+      "sha256": "f0e70131dc4831d7b9cabb4ae2e21b686d7b3cf195d7214b09c641d42973ded2"
+    },
+    {
+      "kind": "server-bun-support",
+      "path": "apps/server/tests/setup.ts",
+      "mode": "100644",
+      "bytes": 10200,
+      "sha256": "62a6db803e3639bb4f570646e36c0ef4223d8cc6b999ad4a60390a427941f243"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/lib/crypto.test.ts",
+      "mode": "100644",
+      "bytes": 1891,
+      "sha256": "e080ae6e58e5cfbc9b6f3dbb21896a867230d9112f6418f232fa3af494413d39"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/lib/local-secrets.test.ts",
+      "mode": "100644",
+      "bytes": 2400,
+      "sha256": "3aeefd3a029ef8d9f4e6db95930afe8666d642f18fa52dc371d1106619809776"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/lib/otlp.test.ts",
+      "mode": "100644",
+      "bytes": 9966,
+      "sha256": "b117706e8e94040dc7c6e467d45169b857aea5954ef20b8517d2b170ceb4ffde"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/services/derived-traces.test.ts",
+      "mode": "100644",
+      "bytes": 2708,
+      "sha256": "bce24da90ef5bfbf9323c75864c80be5fb6b7d9ebb572360abe56248e6fb0c81"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/agent-sessions.test.ts",
+      "mode": "100644",
+      "bytes": 11317,
+      "sha256": "daa833f9265bdb9983e13e15e661087a5e37504de778378b0e1b7b89b7a19afe"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/analytics.test.ts",
+      "mode": "100644",
+      "bytes": 6631,
+      "sha256": "5a4d39794d7f255924fba67d9b20076b774f114661dfd8e5e07980a0fcb6f743"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/dashboard-static.test.ts",
+      "mode": "100644",
+      "bytes": 2917,
+      "sha256": "23c700c7366626f961434dbc75d9279c279e60d57dec14e66e7f82159609f10e"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/derived-traces.test.ts",
+      "mode": "100644",
+      "bytes": 3005,
+      "sha256": "f26ad2de13fb7b5ad276f4bd3f74e697714f00ad6aaf93c50662cff3fb440297"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/legacy-tables-migration.test.ts",
+      "mode": "100644",
+      "bytes": 2230,
+      "sha256": "5181485924ca127f7f5074249d815e41052be12904a6ddc09bc79205c7dd2bc8"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/local-login.test.ts",
+      "mode": "100644",
+      "bytes": 3902,
+      "sha256": "978ff8b65cbcfd5403ce5124dabf84576bc2814721f34d04ed9aaff7e3c6b037"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/otlp-traces.test.ts",
+      "mode": "100644",
+      "bytes": 19948,
+      "sha256": "b61d7da9cd438381b5be2c142a3d7e69f6071e7257852db98a48b6df55ecc1d3"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/sessions.test.ts",
+      "mode": "100644",
+      "bytes": 5051,
+      "sha256": "e8901e115784be586a641f7e0ec051e406fb23edb24fb66e95035e248bfc7f25"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/spans-wal.test.ts",
+      "mode": "100644",
+      "bytes": 5054,
+      "sha256": "6ca3b34d23c9b9dc2aa9db1bf6e1fc3a0b3b82994f3ff85122b0715ac488dd32"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/spans.test.ts",
+      "mode": "100644",
+      "bytes": 4790,
+      "sha256": "c33e28b27e08a6aa67cd0cfc20674bde0a8a88527cf97b5ac565a44d329b99bb"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/traces.test.ts",
+      "mode": "100644",
+      "bytes": 8889,
+      "sha256": "0d6d589726337fcbec9c3beb63c5b1e8a07de8d53249c91fb1fca424e1f04ece"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/validation.test.ts",
+      "mode": "100644",
+      "bytes": 3513,
+      "sha256": "892c086377088e80d6af67124c977826a4edfe3ca6b832139d1a1fd2bcca4f99"
+    },
+    {
+      "kind": "server-bun-test",
+      "path": "apps/server/tests/wal-segment.test.ts",
+      "mode": "100644",
+      "bytes": 3056,
+      "sha256": "7f80e0a867c56d7aa355543b7ee22fd5e4c2d953cbf41c1156dffddc63dad361"
+    },
+    {
+      "kind": "server-harness",
+      "path": "apps/server/.env.test",
+      "mode": "100644",
+      "bytes": 286,
+      "sha256": "7ea6042ba5dd6df36fdc4ff72c3c2884f5c9bb03c442a6efa17ed3d9973fe57e"
+    },
+    {
+      "kind": "server-harness",
+      "path": "apps/server/scripts/run-e2e.sh",
+      "mode": "100755",
+      "bytes": 5120,
+      "sha256": "30faea613f1931e8a9002b3ea0ee42d4e25e138120339be474917930e01ac25f"
+    },
+    {
+      "kind": "typescript-bun-test",
+      "path": "sdks/typescript/tests/e2e.test.ts",
+      "mode": "100644",
+      "bytes": 8112,
+      "sha256": "41e84fde7dcbfea9a8e1ed2673ee528b3b03f76ea94c10ced5b540dbe6e48ad1"
+    },
+    {
+      "kind": "typescript-bun-test",
+      "path": "sdks/typescript/tests/pricing.test.ts",
+      "mode": "100644",
+      "bytes": 7533,
+      "sha256": "c3a31cfa0cd22912233a343b8eebb8204a303925587f4f69ed9bd8b676393787"
+    },
+    {
+      "kind": "typescript-bun-test",
+      "path": "sdks/typescript/tests/sdk-spans.test.ts",
+      "mode": "100644",
+      "bytes": 620,
+      "sha256": "6ef6b74818fb178ea98c2c16abe2f52fbf4c2a46431ef9337f5ac6a707cd813f"
+    },
+    {
+      "kind": "typescript-bun-test",
+      "path": "sdks/typescript/tests/transport.test.ts",
+      "mode": "100644",
+      "bytes": 6850,
+      "sha256": "1c6bca96ea2bbf3348e3bbb46ccd15895719e8a49ddc32decd4cd06c0d1588ed"
+    },
+    {
+      "kind": "typescript-test-support",
+      "path": "sdks/typescript/tests/test-server.ts",
+      "mode": "100644",
+      "bytes": 3088,
+      "sha256": "af50db0b0ff2e0de5f01db7b1eda7a06568e84588b992414941158b4e38f2ab3"
+    }
+  ]
+}

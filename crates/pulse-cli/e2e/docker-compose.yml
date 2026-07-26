@@ -1,0 +1,60 @@
+services:
+  e2e:
+    build:
+      context: ..
+      dockerfile: e2e/Dockerfile
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  e2e-cc-tools:
+    build:
+      context: ..
+      dockerfile: e2e/Dockerfile
+      args:
+        TEST_SCRIPT: claude-tools-e2e.sh
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  e2e-opencode:
+    build:
+      context: ..
+      dockerfile: e2e/Dockerfile.opencode
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  e2e-oc-tools:
+    build:
+      context: ..
+      dockerfile: e2e/Dockerfile.opencode
+      args:
+        TEST_SCRIPT: opencode-tools-e2e.sh
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  e2e-codex:
+    build:
+      context: ..
+      dockerfile: e2e/Dockerfile.codex
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  e2e-codex-tools:
+    build:
+      context: ..
+      dockerfile: e2e/Dockerfile.codex
+      args:
+        TEST_SCRIPT: codex-tools-e2e.sh
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

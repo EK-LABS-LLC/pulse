@@ -4,7 +4,7 @@
 
 ### Prepare Monorepo Cutover
 
-Date: 2026-07-25 CDT; Status: In Progress; PR: TBD
+Date: 2026-07-25 CDT; Status: Completed; PR: #1 https://github.com/EK-LABS-LLC/pulse/pull/1
 Changed: Server and dashboard builds now use the shared Pulse workspace and API contracts while remaining independently deployable.
 Changed: Repository development commands now use root Just recipes and shared root tooling configuration.
 Changed: Installer discovery supports `server-v*` and `cli-v*` monorepo releases and falls back to existing trace-service and trace-cli releases during cutover.

@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "artifact_count": 78,
-  "aggregate_sha256": "bb96270e8224f350600ee1e642726390159ccdab516d7108cb7eaf7fa752fa54",
+  "artifact_count": 79,
+  "aggregate_sha256": "72179a1666cdcc04d7b8e873f23bbbcf23005e1560ac2bb2bae55cea8ee40e38",
   "artifacts": [
     {
       "kind": "cli-cargo-test",
       "path": "crates/pulse-cli/tests/http_test.rs",
       "mode": "100644",
-      "bytes": 4207,
-      "sha256": "460801e78474bc8885b468cad495daaea502f55a11f39fd738288d145677d4a2"
+      "bytes": 4772,
+      "sha256": "7cd4e652b2788134ddee266cee2d9aa2bcbce7f43403fb5c48089664b3ead6cb"
     },
     {
       "kind": "cli-cargo-test",
@@ -119,15 +119,15 @@
       "kind": "python-pytest",
       "path": "sdks/python/tests/test_transport.py",
       "mode": "100644",
-      "bytes": 5748,
-      "sha256": "e4b850eb49ac22901331f2b6e8e5838f341e325bdb3125a2b9461071275e89b1"
+      "bytes": 7143,
+      "sha256": "3e148876777f20b6904dcbfdfd9699f1f89399d3a98e17b181bbfdfb63e7bc0b"
     },
     {
       "kind": "rust-cfg-test",
       "path": "crates/pulse-cli/src/commands/emit.rs#0",
       "mode": "inline",
-      "bytes": 654,
-      "sha256": "b1d84095d8e3bddf2146b8cde3484a6a2e4bd1fcbcf5d65b03c98a5a79e08d48"
+      "bytes": 2002,
+      "sha256": "7b16ad76ad7d3c78676e31ae4984550c8419755d8cd7f7181c747ca56d8af255"
     },
     {
       "kind": "rust-cfg-test",
@@ -147,8 +147,8 @@
       "kind": "rust-cfg-test",
       "path": "crates/pulse-cli/src/config.rs#0",
       "mode": "inline",
-      "bytes": 1649,
-      "sha256": "04ec00c6588a378ee75af4bb23cb4665a866bdec3c44855f726bb8f2732502e2"
+      "bytes": 2839,
+      "sha256": "b8a15552fd89371aca6c47501d81098d6352760ff0d8bed893a83f857622d59b"
     },
     {
       "kind": "rust-cfg-test",
@@ -196,26 +196,33 @@
       "kind": "rust-test-function",
       "path": "crates/pulse-cli/tests/http_test.rs#1",
       "mode": "inline",
+      "bytes": 563,
+      "sha256": "98ebfcef7a50ed2133c016b5fba199b8ddf0ee4d08f9f8d1b2c69de63bb0402e"
+    },
+    {
+      "kind": "rust-test-function",
+      "path": "crates/pulse-cli/tests/http_test.rs#2",
+      "mode": "inline",
       "bytes": 768,
       "sha256": "cd2864ca6328a74d96d4e1b8c00ca6da6ffc5fe871eb533053669c12f2051418"
     },
     {
       "kind": "rust-test-function",
-      "path": "crates/pulse-cli/tests/http_test.rs#2",
+      "path": "crates/pulse-cli/tests/http_test.rs#3",
       "mode": "inline",
       "bytes": 368,
       "sha256": "e0b3555752362e94b6b5c4ca9810d885df34b1cfdccbfebc272b04fc5ec0d8b6"
     },
     {
       "kind": "rust-test-function",
-      "path": "crates/pulse-cli/tests/http_test.rs#3",
+      "path": "crates/pulse-cli/tests/http_test.rs#4",
       "mode": "inline",
       "bytes": 374,
       "sha256": "b43755d1ff348860b8cba9cc34aa949b66e961c67472471fa7e055fc09ade47a"
     },
     {
       "kind": "rust-test-function",
-      "path": "crates/pulse-cli/tests/http_test.rs#4",
+      "path": "crates/pulse-cli/tests/http_test.rs#5",
       "mode": "inline",
       "bytes": 942,
       "sha256": "bf042e63eb010579981807cab0c5c783b10f674bdc774dbb682b6805bc942ac9"
@@ -399,15 +406,15 @@
       "kind": "server-bun-test",
       "path": "apps/server/lib/otlp.test.ts",
       "mode": "100644",
-      "bytes": 9966,
-      "sha256": "b117706e8e94040dc7c6e467d45169b857aea5954ef20b8517d2b170ceb4ffde"
+      "bytes": 13492,
+      "sha256": "ab8198d3032c254a41bad00d6dd57690c1424133e9609339464c7373044c7865"
     },
     {
       "kind": "server-bun-test",
       "path": "apps/server/services/derived-traces.test.ts",
       "mode": "100644",
-      "bytes": 2708,
-      "sha256": "bce24da90ef5bfbf9323c75864c80be5fb6b7d9ebb572360abe56248e6fb0c81"
+      "bytes": 2875,
+      "sha256": "220674570fcdd4e4c680e4ac297b6687c4a38dc44daa725d90336133a757f76b"
     },
     {
       "kind": "server-bun-test",
@@ -434,8 +441,8 @@
       "kind": "server-bun-test",
       "path": "apps/server/tests/derived-traces.test.ts",
       "mode": "100644",
-      "bytes": 3005,
-      "sha256": "f26ad2de13fb7b5ad276f4bd3f74e697714f00ad6aaf93c50662cff3fb440297"
+      "bytes": 4375,
+      "sha256": "8e981ad57e71d43e526b22e28a63d0d52618b4bceaca4a9811af2375e7e0d681"
     },
     {
       "kind": "server-bun-test",
@@ -455,8 +462,8 @@
       "kind": "server-bun-test",
       "path": "apps/server/tests/otlp-traces.test.ts",
       "mode": "100644",
-      "bytes": 19948,
-      "sha256": "b61d7da9cd438381b5be2c142a3d7e69f6071e7257852db98a48b6df55ecc1d3"
+      "bytes": 23187,
+      "sha256": "d13139136b85f3022505b38f37fc2902a03cc220a308e244d27a8c24740d5c4a"
     },
     {
       "kind": "server-bun-test",
@@ -476,15 +483,15 @@
       "kind": "server-bun-test",
       "path": "apps/server/tests/spans.test.ts",
       "mode": "100644",
-      "bytes": 4790,
-      "sha256": "c33e28b27e08a6aa67cd0cfc20674bde0a8a88527cf97b5ac565a44d329b99bb"
+      "bytes": 6354,
+      "sha256": "0e186b6047a67c261772d133787f01039f340f32ac136ffcf9aa259bd2d32be8"
     },
     {
       "kind": "server-bun-test",
       "path": "apps/server/tests/traces.test.ts",
       "mode": "100644",
-      "bytes": 8889,
-      "sha256": "0d6d589726337fcbec9c3beb63c5b1e8a07de8d53249c91fb1fca424e1f04ece"
+      "bytes": 10653,
+      "sha256": "83eccf38821e8fa476fdf5bf41323793c5b107247aaf8d69aa5c11d17a644b14"
     },
     {
       "kind": "server-bun-test",
@@ -539,8 +546,8 @@
       "kind": "typescript-bun-test",
       "path": "sdks/typescript/tests/transport.test.ts",
       "mode": "100644",
-      "bytes": 6850,
-      "sha256": "1c6bca96ea2bbf3348e3bbb46ccd15895719e8a49ddc32decd4cd06c0d1588ed"
+      "bytes": 8259,
+      "sha256": "64d769183157513cbd4b75c02799f862c96153eaa477378280c98728de4ebe3f"
     },
     {
       "kind": "typescript-test-support",

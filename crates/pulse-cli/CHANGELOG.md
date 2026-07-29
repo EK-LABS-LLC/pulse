@@ -4,7 +4,7 @@
 
 ### Prepare Monorepo Releases
 
-Date: 2026-07-25 CDT; Status: In Progress; PR: TBD
+Date: 2026-07-25 CDT; Status: Completed; PR: #1 https://github.com/EK-LABS-LLC/pulse/pull/1
 Changed: Bumped CLI package version to 0.2.17.
 Changed: CLI development and version commands now use root Just recipes and the root workspace Cargo lockfile.
 Changed: Update and installer discovery supports `cli-v*` and `server-v*` monorepo releases with a legacy-release bridge for existing installations.
@@ -42,21 +42,21 @@ Added: PR CI now checks that Cargo.toml is bumped above main and matches Cargo.l
 
 ### Add Codex Hook Support
 
-Date: 2026-06-23 16:51:17 CDT; Status: Completed; PR: TBD
+Date: 2026-06-23 16:51:17 CDT; Status: Completed; PR: #7 https://github.com/EK-LABS-LLC/trace-cli/pull/7
 Task: Add Codex as a first-class Pulse hook integration.
 Message: `pulse install-hooks` now writes Codex lifecycle hooks and a hidden `emit-codex` adapter labels Codex spans correctly.
 Added/Changed: Codex status/connect/disconnect support, `permission_request` span mapping, and README hook docs.
 
 ### Fix Claude Hook Install Location
 
-Date: 2026-06-23 16:59:58 CDT; Status: Completed; PR: TBD
+Date: 2026-06-23 16:59:58 CDT; Status: Completed; PR: #6 https://github.com/EK-LABS-LLC/trace-cli/pull/6
 Task: Prevent Claude Code hooks from being installed into a settings file Claude does not load.
 Message: Claude hooks now install to `~/.claude/settings.json`, use the absolute running `pulse` binary path, and migrate old misplaced Pulse hooks out of `settings.local.json`.
 Fixed/Changed: `pulse status`, `install-hooks`, and `disconnect` now recognize migrated/absolute Claude hook commands.
 
 ### Fix CLI Release Version And Installer Start Text
 
-Date: 2026-06-23 16:34:27 CDT; Status: Completed; PR: TBD
+Date: 2026-06-23 16:34:27 CDT; Status: Completed; PR: #5 https://github.com/EK-LABS-LLC/trace-cli/pull/5
 Task: Fix post-release CLI metadata and install guidance.
 Message: `pulse --version` now matches the next release, and installer output points local users to `pulse up` then `pulse dashboard`.
 Changed/Fixed: Bumped Cargo package version to 0.2.11 and removed stale `pulse setup --local` from install quick start.

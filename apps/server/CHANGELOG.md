@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Scope Version Guard To Shipping Files
+
+Date: 2026-07-29 CDT; Status: In Progress; PR: #3 https://github.com/EK-LABS-LLC/pulse/pull/3
+Task: Stop the server version guard from demanding a release bump for changes that ship nothing.
+Fixed: `server_release` CI path filter now lists server, dashboard, and API contract source instead of matching whole directories, so changelog, README, design docs, tests, and local-only config no longer require a version bump.
+
 ### Prepare Monorepo Cutover
 
 Date: 2026-07-25 CDT; Status: Completed; PR: #1 https://github.com/EK-LABS-LLC/pulse/pull/1

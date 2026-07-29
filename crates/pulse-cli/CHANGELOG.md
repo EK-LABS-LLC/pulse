@@ -4,7 +4,7 @@
 
 ### Make The Emitted Service Name Configurable
 
-Date: 2026-07-29 CDT; Status: Completed; PR: TBD
+Date: 2026-07-29 CDT; Status: Completed; PR: #4 https://github.com/EK-LABS-LLC/pulse/pull/4
 Task: Stop reporting every hook emission under a single hardcoded OTel service so downstream service attribution is usable.
 Changed: Bumped CLI package version to 0.2.18.
 Added: Optional `service_name` in `~/.pulse/config.toml` sets the `service.name` resource attribute on emitted spans, defaulting to `pulse-cli` when unset or blank.

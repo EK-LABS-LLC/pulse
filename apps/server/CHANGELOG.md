@@ -11,7 +11,7 @@ Added: A follow-up CI step rejects baseline entries that were added, dropped, or
 
 ### Attribute Spans To Their Service
 
-Date: 2026-07-29 CDT; Status: In Progress; PR: TBD
+Date: 2026-07-29 CDT; Status: In Progress; PR: #4 https://github.com/EK-LABS-LLC/pulse/pull/4
 Task: Make the OTel `service.name` resource attribute a queryable span dimension instead of an opaque metadata entry.
 Changed: Bumped trace-service package version to 0.2.17.
 Added: Spans carry a first-class `service` field, populated from the `service.name` resource attribute of the OTLP export and applied to every span in that resource batch.

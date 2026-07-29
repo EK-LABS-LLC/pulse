@@ -71,6 +71,7 @@ class PulseConfig(TypedDict, total=False):
     batch_size: int
     flush_interval: int
     enabled: bool
+    service_name: str
 
 
 @dataclass

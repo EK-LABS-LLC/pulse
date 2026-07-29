@@ -12,6 +12,7 @@ const RUN_DIR: &str = "run";
 const LOG_DIR: &str = "logs";
 const SERVER_PID_FILE: &str = "server.pid";
 const SERVER_LOG_FILE: &str = "server.log";
+const DEFAULT_SERVICE_NAME: &str = "pulse-cli";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -30,6 +31,8 @@ pub struct PulseConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub server_command: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub service_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub local_email: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub local_password: Option<String>,
@@ -40,12 +43,22 @@ impl PulseConfig {
         self.mode.unwrap_or_else(|| infer_mode(self))
     }
 
+    /// OTel `service.name` reported on emitted spans.
+    pub fn effective_service_name(&self) -> &str {
+        self.service_name.as_deref().unwrap_or(DEFAULT_SERVICE_NAME)
+    }
+
     pub fn sanitized(mut self) -> Self {
         self.api_url = self.api_url.trim_end_matches('/').trim().to_string();
         self.api_key = self.api_key.trim().to_string();
         self.project_id = self.project_id.trim().to_string();
         self.server_command = self
             .server_command
+            .as_ref()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+        self.service_name = self
+            .service_name
             .as_ref()
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty());
@@ -144,6 +157,7 @@ mod tests {
             api_key: "pulse_sk_test".to_string(),
             project_id: "project_test".to_string(),
             server_command: None,
+            service_name: None,
             local_email: None,
             local_password: None,
         }
@@ -172,6 +186,40 @@ mod tests {
         assert_eq!(sanitized.mode, Some(ConfigMode::Local));
         assert_eq!(sanitized.local_email.as_deref(), Some("local@pulse.test"));
         assert_eq!(sanitized.local_password.as_deref(), Some("secret"));
+    }
+
+    #[test]
+    fn service_name_falls_back_to_the_cli_default() {
+        let config = base_config();
+        assert_eq!(config.effective_service_name(), "pulse-cli");
+    }
+
+    #[test]
+    fn sanitize_keeps_configured_service_name_and_drops_blank_values() {
+        let mut config = base_config();
+        config.service_name = Some(" checkout-agent ".to_string());
+        assert_eq!(
+            config.clone().sanitized().effective_service_name(),
+            "checkout-agent"
+        );
+
+        config.service_name = Some("   ".to_string());
+        let sanitized = config.sanitized();
+        assert_eq!(sanitized.service_name, None);
+        assert_eq!(sanitized.effective_service_name(), "pulse-cli");
+    }
+
+    #[test]
+    fn service_name_is_read_from_saved_config_toml() {
+        let body = r#"
+            api_url = "https://pulse.example.com"
+            api_key = "pulse_sk_test"
+            project_id = "project_test"
+            service_name = "checkout-agent"
+        "#;
+        let config: PulseConfig = toml::from_str(body).expect("config should parse");
+
+        assert_eq!(config.effective_service_name(), "checkout-agent");
     }
 
     #[test]

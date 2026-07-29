@@ -4,6 +4,8 @@ export interface PulseConfig {
   batchSize?: number;
   flushInterval?: number;
   enabled?: boolean;
+  /** OTel `service.name` resource attribute reported for exported spans. */
+  serviceName?: string;
 }
 
 export enum Provider {

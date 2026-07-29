@@ -2,6 +2,9 @@ import json
 import re
 from typing import Any, Dict, List
 
+import pytest
+
+from pulse_sdk.config import ConfigError, load_config
 from pulse_sdk.ids import generate_span_id, generate_trace_id
 from pulse_sdk.transport import _to_otlp, send_spans
 from pulse_sdk.types import Span
@@ -90,6 +93,24 @@ def test_to_otlp_serializes_llm_call_span() -> None:
     assert attrs["tenant"] == "acme"
 
 
+def test_to_otlp_reports_configured_service_name() -> None:
+    body = _to_otlp([_sample_span()], "checkout-api")
+
+    resource_attrs = _attr_map(body["resourceSpans"][0]["resource"]["attributes"])
+    assert resource_attrs["service.name"] == "checkout-api"
+
+
+def test_load_config_defaults_service_name() -> None:
+    config = load_config({"api_key": "pulse_sk_test"})
+
+    assert config.service_name == "pulse-sdk-py"
+
+
+def test_load_config_rejects_blank_service_name() -> None:
+    with pytest.raises(ConfigError):
+        load_config({"api_key": "pulse_sk_test", "service_name": "   "})
+
+
 def test_to_otlp_serializes_tool_span_with_parent() -> None:
     body = _to_otlp(
         [
@@ -153,6 +174,28 @@ def test_send_spans_posts_otlp_json_to_v1_traces(monkeypatch) -> None:
     assert calls["kwargs"]["headers"]["Authorization"] == "Bearer pulse_sk_test"
     body = json.loads(calls["kwargs"]["data"])
     assert len(body["resourceSpans"][0]["scopeSpans"][0]["spans"]) == 1
+
+
+def test_send_spans_posts_configured_service_name(monkeypatch) -> None:
+    calls: Dict[str, Any] = {}
+
+    class Response:
+        ok = True
+        status_code = 200
+        text = "{}"
+
+    def post(url: str, **kwargs: Any) -> Response:
+        calls["kwargs"] = kwargs
+        return Response()
+
+    monkeypatch.setattr("pulse_sdk.transport.requests.post", post)
+
+    config = load_config({"api_key": "pulse_sk_test", "service_name": "checkout-api"})
+    send_spans(config.api_url, config.api_key, [_sample_span()], config.service_name)
+
+    body = json.loads(calls["kwargs"]["data"])
+    resource_attrs = _attr_map(body["resourceSpans"][0]["resource"]["attributes"])
+    assert resource_attrs["service.name"] == "checkout-api"
 
 
 def test_send_spans_skips_empty_batches(monkeypatch) -> None:

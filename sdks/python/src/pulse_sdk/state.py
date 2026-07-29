@@ -56,7 +56,7 @@ def flush_buffer() -> None:
 
     cfg = get_config()
     try:
-        send_spans(cfg.api_url, cfg.api_key, traces)
+        send_spans(cfg.api_url, cfg.api_key, traces, cfg.service_name)
     except Exception as exc:
         print(f"Pulse SDK: failed to send traces: {exc}")
 

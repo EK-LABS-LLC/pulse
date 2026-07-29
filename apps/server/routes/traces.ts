@@ -148,6 +148,7 @@ export async function getTraces(c: Context): Promise<Response> {
   const filters = {
     sessionId: params.session_id,
     source: params.source,
+    service: params.service,
     provider: params.provider,
     model: params.model,
     status: params.status,

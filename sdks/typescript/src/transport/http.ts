@@ -1,15 +1,21 @@
 import type { OtlpSpanAttribute, OtlpTracesPayload, Span } from "../types";
+import { defaults } from "../core/config";
 
 /**
  * Send buffered SDK spans to the Pulse OTLP-compatible traces endpoint.
  */
-export async function sendSpans(apiUrl: string, apiKey: string, spans: Span[]): Promise<void> {
+export async function sendSpans(
+  apiUrl: string,
+  apiKey: string,
+  spans: Span[],
+  serviceName: string = defaults.serviceName
+): Promise<void> {
   if (spans.length === 0) {
     return;
   }
 
   const url = `${apiUrl}/v1/traces`;
-  const body = JSON.stringify(toOtlpPayload(spans));
+  const body = JSON.stringify(toOtlpPayload(spans, serviceName));
 
   try {
     const response = await fetch(url, {
@@ -30,12 +36,15 @@ export async function sendSpans(apiUrl: string, apiKey: string, spans: Span[]): 
   }
 }
 
-export function toOtlpPayload(spans: Span[]): OtlpTracesPayload {
+export function toOtlpPayload(
+  spans: Span[],
+  serviceName: string = defaults.serviceName
+): OtlpTracesPayload {
   return {
     resourceSpans: [
       {
         resource: {
-          attributes: [{ key: "service.name", value: { stringValue: "pulse-sdk" } }],
+          attributes: [{ key: "service.name", value: { stringValue: serviceName } }],
         },
         scopeSpans: [
           {

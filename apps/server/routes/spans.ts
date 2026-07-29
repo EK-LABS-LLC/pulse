@@ -124,6 +124,7 @@ export async function getSpans(c: Context): Promise<Response> {
     sessionId: params.session_id,
     traceId: params.trace_id,
     source: params.source,
+    service: params.service,
     kind: params.kind,
     toolName: params.tool_name,
     status: params.status,

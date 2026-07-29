@@ -13,6 +13,7 @@ export interface TraceSummary {
   timestamp: Date | string;
   latencyMs: number;
   source: string;
+  services: string[];
   spanCount: number;
   summary: string;
   toolCallCount: number;
@@ -29,6 +30,7 @@ export interface TraceSummary {
   finishReason: string | undefined;
   status: "success" | "error";
   error: unknown;
+  errorService: string | null;
   costCents: number | null;
   metadata: Record<string, unknown>;
   spans: Array<Span & { label: string }>;
@@ -122,6 +124,14 @@ export function deriveTraceSummary(
       .filter((path): path is string => path !== undefined),
   ).size;
   const model = providerSpan.model ?? "unknown";
+  const services = [
+    ...new Set(
+      sorted
+        .map((span) => span.service)
+        .filter((service): service is string => service != null),
+    ),
+  ];
+  const firstFailingSpan = sorted.find((span) => span.status === "error");
 
   const llmSpans = sorted.filter((span) => span.kind === "llm_call");
   const sumTokens = (
@@ -141,6 +151,7 @@ export function deriveTraceSummary(
     timestamp: providerSpan.timestamp,
     latencyMs: sorted.reduce((sum, span) => sum + (span.durationMs ?? 0), 0),
     source: providerSpan.source,
+    services,
     spanCount: sorted.length,
     summary: buildSummary(isLlm, model, toolCallCount, filesEdited),
     toolCallCount,
@@ -148,10 +159,9 @@ export function deriveTraceSummary(
     providerRequestId: providerSpan.providerRequestId ?? undefined,
     outputText: providerSpan.outputText ?? undefined,
     finishReason: providerSpan.finishReason ?? undefined,
-    status: sorted.some((span) => span.status === "error")
-      ? "error"
-      : "success",
+    status: firstFailingSpan ? "error" : "success",
     error: sorted.find((span) => span.error)?.error,
+    errorService: firstFailingSpan?.service ?? null,
     metadata: {
       ...metadata,
       toolCalls: toolIds.size,

@@ -191,6 +191,9 @@ pub async fn run_setup(args: SetupArgs) -> Result<()> {
         api_key,
         project_id,
         server_command: local.then(|| server_command.trim().to_string()),
+        service_name: existing_config
+            .as_ref()
+            .and_then(|cfg| cfg.service_name.clone()),
         local_email: None,
         local_password: None,
     }
@@ -283,6 +286,9 @@ pub async fn ensure_local_config(
         api_key,
         project_id,
         server_command: Some(server_command.trim().to_string()),
+        service_name: existing_config
+            .as_ref()
+            .and_then(|cfg| cfg.service_name.clone()),
         local_email: None,
         local_password: None,
     }

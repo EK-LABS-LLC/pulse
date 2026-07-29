@@ -6,6 +6,7 @@ export interface ResolvedConfig {
   batchSize: number;
   flushInterval: number;
   enabled: boolean;
+  serviceName: string;
 }
 
 export const defaults = {
@@ -13,6 +14,7 @@ export const defaults = {
   batchSize: 10,
   flushInterval: 5000,
   enabled: true,
+  serviceName: "pulse-sdk",
 } as const;
 
 export function loadConfig(config: PulseConfig): ResolvedConfig {
@@ -34,11 +36,17 @@ export function loadConfig(config: PulseConfig): ResolvedConfig {
     throw new Error("Pulse SDK: flushInterval must be at least 1000ms");
   }
 
+  const serviceName = (config.serviceName ?? defaults.serviceName).trim();
+  if (!serviceName) {
+    throw new Error("Pulse SDK: serviceName must not be empty");
+  }
+
   return {
     apiKey: config.apiKey,
     apiUrl: config.apiUrl ?? defaults.apiUrl,
     batchSize,
     flushInterval,
     enabled: config.enabled ?? defaults.enabled,
+    serviceName,
   };
 }

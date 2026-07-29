@@ -62,6 +62,17 @@ pulse connect \
 
 This saves a remote config and installs hooks locally. It does not start a server.
 
+#### Service name (optional)
+
+Emitted spans carry a `service.name` resource attribute, `pulse-cli` by default. To attribute
+traces to a specific deployment, set it in `~/.pulse/config.toml`:
+
+```toml
+service_name = "checkout-agent"
+```
+
+`pulse setup` and `pulse connect` keep the value when they rewrite the config.
+
 ### 3. Verify
 
 ```bash

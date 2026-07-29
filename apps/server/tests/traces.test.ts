@@ -230,6 +230,63 @@ describe("Traces Endpoints", () => {
       expect(data.total).toBe(1);
     });
 
+    test("service filter narrows trace list and surfaces trace services", async () => {
+      const serviceFilterProject = await createTestProject(
+        "Service Filter Traces Test Project",
+      );
+      await ingestSpans(serviceFilterProject.apiKey, [
+        {
+          span_id: "sv1",
+          trace_id: "tsv",
+          session_id: "s",
+          timestamp: new Date().toISOString(),
+          source: "sdk",
+          service: "checkout-api",
+          kind: "llm_call",
+          event_type: "provider_call",
+          status: "success",
+        },
+        {
+          span_id: "sv2",
+          trace_id: "tsv",
+          session_id: "s",
+          timestamp: new Date(Date.now() + 1000).toISOString(),
+          source: "sdk",
+          service: "payments-worker",
+          kind: "tool_use",
+          event_type: "post_tool_use",
+          status: "error",
+          error: "charge declined",
+        },
+        {
+          span_id: "sv3",
+          trace_id: "tother",
+          session_id: "s",
+          timestamp: new Date().toISOString(),
+          source: "sdk",
+          service: "search-api",
+          kind: "llm_call",
+          event_type: "provider_call",
+          status: "success",
+        },
+      ]);
+
+      const response = await authFetch(
+        "/v1/traces?service=checkout-api",
+        serviceFilterProject.apiKey,
+      );
+      const data = (await response.json()) as TracesResponse;
+
+      expect(response.status).toBe(200);
+      expect(data.total).toBe(1);
+      expect(data.traces.map((trace) => trace.traceId)).toEqual(["tsv"]);
+      expect(data.traces[0]?.services).toEqual([
+        "checkout-api",
+        "payments-worker",
+      ]);
+      expect(data.traces[0]?.errorService).toBe("payments-worker");
+    });
+
     test("paginates derived traces without overlap", async () => {
       const paginationProject = await createTestProject(
         "Paginated Traces Test Project",

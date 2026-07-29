@@ -29,6 +29,7 @@ export const spanSourceSchema = z.enum(SPAN_SOURCES);
 export const traceQuerySchema = z.object({
   session_id: z.string().uuid().optional(),
   source: spanSourceSchema.optional(),
+  service: z.string().optional(),
   provider: z.string().optional(),
   model: z.string().optional(),
   status: statusSchema.optional(),
@@ -103,6 +104,9 @@ export const spanSchema = z.object({
 
   /** Which tool or SDK produced this span. */
   source: spanSourceSchema,
+
+  /** Service that emitted the span, from the OTel `service.name` resource attribute. */
+  service: z.string().optional(),
 
   /** What category of event this span represents. */
   kind: spanKindSchema,
@@ -199,6 +203,7 @@ export const spanQuerySchema = z.object({
   session_id: z.string().optional(),
   trace_id: z.string().optional(),
   source: spanSourceSchema.optional(),
+  service: z.string().optional(),
   kind: spanKindSchema.optional(),
   tool_name: z.string().optional(),
   status: statusSchema.optional(),

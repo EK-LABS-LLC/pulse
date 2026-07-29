@@ -51,6 +51,25 @@ fn serialization_uses_otlp_trace_shape() {
 }
 
 #[test]
+fn serialization_includes_resource_service_name() {
+    let json = serde_json::to_value(OtlpTracePayload::single(
+        minimal_span(),
+        vec![OtlpAttribute::string("service.name", "checkout-agent")],
+    ))
+    .unwrap();
+
+    let attrs = json["resourceSpans"][0]["resource"]["attributes"]
+        .as_array()
+        .unwrap();
+    let service_name = attrs
+        .iter()
+        .find(|attr| attr["key"] == "service.name")
+        .expect("service.name should exist");
+
+    assert_eq!(service_name["value"]["stringValue"], "checkout-agent");
+}
+
+#[test]
 fn serialization_includes_pulse_attributes() {
     let json = serde_json::to_value(minimal_payload()).unwrap();
     let attrs = json["resourceSpans"][0]["scopeSpans"][0]["spans"][0]["attributes"]

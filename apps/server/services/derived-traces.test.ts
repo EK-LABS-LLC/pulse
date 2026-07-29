@@ -13,6 +13,7 @@ describe("derived-traces", () => {
         timestamp: new Date("2026-01-01T00:00:01.000Z"),
         durationMs: 10,
         source: "sdk",
+        service: "checkout-api",
         kind: "tool_use",
         eventType: "tool_request",
         status: "success",
@@ -44,6 +45,7 @@ describe("derived-traces", () => {
         timestamp: new Date("2026-01-01T00:00:00.000Z"),
         durationMs: 100,
         source: "sdk",
+        service: "checkout-api",
         kind: "llm_call",
         eventType: "provider_call",
         status: "success",
@@ -82,6 +84,8 @@ describe("derived-traces", () => {
     expect(summary.outputText).toBe("Hi there");
     expect(summary.providerRequestId).toBe("chatcmpl-123");
     expect(summary.latencyMs).toBe(110);
+    expect(summary.services).toEqual(["checkout-api"]);
+    expect(summary.errorService).toBeNull();
     expect(summary.metadata.toolCalls).toBe(1);
     expect(summary.spans).toHaveLength(2);
     expect(summary.spans[0]?.spanId).toBe("llm-1");

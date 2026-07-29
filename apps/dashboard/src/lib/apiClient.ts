@@ -37,6 +37,7 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 export interface GetTracesParams {
   session_id?: string;
   source?: string;
+  service?: string;
   provider?: string;
   model?: string;
   status?: string;
@@ -50,6 +51,7 @@ export interface Trace {
   traceId: string;
   timestamp: string;
   source: string;
+  services?: string[];
   summary: string;
   spanCount: number;
   provider: string | null;
@@ -63,6 +65,7 @@ export interface Trace {
   requestBody?: unknown;
   responseBody?: unknown;
   error?: unknown;
+  errorService?: string | null;
   inputTokens?: number | null;
   outputTokens?: number | null;
   outputText?: string;
@@ -89,6 +92,7 @@ export interface Span {
   timestamp: string;
   durationMs?: number;
   source: SpanSource;
+  service?: string;
   kind: SpanKind;
   eventType: string;
   status: TraceStatus;
@@ -151,6 +155,7 @@ export interface GetSpansParams {
   session_id?: string;
   trace_id?: string;
   source?: SpanSource;
+  service?: string;
   kind?: SpanKind;
   tool_name?: string;
   status?: string;

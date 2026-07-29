@@ -5,12 +5,18 @@ from typing import Any, Dict, List
 
 import requests
 
+from .config import DEFAULT_SERVICE_NAME
 from .types import Span
 
 DEFAULT_TIMEOUT = 10  # seconds
 
 
-def send_spans(api_url: str, api_key: str, spans: List[Span]) -> None:
+def send_spans(
+    api_url: str,
+    api_key: str,
+    spans: List[Span],
+    service_name: str = DEFAULT_SERVICE_NAME,
+) -> None:
     if not spans:
         return
 
@@ -20,7 +26,10 @@ def send_spans(api_url: str, api_key: str, spans: List[Span]) -> None:
         "Content-Type": "application/json",
     }
     response = requests.post(
-        url, headers=headers, data=json.dumps(_to_otlp(spans)), timeout=DEFAULT_TIMEOUT
+        url,
+        headers=headers,
+        data=json.dumps(_to_otlp(spans, service_name)),
+        timeout=DEFAULT_TIMEOUT,
     )
     if not response.ok:
         raise RuntimeError(
@@ -32,11 +41,13 @@ def _attr(key: str, value: str) -> Dict[str, Any]:
     return {"key": key, "value": {"stringValue": value}}
 
 
-def _to_otlp(spans: List[Span]) -> Dict[str, Any]:
+def _to_otlp(
+    spans: List[Span], service_name: str = DEFAULT_SERVICE_NAME
+) -> Dict[str, Any]:
     return {
         "resourceSpans": [
             {
-                "resource": {"attributes": [_attr("service.name", "pulse-sdk-py")]},
+                "resource": {"attributes": [_attr("service.name", service_name)]},
                 "scopeSpans": [
                     {
                         "scope": {"name": "pulse-trace-sdk"},

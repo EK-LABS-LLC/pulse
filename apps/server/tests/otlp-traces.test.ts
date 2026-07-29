@@ -303,6 +303,96 @@ describe("OTLP / SDK traces", () => {
     expect(sessionData.traces.map((trace) => trace.traceId)).toEqual([traceId]);
   });
 
+  test("POST /v1/traces stores the resource service.name on every span", async () => {
+    const sessionId = crypto.randomUUID();
+    const traceId = otelTraceId();
+    const llmSpanId = otelSpanId();
+    const toolSpanId = otelSpanId();
+    const service = `checkout-api-${crypto.randomUUID().slice(0, 8)}`;
+    const startNs = BigInt(Date.now()) * 1_000_000n;
+    const spanAttributes = (kind: string, eventType: string) => [
+      { key: "pulse.source", value: { stringValue: "sdk" } },
+      { key: "pulse.kind", value: { stringValue: kind } },
+      { key: "pulse.event_type", value: { stringValue: eventType } },
+      { key: "pulse.session_id", value: { stringValue: sessionId } },
+      { key: "pulse.trace_id", value: { stringValue: traceId } },
+    ];
+
+    const ingestResponse = await authFetch("/v1/traces", testProject.apiKey, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resourceSpans: [
+          {
+            resource: {
+              attributes: [
+                { key: "service.name", value: { stringValue: service } },
+              ],
+            },
+            scopeSpans: [
+              {
+                spans: [
+                  {
+                    traceId,
+                    spanId: llmSpanId,
+                    name: "provider_call",
+                    startTimeUnixNano: startNs.toString(),
+                    endTimeUnixNano: (startNs + 10_000_000n).toString(),
+                    attributes: spanAttributes("llm_call", "provider_call"),
+                    status: { code: 1 },
+                  },
+                  {
+                    traceId,
+                    spanId: toolSpanId,
+                    name: "shell",
+                    startTimeUnixNano: (startNs + 20_000_000n).toString(),
+                    endTimeUnixNano: (startNs + 30_000_000n).toString(),
+                    attributes: spanAttributes("tool_use", "post_tool_use"),
+                    status: { code: 2 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    expect(ingestResponse.status).toBe(200);
+
+    const detailResponse = await waitForApiResponse(
+      `/v1/traces/${traceId}`,
+      testProject.apiKey,
+      (data) => (data as { spans?: unknown[] }).spans?.length === 2,
+    );
+    const detail = (await detailResponse.json()) as {
+      services: string[];
+      errorService: string | null;
+      spans: Array<{ spanId: string; service: string | null }>;
+    };
+
+    expect(detailResponse.status).toBe(200);
+    expect(detail.spans.map((span) => span.service)).toEqual([
+      service,
+      service,
+    ]);
+    expect(detail.services).toEqual([service]);
+    expect(detail.errorService).toBe(service);
+
+    const filtered = await waitForApiResponse(
+      `/v1/traces?service=${encodeURIComponent(service)}`,
+      testProject.apiKey,
+      (data) => (data as { total?: number }).total === 1,
+    );
+    const filteredData = (await filtered.json()) as {
+      traces: Array<{ traceId: string }>;
+      total: number;
+    };
+    expect(filtered.status).toBe(200);
+    expect(filteredData.traces.map((trace) => trace.traceId)).toEqual([
+      traceId,
+    ]);
+  });
+
   test("POST /v1/traces is idempotent for retried exports", async () => {
     const sessionId = crypto.randomUUID();
     const traceId = otelTraceId();

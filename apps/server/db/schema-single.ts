@@ -90,6 +90,7 @@ export const spans = sqliteTable(
       .notNull(),
     durationMs: integer("duration_ms"),
     source: text("source").notNull(),
+    service: text("service"),
     kind: text("kind").notNull(),
     eventType: text("event_type").notNull(),
     status: text("status").notNull(),
@@ -118,6 +119,7 @@ export const spans = sqliteTable(
     index("spans_project_trace_idx").on(table.projectId, table.traceId),
     index("spans_project_session_idx").on(table.projectId, table.sessionId),
     index("spans_project_kind_idx").on(table.projectId, table.kind),
+    index("spans_project_service_idx").on(table.projectId, table.service),
   ],
 );
 

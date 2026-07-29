@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import type { Span } from "../src/types";
+import { loadConfig } from "../src/core/config";
 import { toOtlpPayload, sendSpans } from "../src/transport/http";
 import { generateSpanId, generateTraceId } from "../src/lib/ids";
 
@@ -105,6 +106,15 @@ describe("toOtlpPayload", () => {
     expect(readAttribute(span!, "pulse.metadata.tenant")).toBe("acme");
   });
 
+  it("reports the configured service name as the resource service.name", () => {
+    const payload = toOtlpPayload([sampleSpan()], "checkout-api");
+
+    expect(payload.resourceSpans[0]?.resource?.attributes?.[0]).toEqual({
+      key: "service.name",
+      value: { stringValue: "checkout-api" },
+    });
+  });
+
   it("namespaces metadata attributes to avoid reserved key collisions", () => {
     const payload = toOtlpPayload([
       sampleSpan({ metadata: { "pulse.source": "user-value" } }),
@@ -154,6 +164,18 @@ describe("toOtlpPayload", () => {
   });
 });
 
+describe("service name configuration", () => {
+  it("falls back to the default service name when unset", () => {
+    expect(loadConfig({ apiKey: "pulse_sk_test" }).serviceName).toBe("pulse-sdk");
+  });
+
+  it("rejects a blank service name", () => {
+    expect(() => loadConfig({ apiKey: "pulse_sk_test", serviceName: "   " })).toThrow(
+      "Pulse SDK: serviceName must not be empty"
+    );
+  });
+});
+
 describe("sendSpans", () => {
   it("posts OTLP JSON to /v1/traces", async () => {
     const calls: Array<{ url: string; init: RequestInit }> = [];
@@ -174,6 +196,22 @@ describe("sendSpans", () => {
 
     const body = JSON.parse(String(calls[0]?.init.body));
     expect(body.resourceSpans[0].scopeSpans[0].spans).toHaveLength(1);
+  });
+
+  it("posts the configured service name as a resource attribute", async () => {
+    const bodies: string[] = [];
+    globalThis.fetch = mockFetch((_url, init) => {
+      bodies.push(String(init?.body));
+      return Promise.resolve(new Response("{}", { status: 200 }));
+    });
+
+    const config = loadConfig({ apiKey: "pulse_sk_test", serviceName: "checkout-api" });
+    await sendSpans(config.apiUrl, config.apiKey, [sampleSpan()], config.serviceName);
+
+    const body = JSON.parse(bodies[0]!);
+    expect(body.resourceSpans[0].resource.attributes).toEqual([
+      { key: "service.name", value: { stringValue: "checkout-api" } },
+    ]);
   });
 
   it("does not call fetch when there are no spans", async () => {

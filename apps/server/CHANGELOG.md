@@ -9,6 +9,16 @@ Task: Let a pull request that legitimately adds or edits a test update the test-
 Fixed: The test-integrity guard reads `baseline.json` from the branch instead of the base commit, so adding or changing a test no longer fails CI with no way to pass.
 Added: A follow-up CI step rejects baseline entries that were added, dropped, or altered for test files the branch does not modify, so rebaselining stays scoped to the tests a change actually touches.
 
+### Attribute Spans To Their Service
+
+Date: 2026-07-29 CDT; Status: In Progress; PR: TBD
+Task: Make the OTel `service.name` resource attribute a queryable span dimension instead of an opaque metadata entry.
+Changed: Bumped trace-service package version to 0.2.17.
+Added: Spans carry a first-class `service` field, populated from the `service.name` resource attribute of the OTLP export and applied to every span in that resource batch.
+Added: `GET /v1/spans` and `GET /v1/traces` accept a `service` filter.
+Added: Trace summaries list the distinct `services` a trace touched and report `errorService`, the service that owned the first failing span.
+Changed: `service.name` is no longer duplicated into span metadata now that it has a column.
+
 ### Scope Version Guard To Shipping Files
 
 Date: 2026-07-29 CDT; Status: In Progress; PR: #3 https://github.com/EK-LABS-LLC/pulse/pull/3

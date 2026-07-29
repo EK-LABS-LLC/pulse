@@ -25,6 +25,7 @@ function toNewSpan(input: SpanInput, projectId: string): NewSpan {
     timestamp: new Date(input.timestamp),
     durationMs: input.duration_ms,
     source: input.source,
+    service: input.service,
     kind: input.kind,
     eventType: input.event_type,
     status: input.status,

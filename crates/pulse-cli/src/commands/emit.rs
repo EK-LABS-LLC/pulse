@@ -13,10 +13,10 @@ use tempfile::NamedTempFile;
 use uuid::Uuid;
 
 use crate::{
-    config::ConfigStore,
+    config::{ConfigStore, PulseConfig},
     error::Result,
     hooks::{CLAUDE_SOURCE, CODEX_SOURCE, span},
-    http::TraceHttpClient,
+    http::{OtlpAttribute, TraceHttpClient},
 };
 
 fn debug_enabled() -> bool {
@@ -250,6 +250,15 @@ fn resolve_span_context(
     }
 }
 
+fn resource_attributes(config: &PulseConfig, source: &str) -> Vec<OtlpAttribute> {
+    vec![
+        OtlpAttribute::string("service.name", config.effective_service_name()),
+        OtlpAttribute::string("service.version", env!("CARGO_PKG_VERSION")),
+        OtlpAttribute::string("pulse.project.id", config.project_id.clone()),
+        OtlpAttribute::string("pulse.source", source),
+    ]
+}
+
 async fn emit_inner(args: EmitArgs) -> Result<()> {
     let event_type = args.event_type.trim().to_string();
     if event_type.is_empty() {
@@ -341,13 +350,8 @@ pub async fn emit_payload(
         Err(_) => return Ok(()),
     };
 
-    let resource_attributes = vec![
-        crate::http::OtlpAttribute::string("service.name", "pulse-cli"),
-        crate::http::OtlpAttribute::string("service.version", env!("CARGO_PKG_VERSION")),
-        crate::http::OtlpAttribute::string("pulse.project.id", config.project_id),
-        crate::http::OtlpAttribute::string("pulse.source", source),
-    ];
-    let traces = crate::http::OtlpTracePayload::single(otlp_span, resource_attributes);
+    let traces =
+        crate::http::OtlpTracePayload::single(otlp_span, resource_attributes(&config, &source));
     let _ = client.post_traces(&traces).await;
 
     Ok(())
@@ -355,8 +359,48 @@ pub async fn emit_payload(
 
 #[cfg(test)]
 mod tests {
-    use super::event_identity;
+    use super::{event_identity, resource_attributes};
+    use crate::config::PulseConfig;
     use serde_json::json;
+
+    fn test_config(service_name: Option<&str>) -> PulseConfig {
+        PulseConfig {
+            mode: None,
+            api_url: "http://localhost:3000".to_string(),
+            api_key: "pulse_sk_test".to_string(),
+            project_id: "project_test".to_string(),
+            server_command: None,
+            service_name: service_name.map(ToString::to_string),
+            local_email: None,
+            local_password: None,
+        }
+    }
+
+    fn service_name_attribute(config: &PulseConfig) -> String {
+        let attributes = serde_json::to_value(resource_attributes(config, "claude_code")).unwrap();
+        attributes
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|attr| attr["key"] == "service.name")
+            .expect("service.name should be emitted")["value"]["stringValue"]
+            .as_str()
+            .unwrap()
+            .to_string()
+    }
+
+    #[test]
+    fn resource_attributes_use_the_configured_service_name() {
+        assert_eq!(
+            service_name_attribute(&test_config(Some("checkout-agent"))),
+            "checkout-agent"
+        );
+    }
+
+    #[test]
+    fn resource_attributes_default_the_service_name_when_unset() {
+        assert_eq!(service_name_attribute(&test_config(None)), "pulse-cli");
+    }
 
     #[test]
     fn tool_identity_prefers_tool_use_id_over_shared_turn_id() {

@@ -6,6 +6,7 @@ import type { Span, NewSpan } from "./schema";
 export interface TraceQueryFilters {
   sessionId?: string;
   source?: string;
+  service?: string;
   provider?: string;
   model?: string;
   status?: "success" | "error";
@@ -22,6 +23,7 @@ export interface SpanQueryFilters {
   sessionId?: string;
   traceId?: string;
   source?: "claude_code" | "codex" | "opencode" | "openclaw" | "sdk";
+  service?: string;
   kind?:
     | "llm_call"
     | "tool_use"

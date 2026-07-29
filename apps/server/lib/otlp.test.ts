@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { extractOtlpSpans } from "./otlp";
 
-function otlpPayload(spans: unknown[]) {
+function otlpPayload(spans: unknown[], resourceAttributes?: unknown[]) {
   return {
     resourceSpans: [
       {
+        resource: resourceAttributes
+          ? { attributes: resourceAttributes }
+          : undefined,
         scopeSpans: [
           {
             spans,
@@ -36,15 +39,27 @@ describe("extractOtlpSpans", () => {
           attributes: [
             { key: "pulse.source", value: { stringValue: "sdk" } },
             { key: "pulse.kind", value: { stringValue: "llm_call" } },
-            { key: "pulse.event_type", value: { stringValue: "provider_call" } },
+            {
+              key: "pulse.event_type",
+              value: { stringValue: "provider_call" },
+            },
             { key: "pulse.session_id", value: { stringValue: "session-1" } },
             { key: "pulse.provider", value: { stringValue: "openai" } },
             { key: "pulse.trace_id", value: { stringValue: TRACE_ID } },
             { key: "gen_ai.provider.name", value: { stringValue: "openai" } },
             { key: "gen_ai.request.model", value: { stringValue: "gpt-4o" } },
-            { key: "gen_ai.response.model", value: { stringValue: "gpt-4o-2024-08-06" } },
-            { key: "gen_ai.response.id", value: { stringValue: "chatcmpl-123" } },
-            { key: "gen_ai.response.finish_reasons", value: { stringValue: '["stop"]' } },
+            {
+              key: "gen_ai.response.model",
+              value: { stringValue: "gpt-4o-2024-08-06" },
+            },
+            {
+              key: "gen_ai.response.id",
+              value: { stringValue: "chatcmpl-123" },
+            },
+            {
+              key: "gen_ai.response.finish_reasons",
+              value: { stringValue: '["stop"]' },
+            },
             { key: "gen_ai.usage.input_tokens", value: { intValue: "42" } },
             { key: "gen_ai.usage.output_tokens", value: { intValue: "7" } },
             { key: "pulse.cost_cents", value: { doubleValue: 0.125 } },
@@ -90,11 +105,17 @@ describe("extractOtlpSpans", () => {
           attributes: [
             { key: "pulse.source", value: { stringValue: "sdk" } },
             { key: "pulse.kind", value: { stringValue: "llm_call" } },
-            { key: "pulse.event_type", value: { stringValue: "provider_call" } },
+            {
+              key: "pulse.event_type",
+              value: { stringValue: "provider_call" },
+            },
             { key: "pulse.session_id", value: { stringValue: "session-1" } },
             { key: "gen_ai.usage.input_tokens", value: { intValue: "42" } },
             { key: "pulse.provider", value: { stringValue: "openai" } },
-            { key: "pulse.request", value: { stringValue: '{"model":"gpt-4o"}' } },
+            {
+              key: "pulse.request",
+              value: { stringValue: '{"model":"gpt-4o"}' },
+            },
           ],
           status: { code: 1 },
         },
@@ -105,6 +126,97 @@ describe("extractOtlpSpans", () => {
     expect(metadata["gen_ai.usage.input_tokens"]).toBeUndefined();
     expect(metadata["pulse.provider"]).toBeUndefined();
     expect(metadata["pulse.request"]).toEqual({ model: "gpt-4o" });
+  });
+
+  test("lifts the resource-level service.name onto every span in the batch", () => {
+    const startNs = BigInt(Date.now()) * 1_000_000n;
+    const spanAttributes = [
+      { key: "pulse.source", value: { stringValue: "sdk" } },
+      { key: "pulse.kind", value: { stringValue: "llm_call" } },
+      { key: "pulse.event_type", value: { stringValue: "provider_call" } },
+      { key: "pulse.session_id", value: { stringValue: "session-1" } },
+    ];
+    const { spans } = extractOtlpSpans(
+      otlpPayload(
+        [
+          {
+            traceId: TRACE_ID,
+            spanId: SPAN_ID,
+            startTimeUnixNano: startNs.toString(),
+            attributes: spanAttributes,
+            status: { code: 1 },
+          },
+          {
+            traceId: TRACE_ID,
+            spanId: PARENT_SPAN_ID,
+            startTimeUnixNano: startNs.toString(),
+            attributes: spanAttributes,
+            status: { code: 1 },
+          },
+        ],
+        [{ key: "service.name", value: { stringValue: "checkout-api" } }],
+      ),
+    );
+
+    expect(spans.map((span) => span.service)).toEqual([
+      "checkout-api",
+      "checkout-api",
+    ]);
+    expect(spans[0]!.metadata).not.toHaveProperty("service.name");
+  });
+
+  test("prefers a span-level service.name over the resource attribute", () => {
+    const startNs = BigInt(Date.now()) * 1_000_000n;
+    const { spans } = extractOtlpSpans(
+      otlpPayload(
+        [
+          {
+            traceId: TRACE_ID,
+            spanId: SPAN_ID,
+            startTimeUnixNano: startNs.toString(),
+            attributes: [
+              { key: "pulse.source", value: { stringValue: "sdk" } },
+              { key: "pulse.kind", value: { stringValue: "llm_call" } },
+              {
+                key: "pulse.event_type",
+                value: { stringValue: "provider_call" },
+              },
+              { key: "pulse.session_id", value: { stringValue: "session-1" } },
+              { key: "service.name", value: { stringValue: "worker" } },
+            ],
+            status: { code: 1 },
+          },
+        ],
+        [{ key: "service.name", value: { stringValue: "checkout-api" } }],
+      ),
+    );
+
+    expect(spans[0]!.service).toBe("worker");
+  });
+
+  test("leaves service undefined when no service.name is exported", () => {
+    const startNs = BigInt(Date.now()) * 1_000_000n;
+    const { spans } = extractOtlpSpans(
+      otlpPayload([
+        {
+          traceId: TRACE_ID,
+          spanId: SPAN_ID,
+          startTimeUnixNano: startNs.toString(),
+          attributes: [
+            { key: "pulse.source", value: { stringValue: "sdk" } },
+            { key: "pulse.kind", value: { stringValue: "llm_call" } },
+            {
+              key: "pulse.event_type",
+              value: { stringValue: "provider_call" },
+            },
+            { key: "pulse.session_id", value: { stringValue: "session-1" } },
+          ],
+          status: { code: 1 },
+        },
+      ]),
+    );
+
+    expect(spans[0]!.service).toBeUndefined();
   });
 
   test("maps canonical CLI agent attributes and structured AnyValues", () => {
@@ -218,7 +330,10 @@ describe("extractOtlpSpans", () => {
           attributes: [
             { key: "pulse.source", value: { stringValue: "sdk" } },
             { key: "pulse.kind", value: { stringValue: "not_a_kind" } },
-            { key: "pulse.event_type", value: { stringValue: "provider_call" } },
+            {
+              key: "pulse.event_type",
+              value: { stringValue: "provider_call" },
+            },
             { key: "pulse.session_id", value: { stringValue: "session-1" } },
           ],
         },
@@ -229,7 +344,10 @@ describe("extractOtlpSpans", () => {
           attributes: [
             { key: "pulse.source", value: { stringValue: "sdk" } },
             { key: "pulse.kind", value: { stringValue: "llm_call" } },
-            { key: "pulse.event_type", value: { stringValue: "provider_call" } },
+            {
+              key: "pulse.event_type",
+              value: { stringValue: "provider_call" },
+            },
             { key: "pulse.session_id", value: { stringValue: "session-1" } },
           ],
           status: { code: 1 },
@@ -253,7 +371,10 @@ describe("extractOtlpSpans", () => {
           attributes: [
             { key: "pulse.source", value: { stringValue: "sdk" } },
             { key: "pulse.kind", value: { stringValue: "llm_call" } },
-            { key: "pulse.event_type", value: { stringValue: "provider_call" } },
+            {
+              key: "pulse.event_type",
+              value: { stringValue: "provider_call" },
+            },
             { key: "pulse.session_id", value: { stringValue: "session-1" } },
           ],
         },

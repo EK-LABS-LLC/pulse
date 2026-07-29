@@ -53,7 +53,7 @@ export async function flushBuffer(): Promise<void> {
   traceBuffer = [];
 
   try {
-    await sendSpans(cfg.apiUrl, cfg.apiKey, traces);
+    await sendSpans(cfg.apiUrl, cfg.apiKey, traces, cfg.serviceName);
   } catch (error) {
     console.error("Pulse SDK: failed to flush traces:", error);
   }

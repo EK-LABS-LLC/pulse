@@ -12,6 +12,7 @@ function span(overrides: Partial<Span>): Span {
     timestamp: new Date("2026-07-20T00:00:00Z"),
     durationMs: 0,
     source: "claude_code",
+    service: null,
     kind: "tool_use",
     eventType: "post_tool_use",
     status: "success",
@@ -116,4 +117,42 @@ test("sdk trace keeps llm fields and models the summary", () => {
   expect(s.provider).toBe("openai");
   expect(s.inputTokens).toBe(100);
   expect(s.summary).toBe("gpt-4o-mini");
+});
+
+test("trace reports the distinct services it touched", () => {
+  const spans = [
+    span({ service: "gateway", timestamp: new Date("2026-07-20T00:00:00Z") }),
+    span({ service: "checkout", timestamp: new Date("2026-07-20T00:00:01Z") }),
+    span({ service: "gateway", timestamp: new Date("2026-07-20T00:00:02Z") }),
+    span({ service: null, timestamp: new Date("2026-07-20T00:00:03Z") }),
+  ];
+  const s = deriveTraceSummary("t1", spans);
+  expect(s.services).toEqual(["gateway", "checkout"]);
+  expect(s.errorService).toBeNull();
+});
+
+test("errorService names the service of the first failing span", () => {
+  const spans = [
+    span({ service: "gateway", timestamp: new Date("2026-07-20T00:00:00Z") }),
+    span({
+      service: "checkout",
+      status: "error",
+      error: "boom",
+      timestamp: new Date("2026-07-20T00:00:01Z"),
+    }),
+    span({
+      service: "payments",
+      status: "error",
+      error: "downstream",
+      timestamp: new Date("2026-07-20T00:00:02Z"),
+    }),
+  ];
+  const s = deriveTraceSummary("t1", spans);
+  expect(s.status).toBe("error");
+  expect(s.errorService).toBe("checkout");
+});
+
+test("errorService is null when the failing span has no service", () => {
+  const spans = [span({ service: null, status: "error", error: "boom" })];
+  expect(deriveTraceSummary("t1", spans).errorService).toBeNull();
 });

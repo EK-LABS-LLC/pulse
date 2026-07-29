@@ -1,9 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import {
-  authFetch,
-  createTestProject,
-  cleanupTestData,
-} from "./setup";
+import { authFetch, createTestProject, cleanupTestData } from "./setup";
 
 describe("Spans Endpoints", () => {
   let testProject: { id: string; apiKey: string };
@@ -27,11 +23,15 @@ describe("Spans Endpoints", () => {
       metadata: { i },
     }));
 
-    const ingestResponse = await authFetch("/v1/spans/batch", testProject.apiKey, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(seedSpans),
-    });
+    const ingestResponse = await authFetch(
+      "/v1/spans/batch",
+      testProject.apiKey,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(seedSpans),
+      },
+    );
     expect(ingestResponse.status).toBe(202);
     spanIds = seedSpans.map((s) => s.span_id);
   });
@@ -85,11 +85,15 @@ describe("Spans Endpoints", () => {
       },
     ];
 
-    const ingestResponse = await authFetch("/v1/spans/batch", testProject.apiKey, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const ingestResponse = await authFetch(
+      "/v1/spans/batch",
+      testProject.apiKey,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
     expect(ingestResponse.status).toBe(202);
 
     const response = await authFetch(
@@ -120,6 +124,58 @@ describe("Spans Endpoints", () => {
     expect(data.spanId).toBe(firstSpanId);
   });
 
+  test("GET /v1/spans filters by service", async () => {
+    const service = `checkout-api-${crypto.randomUUID().slice(0, 8)}`;
+    const servicedSpanId = crypto.randomUUID();
+    const payload = [
+      {
+        span_id: servicedSpanId,
+        session_id: sessionId,
+        timestamp: new Date().toISOString(),
+        source: "sdk",
+        service,
+        kind: "llm_call",
+        event_type: "provider_call",
+        status: "success",
+      },
+      {
+        span_id: crypto.randomUUID(),
+        session_id: sessionId,
+        timestamp: new Date().toISOString(),
+        source: "sdk",
+        service: "payments-worker",
+        kind: "llm_call",
+        event_type: "provider_call",
+        status: "success",
+      },
+    ];
+
+    const ingestResponse = await authFetch(
+      "/v1/spans/batch",
+      testProject.apiKey,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
+    expect(ingestResponse.status).toBe(202);
+
+    const response = await authFetch(
+      `/v1/spans?service=${encodeURIComponent(service)}`,
+      testProject.apiKey,
+    );
+    const data = (await response.json()) as {
+      spans: Array<{ spanId: string; service: string }>;
+      total: number;
+    };
+
+    expect(response.status).toBe(200);
+    expect(data.total).toBe(1);
+    expect(data.spans[0]?.spanId).toBe(servicedSpanId);
+    expect(data.spans[0]?.service).toBe(service);
+  });
+
   test("POST /v1/spans/async queues and persists span", async () => {
     const payload = [
       {
@@ -135,11 +191,15 @@ describe("Spans Endpoints", () => {
     ];
     const payloadSpanId = payload[0]!.span_id;
 
-    const enqueueResponse = await authFetch("/v1/spans/async", testProject.apiKey, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const enqueueResponse = await authFetch(
+      "/v1/spans/async",
+      testProject.apiKey,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
     expect(enqueueResponse.status).toBe(202);
 
     await new Promise((resolve) => setTimeout(resolve, 1000));

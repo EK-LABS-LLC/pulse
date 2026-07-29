@@ -50,6 +50,7 @@ pub async fn run_connect(args: ConnectArgs) -> Result<()> {
         api_key,
         project_id,
         server_command: None,
+        service_name: ConfigStore::load().ok().and_then(|cfg| cfg.service_name),
         local_email: None,
         local_password: None,
     }

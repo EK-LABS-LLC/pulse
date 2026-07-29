@@ -107,6 +107,9 @@ export class PostgresStorage implements StorageAdapter {
     if (filters.source) {
       conditions.push(eq(spans.source, filters.source));
     }
+    if (filters.service) {
+      conditions.push(eq(spans.service, filters.service));
+    }
     if (filters.kind) {
       conditions.push(eq(spans.kind, filters.kind));
     }
@@ -280,6 +283,9 @@ export class PostgresStorage implements StorageAdapter {
     if (filters.source) {
       conditions.push(eq(spans.source, filters.source));
     }
+    if (filters.service) {
+      conditions.push(eq(spans.service, filters.service));
+    }
     if (filters.kind) {
       conditions.push(eq(spans.kind, filters.kind));
     }
@@ -313,6 +319,7 @@ export class PostgresStorage implements StorageAdapter {
       isNotNull(spans.traceId),
     ];
     if (filters.source) conditions.push(eq(spans.source, filters.source));
+    if (filters.service) conditions.push(eq(spans.service, filters.service));
     if (filters.sessionId)
       conditions.push(eq(spans.sessionId, filters.sessionId));
     if (filters.dateFrom)

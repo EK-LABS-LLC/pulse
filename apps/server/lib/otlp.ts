@@ -1,4 +1,8 @@
-import { MAX_OTLP_SPANS_PER_EXPORT, spanSchema, type SpanInput } from "../shared/validation";
+import {
+  MAX_OTLP_SPANS_PER_EXPORT,
+  spanSchema,
+  type SpanInput,
+} from "../shared/validation";
 
 const MAX_PAYLOAD_BYTES = 64 * 1024;
 
@@ -70,6 +74,7 @@ const FIRST_CLASS_ATTRIBUTE_KEYS = new Set([
   "gen_ai.provider.name",
   "gen_ai.system",
   "gen_ai.conversation.id",
+  "service.name",
 ]);
 
 function anyValue(value: OtlpAnyValue | undefined): unknown {
@@ -104,7 +109,10 @@ function valueAttr(attrs: Map<string, unknown>, ...keys: string[]): unknown {
   return undefined;
 }
 
-function stringAttr(attrs: Map<string, unknown>, ...keys: string[]): string | undefined {
+function stringAttr(
+  attrs: Map<string, unknown>,
+  ...keys: string[]
+): string | undefined {
   for (const key of keys) {
     const value = attrs.get(key);
     if (typeof value === "string" && value.length > 0) return value;
@@ -112,7 +120,10 @@ function stringAttr(attrs: Map<string, unknown>, ...keys: string[]): string | un
   return undefined;
 }
 
-function numberAttr(attrs: Map<string, unknown>, ...keys: string[]): number | undefined {
+function numberAttr(
+  attrs: Map<string, unknown>,
+  ...keys: string[]
+): number | undefined {
   for (const key of keys) {
     const value = attrs.get(key);
     if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -124,7 +135,10 @@ function numberAttr(attrs: Map<string, unknown>, ...keys: string[]): number | un
   return undefined;
 }
 
-function boolAttr(attrs: Map<string, unknown>, ...keys: string[]): boolean | undefined {
+function boolAttr(
+  attrs: Map<string, unknown>,
+  ...keys: string[]
+): boolean | undefined {
   for (const key of keys) {
     const value = attrs.get(key);
     if (typeof value === "boolean") return value;
@@ -137,12 +151,17 @@ function boolAttr(attrs: Map<string, unknown>, ...keys: string[]): boolean | und
  * a bare string, a JSON-encoded array, or fall back to the raw value.
  */
 function finishReasonAttr(attrs: Map<string, unknown>): string | undefined {
-  const raw = stringAttr(attrs, "gen_ai.response.finish_reasons", "gen_ai.response.finish_reason");
+  const raw = stringAttr(
+    attrs,
+    "gen_ai.response.finish_reasons",
+    "gen_ai.response.finish_reason",
+  );
   if (!raw) return undefined;
   if (raw.startsWith("[")) {
     try {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && typeof parsed[0] === "string") return parsed[0];
+      if (Array.isArray(parsed) && typeof parsed[0] === "string")
+        return parsed[0];
     } catch {
       return raw;
     }
@@ -181,7 +200,9 @@ function otlpTimeToIso(value: string | number | undefined): string {
   if (value === undefined) return new Date().toISOString();
   try {
     const date = new Date(Number(BigInt(String(value)) / 1_000_000n));
-    return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+    return Number.isNaN(date.getTime())
+      ? new Date().toISOString()
+      : date.toISOString();
   } catch {
     return new Date().toISOString();
   }
@@ -204,12 +225,22 @@ function optionalId(value: string | undefined): string | undefined {
   return value;
 }
 
-function otlpSpanToSpanInput(span: OtlpSpan): SpanInput {
-  const attrs = attrsToMap(span.attributes);
-  const traceId = stringAttr(attrs, "pulse.trace_id") ?? span.traceId ?? crypto.randomUUID();
+/**
+ * Resource attributes describe every span in their resourceSpans batch, so
+ * they are merged underneath the span's own attributes rather than replacing
+ * them.
+ */
+function otlpSpanToSpanInput(
+  span: OtlpSpan,
+  resourceAttrs: Map<string, unknown>,
+): SpanInput {
+  const attrs = new Map([...resourceAttrs, ...attrsToMap(span.attributes)]);
+  const traceId =
+    stringAttr(attrs, "pulse.trace_id") ?? span.traceId ?? crypto.randomUUID();
   const eventType = stringAttr(attrs, "pulse.event_type") ?? "provider_call";
   const kind =
-    stringAttr(attrs, "pulse.kind") ?? (eventType === "provider_call" ? "llm_call" : "tool_use");
+    stringAttr(attrs, "pulse.kind") ??
+    (eventType === "provider_call" ? "llm_call" : "tool_use");
   const toolInput = capPayload(
     parsePayload(valueAttr(attrs, "pulse.tool.input", "gen_ai.tool.input")),
   );
@@ -231,7 +262,7 @@ function otlpSpanToSpanInput(span: OtlpSpan): SpanInput {
   if (sessionName !== undefined) metadata.session_name = sessionName;
   for (const [key, value] of attrs) {
     if (FIRST_CLASS_ATTRIBUTE_KEYS.has(key)) continue;
-    if (key.startsWith("pulse.") || key.startsWith("gen_ai.") || key === "service.name") {
+    if (key.startsWith("pulse.") || key.startsWith("gen_ai.")) {
       metadata[key] = capPayload(parsePayload(value));
     }
   }
@@ -241,11 +272,14 @@ function otlpSpanToSpanInput(span: OtlpSpan): SpanInput {
   return {
     span_id: optionalId(span.spanId) ?? crypto.randomUUID(),
     trace_id: traceId,
-    session_id: stringAttr(attrs, "pulse.session_id", "gen_ai.conversation.id") ?? traceId,
+    session_id:
+      stringAttr(attrs, "pulse.session_id", "gen_ai.conversation.id") ??
+      traceId,
     parent_span_id: optionalId(span.parentSpanId),
     timestamp: otlpTimeToIso(span.startTimeUnixNano),
     duration_ms: durationMs(span.startTimeUnixNano, span.endTimeUnixNano),
     source: (stringAttr(attrs, "pulse.source") ?? "sdk") as SpanInput["source"],
+    service: stringAttr(attrs, "service.name"),
     kind: kind as SpanInput["kind"],
     event_type: eventType,
     status: span.status?.code === 2 ? "error" : "success",
@@ -253,7 +287,9 @@ function otlpSpanToSpanInput(span: OtlpSpan): SpanInput {
     tool_name: kind === "tool_use" ? (toolName ?? span.name) : undefined,
     tool_input: toolInput,
     tool_response: toolResponse,
-    error: capPayload(parsePayload(valueAttr(attrs, "pulse.error", "exception.message"))),
+    error: capPayload(
+      parsePayload(valueAttr(attrs, "pulse.error", "exception.message")),
+    ),
     is_interrupt: boolAttr(attrs, "pulse.is_interrupt"),
     cwd: stringAttr(attrs, "pulse.cwd"),
     model: stringAttr(
@@ -263,13 +299,19 @@ function otlpSpanToSpanInput(span: OtlpSpan): SpanInput {
       "gen_ai.response.model",
     ),
     agent_name: stringAttr(attrs, "pulse.agent.name"),
-    provider: stringAttr(attrs, "gen_ai.provider.name", "gen_ai.system", "pulse.provider"),
+    provider: stringAttr(
+      attrs,
+      "gen_ai.provider.name",
+      "gen_ai.system",
+      "pulse.provider",
+    ),
     model_used: stringAttr(attrs, "gen_ai.response.model"),
     input_tokens: numberAttr(attrs, "gen_ai.usage.input_tokens"),
     output_tokens: numberAttr(attrs, "gen_ai.usage.output_tokens"),
     cost_cents: numberAttr(attrs, "pulse.cost_cents"),
     finish_reason: finishReasonAttr(attrs),
-    output_text: outputText === undefined ? undefined : capPayloadString(outputText),
+    output_text:
+      outputText === undefined ? undefined : capPayloadString(outputText),
     provider_request_id: stringAttr(attrs, "gen_ai.response.id"),
     metadata,
   };
@@ -278,7 +320,9 @@ function otlpSpanToSpanInput(span: OtlpSpan): SpanInput {
 function capPayloadString(value: string): string {
   const bytes = new TextEncoder().encode(value);
   if (bytes.byteLength <= MAX_PAYLOAD_BYTES) return value;
-  return new TextDecoder().decode(bytes.slice(0, MAX_PAYLOAD_BYTES)).replace(/�+$/, "");
+  return new TextDecoder()
+    .decode(bytes.slice(0, MAX_PAYLOAD_BYTES))
+    .replace(/�+$/, "");
 }
 
 /**
@@ -291,7 +335,8 @@ export function extractOtlpSpans(payload: unknown): OtlpExtractResult {
   if (payload === null || typeof payload !== "object") {
     throw new Error("Missing resourceSpans");
   }
-  const resourceSpans = (payload as { resourceSpans?: unknown[] }).resourceSpans;
+  const resourceSpans = (payload as { resourceSpans?: unknown[] })
+    .resourceSpans;
   if (!Array.isArray(resourceSpans)) {
     throw new Error("Missing resourceSpans");
   }
@@ -305,6 +350,10 @@ export function extractOtlpSpans(payload: unknown): OtlpExtractResult {
     if (resourceSpan === null || typeof resourceSpan !== "object") continue;
     const scopeSpans = (resourceSpan as { scopeSpans?: unknown[] }).scopeSpans;
     if (!Array.isArray(scopeSpans)) continue;
+    const resourceAttrs = attrsToMap(
+      (resourceSpan as { resource?: { attributes?: OtlpAttribute[] } }).resource
+        ?.attributes,
+    );
     for (const scopeSpan of scopeSpans) {
       if (scopeSpan === null || typeof scopeSpan !== "object") continue;
       const rawSpans = (scopeSpan as { spans?: unknown[] }).spans;
@@ -315,7 +364,9 @@ export function extractOtlpSpans(payload: unknown): OtlpExtractResult {
           throw new Error(`Export exceeds ${MAX_OTLP_SPANS_PER_EXPORT} spans`);
         }
         try {
-          const parsed = spanSchema.safeParse(otlpSpanToSpanInput(rawSpan as OtlpSpan));
+          const parsed = spanSchema.safeParse(
+            otlpSpanToSpanInput(rawSpan as OtlpSpan, resourceAttrs),
+          );
           if (parsed.success) {
             spans.push(parsed.data);
             continue;
@@ -324,7 +375,8 @@ export function extractOtlpSpans(payload: unknown): OtlpExtractResult {
           errorMessage ??= parsed.error.issues[0]?.message;
         } catch (err) {
           rejectedSpans += 1;
-          errorMessage ??= err instanceof Error ? err.message : "Malformed span";
+          errorMessage ??=
+            err instanceof Error ? err.message : "Malformed span";
         }
       }
     }

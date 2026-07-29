@@ -13,12 +13,14 @@ class ResolvedConfig:
     batch_size: int
     flush_interval: int
     enabled: bool
+    service_name: str
 
 
 DEFAULT_API_URL = "http://localhost:3000"
 DEFAULT_BATCH_SIZE = 10
 DEFAULT_FLUSH_INTERVAL = 5000  # ms
 DEFAULT_ENABLED = True
+DEFAULT_SERVICE_NAME = "pulse-sdk-py"
 
 
 class ConfigError(ValueError):
@@ -41,6 +43,10 @@ def load_config(config: PulseConfig) -> ResolvedConfig:
     if flush_interval < 1000:
         raise ConfigError("Pulse SDK: flush_interval must be at least 1000ms")
 
+    service_name = str(config.get("service_name", DEFAULT_SERVICE_NAME)).strip()
+    if not service_name:
+        raise ConfigError("Pulse SDK: service_name must not be empty")
+
     api_url = config.get("api_url", DEFAULT_API_URL)
     enabled = bool(config.get("enabled", DEFAULT_ENABLED))
 
@@ -50,4 +56,5 @@ def load_config(config: PulseConfig) -> ResolvedConfig:
         batch_size=batch_size,
         flush_interval=flush_interval,
         enabled=enabled,
+        service_name=service_name,
     )

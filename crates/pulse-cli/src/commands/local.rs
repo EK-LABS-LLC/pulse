@@ -145,6 +145,7 @@ fn default_local_config() -> PulseConfig {
         api_key: String::new(),
         project_id: String::new(),
         server_command: Some(DEFAULT_SERVER_COMMAND.to_string()),
+        service_name: None,
         local_email: None,
         local_password: None,
     }

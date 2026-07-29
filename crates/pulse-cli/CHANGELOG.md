@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Make The Emitted Service Name Configurable
+
+Date: 2026-07-29 CDT; Status: Completed; PR: TBD
+Task: Stop reporting every hook emission under a single hardcoded OTel service so downstream service attribution is usable.
+Changed: Bumped CLI package version to 0.2.18.
+Added: Optional `service_name` in `~/.pulse/config.toml` sets the `service.name` resource attribute on emitted spans, defaulting to `pulse-cli` when unset or blank.
+Changed: `pulse setup` and `pulse connect` preserve a configured `service_name` when they rewrite the config file.
+
 ### Prepare Monorepo Releases
 
 Date: 2026-07-25 CDT; Status: Completed; PR: #1 https://github.com/EK-LABS-LLC/pulse/pull/1

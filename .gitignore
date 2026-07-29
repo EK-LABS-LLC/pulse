@@ -43,3 +43,6 @@ apps/server/.data/wal/p*/
 apps/server/.data/wal-spans/p*/
 sdks/typescript/.agents/
 sdks/typescript/.claude/
+
+# Local design references (bundler exports, not source)
+Traces Redesign - Standalone.html

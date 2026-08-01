@@ -194,9 +194,80 @@ jobs:
             git show "${BASE_SHA}:tooling/test-integrity/${file}" > "${guard_dir}/${file}"
           done
           uv run --locked --script "${guard_dir}/check.py" --self-test
+          # The manifest is read from the branch, not the base, so that a change
+          # which legitimately adds or edits a test can rebaseline in the same
+          # commit. Tamper resistance comes from the next step instead: artifacts
+          # belonging to files the branch does not touch must still match the base.
           uv run --locked --script "${guard_dir}/check.py" \
             --root "${GITHUB_WORKSPACE}" \
-            --manifest "${guard_dir}/baseline.json"
+            --manifest "${GITHUB_WORKSPACE}/tooling/test-integrity/baseline.json"
+
+      - name: Reject rebaselining of untouched tests
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          guard_dir="${RUNNER_TEMP}/test-integrity"
+          git diff --name-only "${BASE_SHA}...HEAD" > "${guard_dir}/changed.txt"
+          python3 - "${guard_dir}/baseline.json" \
+                    "${GITHUB_WORKSPACE}/tooling/test-integrity/baseline.json" \
+                    "${guard_dir}/changed.txt" <<'PY'
+          import json
+          import sys
+          from collections import Counter
+
+          base_path, head_path, changed_path = sys.argv[1:4]
+
+          with open(changed_path) as handle:
+              changed = {line.strip() for line in handle if line.strip()}
+
+
+          def artifacts(path):
+              with open(path) as handle:
+                  return json.load(handle)["artifacts"]
+
+
+          def identity(artifact):
+              return (
+                  artifact["kind"],
+                  artifact["path"],
+                  artifact["mode"],
+                  artifact["bytes"],
+                  artifact["sha256"],
+              )
+
+
+          # Rust artifacts are addressed as "<file>#<index>"; attribute them to their file.
+          def source_file(artifact):
+              return artifact["path"].split("#", 1)[0]
+
+
+          def untouched(path):
+              return Counter(
+                  identity(artifact)
+                  for artifact in artifacts(path)
+                  if source_file(artifact) not in changed
+              )
+
+
+          base = untouched(base_path)
+          head = untouched(head_path)
+
+          errors = []
+          for entry, count in sorted((base - head).items()):
+              errors.append(f"baseline entry dropped or altered for an untouched file ({count}): {entry[1]}")
+          for entry, count in sorted((head - base).items()):
+              errors.append(f"baseline entry added for an untouched file ({count}): {entry[1]}")
+
+          if errors:
+              print("test-integrity: baseline changed for files this branch does not modify.")
+              print("Rebaselining is only permitted for tests the branch actually touches.")
+              for error in errors:
+                  print(f"test-integrity: {error}")
+              raise SystemExit(1)
+
+          print(f"Baseline verified: {sum(base.values())} untouched artifacts match the base branch.")
+          PY
 
   server-version:
     runs-on: ubuntu-latest

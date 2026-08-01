@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Allow Test Changes To Rebaseline The Integrity Guard
+
+Date: 2026-08-01 CDT; Status: In Progress
+Task: Let a pull request that legitimately adds or edits a test update the test-integrity baseline in the same commit.
+Fixed: The test-integrity guard reads `baseline.json` from the branch instead of the base commit, so adding or changing a test no longer fails CI with no way to pass.
+Added: A follow-up CI step rejects baseline entries that were added, dropped, or altered for test files the branch does not modify, so rebaselining stays scoped to the tests a change actually touches.
+
 ### Scope Version Guard To Shipping Files
 
 Date: 2026-07-29 CDT; Status: In Progress; PR: #3 https://github.com/EK-LABS-LLC/pulse/pull/3

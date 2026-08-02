@@ -1,75 +1,92 @@
-import type { ReactElement } from "react";
 import type { Span } from "../../lib/apiClient";
+import { buildSpanRows } from "../../lib/spanRows";
 
 interface TraceSpanTreeProps {
   spans: Span[];
-  indentPx?: number;
+  activeSpanId?: string | null;
+  onSelect?: (spanId: string) => void;
 }
 
-function labelForSpan(span: Span): string {
-  return span.label ?? span.toolName ?? span.eventType ?? span.kind;
-}
-
+/**
+ * Waterfall view of a trace's spans: bar position and width are the span's
+ * share of the whole trace, so gaps and long poles are visible at a glance.
+ */
 export default function TraceSpanTree({
   spans,
-  indentPx = 20,
+  activeSpanId,
+  onSelect,
 }: TraceSpanTreeProps) {
-  const sorted = [...spans].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-  );
-  const byParent = new Map<string, Span[]>();
-  for (const span of sorted) {
-    const parent = span.parentSpanId ?? "";
-    byParent.set(parent, [...(byParent.get(parent) ?? []), span]);
+  const rows = buildSpanRows(spans);
+
+  if (rows.length === 0) {
+    return (
+      <p className="px-1 py-6 text-sm" style={{ color: "var(--dim)" }}>
+        No spans recorded for this trace.
+      </p>
+    );
   }
 
-  // Spans arrive from independent hook events, so a malformed parent chain can
-  // cycle. `visited` bounds the recursion per root path.
-  const renderSpan = (
-    span: Span,
-    visited: Set<string>,
-    depth = 0,
-  ): ReactElement | null => {
-    if (visited.has(span.spanId)) return null;
-    const nextVisited = new Set(visited).add(span.spanId);
-    return (
-      <div key={span.spanId}>
-        <div
-          className="grid grid-cols-[1fr_auto_auto] gap-4 items-center py-2 border-b border-neutral-800 last:border-b-0"
-          style={{ paddingLeft: depth * indentPx }}
-        >
-          <div className="min-w-0">
-            <div className="text-sm text-neutral-100 truncate">
-              {labelForSpan(span)}
-            </div>
-            <div className="text-xs text-neutral-500 font-mono truncate">
-              {span.eventType} · {span.kind}
-            </div>
-          </div>
-          <div className="text-xs text-neutral-400">
-            {span.durationMs ? `${span.durationMs}ms` : ""}
-          </div>
+  return (
+    <div className="flex flex-col">
+      {rows.map((row) => {
+        const active = row.id === activeSpanId;
+        return (
           <div
-            className={
-              span.status === "error"
-                ? "text-xs text-rose-400"
-                : "text-xs text-emerald-400"
+            key={row.id}
+            role={onSelect ? "button" : undefined}
+            tabIndex={onSelect ? 0 : undefined}
+            onClick={onSelect ? () => onSelect(row.id) : undefined}
+            onKeyDown={
+              onSelect
+                ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onSelect(row.id);
+                    }
+                  }
+                : undefined
             }
+            className={`grid grid-cols-[minmax(140px,260px)_1fr] items-center gap-3 rounded-md px-2 py-1.5 ${
+              onSelect ? "cursor-pointer" : ""
+            }`}
+            style={{ background: active ? "var(--blue-tint)" : "transparent" }}
           >
-            {span.status}
+            <div
+              className="flex min-w-0 items-center gap-2"
+              style={{ paddingLeft: row.indentPx }}
+            >
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ background: row.color }}
+              />
+              <span
+                className="truncate text-xs"
+                style={{ color: row.labelColor }}
+                title={row.label}
+              >
+                {row.label}
+              </span>
+            </div>
+
+            <div className="relative h-5">
+              <div
+                className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full"
+                style={{
+                  left: row.leftPct,
+                  width: row.widthPct,
+                  background: row.color,
+                }}
+              />
+              <span
+                className="absolute top-1/2 -translate-y-1/2 text-[11px] whitespace-nowrap tabular-nums"
+                style={{ left: row.labelLeftPct, color: "var(--faint)" }}
+              >
+                {row.durationLabel}
+              </span>
+            </div>
           </div>
-        </div>
-        {(byParent.get(span.spanId) ?? []).map((child) =>
-          renderSpan(child, nextVisited, depth + 1),
-        )}
-      </div>
-    );
-  };
-
-  const spanIds = new Set(spans.map((span) => span.spanId));
-  const roots = sorted.filter(
-    (span) => !span.parentSpanId || !spanIds.has(span.parentSpanId),
+        );
+      })}
+    </div>
   );
-
-  return <div>{roots.map((span) => renderSpan(span, new Set()))}</div>;
 }

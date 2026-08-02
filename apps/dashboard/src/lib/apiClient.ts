@@ -171,6 +171,63 @@ export interface GetAnalyticsParams {
   group_by?: AnalyticsGroupBy;
 }
 
+export interface OverviewLatencyPercentiles {
+  p50: number;
+  p95: number;
+  p99: number;
+}
+
+export interface OverviewLatencyBucket {
+  bucket: string;
+  count: number;
+}
+
+export interface OverviewSeriesPoint {
+  period: string;
+  value: number;
+}
+
+export interface OverviewSeries {
+  id: string;
+  name: string;
+  color: string;
+  points: OverviewSeriesPoint[];
+}
+
+export interface OverviewErrorTaxonomyItem {
+  type: string;
+  count: number;
+  share: number;
+}
+
+export interface OverviewHeatmapCell {
+  day: number;
+  hour: number;
+  count: number;
+}
+
+/**
+ * Extended overview analytics the hero chart will consume once the server
+ * route exists. Until then the client returns this empty shape on 404.
+ */
+export interface OverviewExtendedResponse {
+  available: boolean;
+  latencyPercentiles: OverviewLatencyPercentiles | null;
+  latencyHistogram: OverviewLatencyBucket[];
+  series: OverviewSeries[];
+  errorTaxonomy: OverviewErrorTaxonomyItem[];
+  heatmap: OverviewHeatmapCell[];
+}
+
+export const EMPTY_OVERVIEW_EXTENDED: OverviewExtendedResponse = {
+  available: false,
+  latencyPercentiles: null,
+  latencyHistogram: [],
+  series: [],
+  errorTaxonomy: [],
+  heatmap: [],
+};
+
 export interface CostOverTimeByProvider {
   period: string;
   provider: string;
@@ -387,6 +444,40 @@ export const getAnalytics = async (
     headers: getProjectHeaders(),
   });
   return handleResponse<AnalyticsResponse>(response);
+};
+
+/**
+ * Future extended overview metrics (latency percentiles, histogram, split
+ * series, heatmap). Returns an empty payload when the route is not live yet
+ * (404) so the Overview hero can mount against a stable contract.
+ */
+export const getOverviewExtended = async (
+  params: GetAnalyticsParams = {},
+): Promise<OverviewExtendedResponse> => {
+  const url = new URL(
+    `${getBaseUrl()}/dashboard/api/analytics/overview-extended`,
+  );
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  });
+
+  const response = await fetch(url.toString(), {
+    credentials: "include",
+    headers: getProjectHeaders(),
+  });
+
+  if (response.status === 404 || response.status === 501) {
+    return EMPTY_OVERVIEW_EXTENDED;
+  }
+
+  if (!response.ok) {
+    // Treat other failures as empty rather than breaking Overview.
+    return EMPTY_OVERVIEW_EXTENDED;
+  }
+
+  return response.json();
 };
 
 export const getSpansAnalytics = async (

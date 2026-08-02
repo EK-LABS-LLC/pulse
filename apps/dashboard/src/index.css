@@ -1,12 +1,7 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
-/*
- * Design tokens. Dark is the default; light is opt-in via [data-theme="light"]
- * on <html>. The two themes are not an inversion — light darkens every accent
- * so it holds contrast on white. Borders, fills and tracks stay rgba() over the
- * surface rather than solid greys; that layering is what gives surfaces depth.
- */
+/* Dark is the default; light is opt-in via [data-theme="light"] on <html>. */
 :root,
 [data-theme="dark"] {
   --bg: #000000;
@@ -155,23 +150,31 @@
   --color-json-str: var(--json-str);
   --color-json-bool: var(--json-bool);
 
-  /* Custom neutral colors */
-  --color-neutral-950: #0a0a0a;
-  --color-neutral-900: #141414;
-  --color-neutral-850: #1a1a1a;
-  --color-neutral-800: #1f1f1f;
-  --color-neutral-700: #2e2e2e;
-  --color-neutral-600: #3d3d3d;
-  --color-neutral-500: #525252;
-  --color-neutral-400: #737373;
-  --color-neutral-300: #a3a3a3;
-  --color-neutral-200: #d4d4d4;
-  --color-neutral-100: #f5f5f5;
+  /* Each neutral step aliases a token so existing views follow the theme. */
+  --color-neutral-950: var(--bg);
+  --color-neutral-900: var(--surface);
+  --color-neutral-850: var(--surface-2);
+  --color-neutral-800: var(--border);
+  --color-neutral-700: var(--border-strong);
+  --color-neutral-600: var(--faint);
+  --color-neutral-500: var(--dim);
+  --color-neutral-400: var(--text-4);
+  --color-neutral-300: var(--text-3);
+  --color-neutral-200: var(--text-2);
+  --color-neutral-100: var(--text);
 
   /* Accent colors */
-  --color-accent: #3b82f6;
-  --color-success: #22c55e;
-  --color-error: #ef4444;
+  --color-accent: var(--blue);
+  --color-success: var(--green);
+  --color-error: var(--red);
+
+  /* Literal palette names used ad hoc across views. */
+  --color-rose-400: var(--red-text);
+  --color-rose-500: var(--red);
+  --color-emerald-400: var(--green);
+  --color-emerald-500: var(--green);
+  --color-amber-400: var(--orange);
+  --color-sky-400: var(--blue);
 
   /* Subtle corners — sharp but not harsh */
   --radius-xs: 2px;

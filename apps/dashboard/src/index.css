@@ -1,8 +1,132 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+/*
+ * Design tokens. Dark is the default; light is opt-in via [data-theme="light"]
+ * on <html>. The two themes are not an inversion — light darkens every accent
+ * so it holds contrast on white. Borders, fills and tracks stay rgba() over the
+ * surface rather than solid greys; that layering is what gives surfaces depth.
+ */
+:root,
+[data-theme="dark"] {
+  --bg: #000000;
+  --surface: #17171a;
+  --surface-2: #1c1c1e;
+  --surface-3: #141416;
+  --surface-4: #232326;
+  --topbar: rgba(8, 8, 10, 0.9);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #f5f5f7;
+  --text-2: #e5e5ea;
+  --text-3: #d1d1d6;
+  --text-4: #aeaeb2;
+  --dim: #8e8e93;
+  --faint: #6e6e73;
+  --fill: rgba(255, 255, 255, 0.07);
+  --fill-2: rgba(255, 255, 255, 0.12);
+  --track: rgba(255, 255, 255, 0.09);
+  --hover: rgba(255, 255, 255, 0.05);
+  --grid: rgba(255, 255, 255, 0.07);
+  --crosshair: rgba(255, 255, 255, 0.22);
+  --scrim: rgba(0, 0, 0, 0.45);
+  --shadow-c: rgba(0, 0, 0, 0.5);
+  --blue: #0a84ff;
+  --teal: #64d2ff;
+  --purple: #bf5af2;
+  --orange: #ff9f0a;
+  --green: #30d158;
+  --red: #ff453a;
+  --red-text: #ff8c82;
+  --blue-tint: rgba(10, 132, 255, 0.16);
+  --red-tint: rgba(255, 69, 58, 0.1);
+  --red-tint-2: rgba(255, 69, 58, 0.16);
+  --red-border: rgba(255, 69, 58, 0.34);
+  --green-tint: rgba(48, 209, 88, 0.16);
+  --scroll-thumb: #3a3a3c;
+  --scroll-thumb-hover: #48484a;
+}
+
+[data-theme="light"] {
+  --bg: #f4f4f6;
+  --surface: #ffffff;
+  --surface-2: #f0f0f3;
+  --surface-3: #f7f7f9;
+  --surface-4: #ffffff;
+  --topbar: rgba(255, 255, 255, 0.92);
+  --border: rgba(0, 0, 0, 0.15);
+  --border-soft: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.24);
+  --text: #1d1d1f;
+  --text-2: #2c2c2e;
+  --text-3: #3a3a3c;
+  --text-4: #515154;
+  --dim: #6e6e73;
+  --faint: #8a8a8e;
+  --fill: rgba(0, 0, 0, 0.05);
+  --fill-2: rgba(0, 0, 0, 0.08);
+  --track: rgba(0, 0, 0, 0.07);
+  --hover: rgba(0, 0, 0, 0.035);
+  --grid: rgba(0, 0, 0, 0.07);
+  --crosshair: rgba(0, 0, 0, 0.25);
+  --scrim: rgba(0, 0, 0, 0.18);
+  --shadow-c: rgba(0, 0, 0, 0.14);
+  --blue: #0a6ce8;
+  --teal: #0091b5;
+  --purple: #7a3fd9;
+  --orange: #c9700a;
+  --green: #1e9e4a;
+  --red: #d70015;
+  --red-text: #b3000f;
+  --blue-tint: rgba(10, 108, 232, 0.1);
+  --red-tint: rgba(215, 0, 21, 0.07);
+  --red-tint-2: rgba(215, 0, 21, 0.11);
+  --red-border: rgba(215, 0, 21, 0.28);
+  --green-tint: rgba(30, 158, 74, 0.12);
+  --scroll-thumb: #c7c7cc;
+  --scroll-thumb-hover: #aeaeb2;
+}
+
 @theme {
-  --font-family-sans: 'Inter', system-ui, sans-serif;
+  --font-family-sans: "Inter", system-ui, sans-serif;
+
+  /* Design-token utilities. These resolve through the vars above, so they
+     follow the active theme at runtime rather than being baked at build. */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-topbar: var(--topbar);
+  --color-line: var(--border);
+  --color-line-soft: var(--border-soft);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--text);
+  --color-fg-2: var(--text-2);
+  --color-fg-3: var(--text-3);
+  --color-fg-4: var(--text-4);
+  --color-dim: var(--dim);
+  --color-faint: var(--faint);
+  --color-fill: var(--fill);
+  --color-fill-2: var(--fill-2);
+  --color-track: var(--track);
+  --color-hover: var(--hover);
+  --color-grid: var(--grid);
+  --color-crosshair: var(--crosshair);
+  --color-scrim: var(--scrim);
+  --color-blue: var(--blue);
+  --color-teal: var(--teal);
+  --color-purple: var(--purple);
+  --color-orange: var(--orange);
+  --color-green: var(--green);
+  --color-red: var(--red);
+  --color-red-text: var(--red-text);
+  --color-blue-tint: var(--blue-tint);
+  --color-red-tint: var(--red-tint);
+  --color-red-tint-2: var(--red-tint-2);
+  --color-red-border: var(--red-border);
+  --color-green-tint: var(--green-tint);
 
   /* Custom neutral colors */
   --color-neutral-950: #0a0a0a;
@@ -35,8 +159,80 @@
   --radius-full: 9999px;
 }
 
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
   font-family: var(--font-family-sans);
+  background: var(--bg);
+  color: var(--text);
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 12px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
+}
+
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.3);
+  }
+}
+
+@keyframes panelIn {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

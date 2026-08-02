@@ -1,14 +1,21 @@
-import { useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, Link, useLocation } from "react-router-dom";
 import TraceSpanTree from "../components/traces/TraceSpanTree";
 import { SpanDetailPanel } from "../components/traces/SpanDetailPanel";
 import { JsonBlock } from "../components/traces/JsonBlock";
+import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { StatusDot } from "../components/ui/StatusDot";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { useTraceDetailQuery } from "../api";
 import { useProject } from "../hooks/useProject";
 import { fmtCost, fmtLatency, fmtRel, fmtTokens } from "../lib/format";
 import { sourceName } from "../lib/sources";
+import {
+  getTraceUiPrefs,
+  setTraceUiPref,
+  TRACE_UI_PREFS_EVENT,
+  type TraceIoFormat,
+} from "../lib/traceUiPrefs";
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
@@ -16,7 +23,7 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-function NotFoundState() {
+function NotFoundState({ backTo }: { backTo: string }) {
   return (
     <Centered>
       <div className="text-center">
@@ -24,21 +31,135 @@ function NotFoundState() {
         <p className="mb-6" style={{ color: "var(--dim)" }}>
           Trace not found
         </p>
-        <Link to="/dashboard/traces">Back to traces</Link>
+        <Link to={backTo}>Back</Link>
       </div>
     </Centered>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function SummaryMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+}) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[11px]" style={{ color: "var(--dim)" }}>
-        {label}
-      </span>
-      <span className="text-sm tabular-nums" style={{ color: "var(--text-2)" }}>
+    <div className="rounded-xl border border-line bg-surface-3 p-3">
+      <span className="mb-1.5 block text-[11.5px] text-faint">{label}</span>
+      <span
+        className="block truncate text-xl font-semibold tracking-[-0.02em] tabular-nums"
+        style={{ color: tone ?? "var(--text)" }}
+      >
         {value}
       </span>
+    </div>
+  );
+}
+
+function resolveBackTarget(returnTo: unknown): {
+  to: string;
+  label: string;
+} {
+  if (
+    typeof returnTo === "string" &&
+    returnTo.startsWith("/dashboard/sessions")
+  ) {
+    return { to: returnTo, label: "← Sessions" };
+  }
+  return { to: "/dashboard/traces", label: "← Traces" };
+}
+
+function contentAsText(content: unknown): string | null {
+  if (typeof content === "string" && content.trim()) return content;
+  if (Array.isArray(content)) {
+    const parts = content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part === "object" && "text" in part) {
+          const text = (part as { text?: unknown }).text;
+          return typeof text === "string" ? text : "";
+        }
+        return "";
+      })
+      .filter(Boolean);
+    return parts.length ? parts.join("\n") : null;
+  }
+  return null;
+}
+
+function extractChatBubbles(
+  requestBody: unknown,
+  responseBody: unknown,
+  outputText?: string,
+): Array<{ role: string; text: string }> {
+  const bubbles: Array<{ role: string; text: string }> = [];
+
+  if (requestBody && typeof requestBody === "object") {
+    const messages = (requestBody as { messages?: unknown }).messages;
+    if (Array.isArray(messages)) {
+      for (const message of messages) {
+        if (!message || typeof message !== "object") continue;
+        const role =
+          typeof (message as { role?: unknown }).role === "string"
+            ? (message as { role: string }).role
+            : "message";
+        const text = contentAsText((message as { content?: unknown }).content);
+        if (text) bubbles.push({ role, text });
+      }
+    }
+  }
+
+  if (outputText?.trim()) {
+    bubbles.push({ role: "assistant", text: outputText });
+  } else if (responseBody && typeof responseBody === "object") {
+    const body = responseBody as Record<string, unknown>;
+    if (Array.isArray(body.choices)) {
+      const choice = body.choices[0] as
+        { message?: { content?: unknown }; text?: unknown } | undefined;
+      const text =
+        contentAsText(choice?.message?.content) ??
+        (typeof choice?.text === "string" ? choice.text : null);
+      if (text) bubbles.push({ role: "assistant", text });
+    } else {
+      const text = contentAsText(body.content);
+      if (text) bubbles.push({ role: "assistant", text });
+    }
+  }
+
+  return bubbles;
+}
+
+function ChatBubbles({
+  bubbles,
+}: {
+  bubbles: Array<{ role: string; text: string }>;
+}) {
+  return (
+    <div className="flex max-h-[280px] flex-col gap-2.5 overflow-auto">
+      {bubbles.map((bubble, index) => {
+        const isUser = bubble.role === "user";
+        return (
+          <div
+            key={`${bubble.role}-${index}`}
+            className={`max-w-[92%] rounded-xl px-3 py-2 text-[12.5px] leading-relaxed whitespace-pre-wrap ${
+              isUser ? "self-end" : "self-start"
+            }`}
+            style={{
+              background: isUser ? "var(--blue-tint)" : "var(--surface-3)",
+              border: `1px solid ${isUser ? "var(--blue-border)" : "var(--border-soft)"}`,
+              color: "var(--text-2)",
+            }}
+          >
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-faint">
+              {bubble.role}
+            </div>
+            {bubble.text}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -46,7 +167,26 @@ function Metric({ label, value }: { label: string; value: string }) {
 export default function TraceDetail() {
   const { selectedProject } = useProject();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const locationState = location.state as { returnTo?: unknown } | null;
+  const back = resolveBackTarget(locationState?.returnTo);
   const [activeSpanId, setActiveSpanId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [ioFormat, setIoFormat] = useState<TraceIoFormat>(
+    () => getTraceUiPrefs().ioFormat,
+  );
+
+  useEffect(() => {
+    const sync = () => setIoFormat(getTraceUiPrefs().ioFormat);
+    window.addEventListener("storage", sync);
+    window.addEventListener(TRACE_UI_PREFS_EVENT, sync);
+    window.addEventListener("focus", sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(TRACE_UI_PREFS_EVENT, sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, []);
 
   const traceQuery = useTraceDetailQuery(selectedProject?.id, id);
   const trace = traceQuery.data ?? null;
@@ -73,7 +213,7 @@ export default function TraceDetail() {
       </Centered>
     );
   }
-  if (notFound || !trace) return <NotFoundState />;
+  if (notFound || !trace) return <NotFoundState backTo={back.to} />;
   if (errorMessage) {
     return (
       <Centered>
@@ -94,119 +234,181 @@ export default function TraceDetail() {
   }
 
   const totalTokens = (trace.inputTokens ?? 0) + (trace.outputTokens ?? 0);
-  const services = trace.services ?? [];
+  const shortId =
+    trace.traceId.length > 18
+      ? `${trace.traceId.slice(0, 10)}…${trace.traceId.slice(-6)}`
+      : trace.traceId;
+  const copyTraceId = async () => {
+    try {
+      await navigator.clipboard.writeText(trace.traceId);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const payload =
+    trace.status === "error" && trace.error != null
+      ? trace.error
+      : trace.responseBody;
+  const chatBubbles = extractChatBubbles(
+    trace.requestBody,
+    trace.responseBody,
+    trace.outputText,
+  );
+  const showChat = ioFormat === "chat" && chatBubbles.length > 0;
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div
-        className="flex flex-col gap-4 px-6 py-4"
-        style={{ borderBottom: "1px solid var(--border-soft)" }}
-      >
-        <div className="flex items-center gap-3">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-line bg-topbar px-5">
+        <div className="flex min-w-0 items-center gap-3">
           <Link
-            to="/dashboard/traces"
-            className="text-sm no-underline"
-            style={{ color: "var(--dim)" }}
+            to={back.to}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12.5px] text-fg-4 no-underline transition-colors hover:bg-hover hover:text-fg"
           >
-            ← Traces
+            {back.label}
           </Link>
-          <StatusDot status={trace.status} />
-          <span className="font-mono text-sm" style={{ color: "var(--text)" }}>
-            {trace.traceId}
+          <span className="h-4 w-px shrink-0 bg-line-strong" />
+          <span
+            title={trace.traceId}
+            className="truncate font-mono text-[12.5px] text-fg-3"
+          >
+            {shortId}
           </span>
           <span
-            className="rounded px-1.5 py-0.5 text-[11px]"
-            style={{ background: "var(--fill)", color: "var(--text-4)" }}
-          >
-            {sourceName(trace.source)}
-          </span>
-          <span className="text-xs" style={{ color: "var(--faint)" }}>
-            {fmtRel(trace.timestamp)}
-          </span>
-        </div>
-
-        <p className="text-sm" style={{ color: "var(--text-3)" }}>
-          {trace.summary}
-        </p>
-
-        <div className="flex flex-wrap gap-x-10 gap-y-3">
-          <Metric label="Latency" value={fmtLatency(trace.latencyMs)} />
-          <Metric label="Tokens" value={fmtTokens(totalTokens)} />
-          <Metric label="Cost" value={fmtCost(trace.costCents)} />
-          <Metric label="Spans" value={String(trace.spanCount)} />
-          <Metric
-            label="Model"
-            value={trace.modelUsed ?? trace.modelRequested ?? "—"}
-          />
-          <Metric
-            label="Service"
-            value={services.length ? services.join(", ") : "—"}
-          />
-          {trace.errorService && (
-            <div className="flex flex-col gap-1">
-              <span className="text-[11px]" style={{ color: "var(--dim)" }}>
-                Failed in
-              </span>
-              <span className="text-sm" style={{ color: "var(--red-text)" }}>
-                {trace.errorService}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-auto p-6 lg:grid-cols-[1.4fr_1fr]">
-        <div className="flex min-w-0 flex-col gap-4">
-          <section
-            className="rounded-xl p-4"
+            className="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold capitalize"
             style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border-soft)",
+              background:
+                trace.status === "error"
+                  ? "var(--red-tint-2)"
+                  : "var(--green-tint)",
+              color: trace.status === "error" ? "var(--red)" : "var(--green)",
             }}
           >
-            <h3
-              className="mb-3 text-xs tracking-wide uppercase"
-              style={{ color: "var(--dim)" }}
-            >
-              Timeline
-            </h3>
-            <TraceSpanTree
-              spans={spans}
-              activeSpanId={activeSpanId}
-              onSelect={setActiveSpanId}
-            />
+            <StatusDot status={trace.status} />
+            {trace.status}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={copyTraceId}
+          className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-line-strong bg-surface-2 px-2.5 py-1.5 text-xs text-fg-4 transition-colors hover:bg-hover hover:text-fg"
+        >
+          <svg
+            className="h-3 w-3"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 12h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z" />
+          </svg>
+          {copied ? "Copied" : "Copy ID"}
+        </button>
+      </header>
+
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="mx-auto max-w-[1180px] p-6">
+          <section className="mb-4 rounded-2xl border border-line bg-surface p-5">
+            <h1 className="mb-1.5 text-[22px] font-semibold tracking-[-0.022em] text-fg">
+              {trace.summary || "Trace detail"}
+            </h1>
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-dim">
+              <span className="rounded-md bg-fill px-1.5 py-0.5 font-semibold text-fg-4">
+                {sourceName(trace.source)}
+              </span>
+              <span className="font-mono">
+                {trace.modelUsed ?? trace.modelRequested ?? "No model"}
+              </span>
+              <span>·</span>
+              <span>{fmtRel(trace.timestamp)}</span>
+              {trace.errorService ? (
+                <>
+                  <span>·</span>
+                  <span className="text-red-text">
+                    Failed in {trace.errorService}
+                  </span>
+                </>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <SummaryMetric
+                label="Latency"
+                value={fmtLatency(trace.latencyMs)}
+              />
+              <SummaryMetric label="Spans" value={String(trace.spanCount)} />
+              <SummaryMetric label="Tokens" value={fmtTokens(totalTokens)} />
+              <SummaryMetric label="Cost" value={fmtCost(trace.costCents)} />
+              <SummaryMetric
+                label="Status"
+                value={trace.status}
+                tone={trace.status === "error" ? "var(--red)" : "var(--green)"}
+              />
+            </div>
           </section>
 
-          {(trace.requestBody != null || trace.responseBody != null) && (
-            <section
-              className="rounded-xl p-4"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border-soft)",
-              }}
-            >
-              <h3
-                className="mb-3 text-xs tracking-wide uppercase"
-                style={{ color: "var(--dim)" }}
+          <div className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+            <div className="flex min-w-0 flex-col gap-4">
+              <section
+                className="rounded-2xl p-5"
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                }}
               >
-                {trace.status === "error" && trace.error != null
-                  ? "Error"
-                  : "Response"}
-              </h3>
-              <JsonBlock
-                value={
-                  trace.status === "error" && trace.error != null
-                    ? trace.error
-                    : trace.responseBody
-                }
-                maxHeight="280px"
-              />
-            </section>
-          )}
-        </div>
+                <h3 className="mb-3.5 text-[12.5px] font-semibold text-fg-3">
+                  Span timeline
+                </h3>
+                <TraceSpanTree
+                  spans={spans}
+                  activeSpanId={activeSpanId}
+                  onSelect={setActiveSpanId}
+                />
+              </section>
 
-        <div className="min-h-0 lg:sticky lg:top-0">
-          <SpanDetailPanel span={activeSpan} />
+              {(trace.requestBody != null ||
+                trace.responseBody != null ||
+                trace.error != null) && (
+                <section
+                  className="rounded-2xl p-5"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-[12.5px] font-semibold text-fg-3">
+                      {trace.status === "error" && trace.error != null
+                        ? "Error"
+                        : "Request / response"}
+                    </h3>
+                    <SegmentedControl
+                      ariaLabel="Request and response format"
+                      value={ioFormat}
+                      onChange={(value) => {
+                        setIoFormat(value);
+                        setTraceUiPref("ioFormat", value);
+                      }}
+                      options={[
+                        { value: "chat", label: "Chat" },
+                        { value: "json", label: "JSON" },
+                      ]}
+                    />
+                  </div>
+                  {showChat ? (
+                    <ChatBubbles bubbles={chatBubbles} />
+                  ) : (
+                    <JsonBlock value={payload} maxHeight="280px" />
+                  )}
+                </section>
+              )}
+            </div>
+
+            <div className="min-h-0 lg:sticky lg:top-0 lg:self-start">
+              <SpanDetailPanel span={activeSpan} />
+            </div>
+          </div>
         </div>
       </div>
     </div>

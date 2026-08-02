@@ -4,6 +4,7 @@ import type { Trace } from "../../lib/apiClient";
 import { StatusDot } from "../ui/StatusDot";
 import { sourceLabel, sourceName } from "../../lib/sources";
 import { fmtCost, fmtLatency, fmtTokens } from "../../lib/format";
+import type { TraceRowDensity } from "../../lib/traceUiPrefs";
 
 function latencyColor(ms: number, isError: boolean): string {
   if (isError) return "var(--red)";
@@ -81,6 +82,7 @@ interface PaginationProps {
 
 interface TracesTableProps {
   traces: Trace[];
+  rowDensity?: TraceRowDensity;
   onRowClick?: (trace: Trace) => void;
   pagination?: PaginationProps;
 }
@@ -328,6 +330,7 @@ function SortableHeader({
 
 export default function TracesTable({
   traces,
+  rowDensity = "rich",
   onRowClick,
   pagination,
 }: TracesTableProps) {
@@ -379,6 +382,7 @@ export default function TracesTable({
   });
 
   const maxLatency = Math.max(0, ...traces.map((t) => t.latencyMs ?? 0));
+  const rowPadding = rowDensity === "minimal" ? "py-1.5" : "py-2.5";
 
   const handleRowClick = (trace: Trace) => {
     setSelectedId(trace.traceId);
@@ -480,7 +484,7 @@ export default function TracesTable({
                       : "var(--surface)",
                 }}
               >
-                <td className="px-4 py-2.5">
+                <td className={`px-4 ${rowPadding}`}>
                   <div className="flex items-center gap-2">
                     <StatusDot status={trace.status} />
                     <span
@@ -495,7 +499,7 @@ export default function TracesTable({
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className={`px-4 ${rowPadding}`}>
                   <span
                     className="inline-block max-w-[100px] truncate font-mono text-sm"
                     style={{ color: "var(--blue)" }}
@@ -503,13 +507,15 @@ export default function TracesTable({
                     {trace.traceId.slice(0, 12)}
                   </span>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className={`px-4 ${rowPadding}`}>
                   <div className="text-sm whitespace-nowrap">{display}</div>
-                  <div className="text-xs" style={{ color: "var(--dim)" }}>
-                    {relative}
-                  </div>
+                  {rowDensity === "rich" && (
+                    <div className="text-xs" style={{ color: "var(--dim)" }}>
+                      {relative}
+                    </div>
+                  )}
                 </td>
-                <td className="px-4 py-2.5">
+                <td className={`px-4 ${rowPadding}`}>
                   <span
                     className="inline-block max-w-[280px] truncate text-sm"
                     style={{ color: "var(--text-3)" }}
@@ -518,10 +524,10 @@ export default function TracesTable({
                     {trace.summary}
                   </span>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className={`px-4 ${rowPadding}`}>
                   <ServiceCell trace={trace} />
                 </td>
-                <td className="px-4 py-2.5">
+                <td className={`px-4 ${rowPadding}`}>
                   <span
                     className="inline-block max-w-[120px] truncate text-sm"
                     title={model ?? undefined}
@@ -530,19 +536,19 @@ export default function TracesTable({
                     {model ?? "—"}
                   </span>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className={`px-4 ${rowPadding}`}>
                   <span className="text-sm" style={{ color: "var(--text-4)" }}>
                     {trace.spanCount}
                   </span>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className={`px-4 ${rowPadding}`}>
                   <MeterCell
                     label={fmtTokens(totalTokens)}
                     pct={Math.min((totalTokens / 7000) * 100, 100)}
                     color="var(--teal)"
                   />
                 </td>
-                <td className="px-4 py-2.5">
+                <td className={`px-4 ${rowPadding}`}>
                   <MeterCell
                     label={fmtLatency(trace.latencyMs)}
                     pct={
@@ -553,7 +559,7 @@ export default function TracesTable({
                     color={latencyColor(trace.latencyMs, isError)}
                   />
                 </td>
-                <td className="px-4 py-2.5">
+                <td className={`px-4 ${rowPadding}`}>
                   <span
                     className="text-sm tabular-nums"
                     style={{ color: "var(--text-4)" }}
@@ -561,7 +567,7 @@ export default function TracesTable({
                     {fmtCost(trace.costCents)}
                   </span>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className={`px-4 ${rowPadding}`}>
                   {trace.sessionId ? (
                     <span
                       className="inline-block max-w-[80px] truncate font-mono text-xs"

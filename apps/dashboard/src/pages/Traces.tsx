@@ -15,6 +15,12 @@ import TracesTable from "../components/traces/TracesTable";
 import TraceDetailPanel from "../components/traces/TraceDetailPanel";
 import { TableSkeleton } from "../components/ui/TableSkeleton";
 import { useProject } from "../hooks/useProject";
+import {
+  getTraceUiPrefs,
+  setTraceUiPref,
+  TRACE_UI_PREFS_EVENT,
+  type TraceStatsMode,
+} from "../lib/traceUiPrefs";
 
 const RefreshIcon = () => (
   <svg
@@ -34,7 +40,7 @@ const RefreshIcon = () => (
 
 const FilterIcon = () => (
   <svg
-    className="w-4 h-4 text-neutral-500"
+    className="h-4 w-4 text-dim"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -50,7 +56,7 @@ const FilterIcon = () => (
 
 const ChevronDownIcon = () => (
   <svg
-    className="w-3.5 h-3.5 text-neutral-500"
+    className="h-3.5 w-3.5 text-dim"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -154,15 +160,13 @@ function ToolbarMenu<T extends string>({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="group inline-flex h-8 items-center gap-2 rounded border border-neutral-800 bg-neutral-900/80 px-3 text-sm text-neutral-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-colors hover:border-neutral-700 hover:bg-neutral-850 focus:outline-none focus:ring-1 focus:ring-accent/50"
+        className="group inline-flex h-8 items-center gap-2 rounded-lg border border-line bg-surface-2 px-3 text-xs text-fg-3 transition-colors hover:border-line-strong hover:bg-hover focus:outline-none focus:ring-1 focus:ring-blue/50"
       >
         {icon}
-        {prefix ? <span className="text-neutral-500">{prefix}</span> : null}
-        <span className="whitespace-nowrap text-neutral-300">
-          {selected?.label}
-        </span>
+        {prefix ? <span className="text-dim">{prefix}</span> : null}
+        <span className="whitespace-nowrap text-fg-3">{selected?.label}</span>
         <span
-          className={`text-neutral-500 transition-transform group-hover:text-neutral-400 ${
+          className={`text-dim transition-transform group-hover:text-fg-4 ${
             open ? "rotate-180" : ""
           }`}
         >
@@ -174,7 +178,7 @@ function ToolbarMenu<T extends string>({
         <div
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute right-0 top-full z-50 mt-1.5 min-w-full overflow-hidden rounded border border-neutral-800 bg-neutral-950/95 p-1 shadow-xl shadow-black/30 backdrop-blur"
+          className="absolute right-0 top-full z-50 mt-1.5 min-w-full overflow-hidden rounded-lg border border-line bg-surface p-1 shadow-xl shadow-black/30"
         >
           {options.map((option) => {
             const active = option.value === value;
@@ -190,8 +194,8 @@ function ToolbarMenu<T extends string>({
                 }}
                 className={`flex w-full items-center justify-between gap-4 rounded-sm px-2.5 py-1.5 text-left text-sm transition-colors ${
                   active
-                    ? "bg-neutral-850 text-white"
-                    : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200"
+                    ? "bg-fill text-fg"
+                    : "text-fg-4 hover:bg-hover hover:text-fg-2"
                 }`}
               >
                 <span className="whitespace-nowrap">{option.label}</span>
@@ -246,8 +250,10 @@ export default function Traces() {
   });
 
   const [pageSize, setPageSize] = useState(() => {
-    const pageSizeParam = searchParams.get("pageSize");
-    return pageSizeParam ? parseInt(pageSizeParam, 10) : DEFAULT_PAGE_SIZE;
+    const parsed = Number.parseInt(searchParams.get("pageSize") ?? "", 10);
+    return parsed === 25 || parsed === 50 || parsed === 100
+      ? parsed
+      : DEFAULT_PAGE_SIZE;
   });
 
   const [filters, setFilters] = useState<TracesFilters>(() => ({
@@ -264,9 +270,25 @@ export default function Traces() {
   );
 
   const [selectedTrace, setSelectedTrace] = useState<Trace | null>(null);
-  const [serviceFilter, setServiceFilter] = useState<string | null>(null);
+  const [serviceFilter, setServiceFilter] = useState<string | null>(() =>
+    searchParams.get("service"),
+  );
   const [filtersOpen, setFiltersOpen] = useState(true);
-  const [statsMode, setStatsMode] = useState<"trend" | "compact">("trend");
+  const [traceUiPrefs, setTraceUiPrefsState] = useState(getTraceUiPrefs);
+  const statsMode = traceUiPrefs.statsMode;
+
+  useEffect(() => {
+    const syncTraceUiPrefs = () => setTraceUiPrefsState(getTraceUiPrefs());
+
+    window.addEventListener("storage", syncTraceUiPrefs);
+    window.addEventListener(TRACE_UI_PREFS_EVENT, syncTraceUiPrefs);
+    window.addEventListener("focus", syncTraceUiPrefs);
+    return () => {
+      window.removeEventListener("storage", syncTraceUiPrefs);
+      window.removeEventListener(TRACE_UI_PREFS_EVENT, syncTraceUiPrefs);
+      window.removeEventListener("focus", syncTraceUiPrefs);
+    };
+  }, []);
 
   const queryParams = useMemo<GetTracesParams>(() => {
     const params: GetTracesParams = {
@@ -296,18 +318,26 @@ export default function Traces() {
 
   // Status chip counts need trace-level totals, which the list query only
   // reports for the active filter; these ask for the totals alone.
-  const successCountQuery = useTracesQuery("traces-count-success", selectedProject?.id, {
-    ...queryParams,
-    status: "success",
-    limit: 1,
-    offset: 0,
-  });
-  const errorCountQuery = useTracesQuery("traces-count-error", selectedProject?.id, {
-    ...queryParams,
-    status: "error",
-    limit: 1,
-    offset: 0,
-  });
+  const successCountQuery = useTracesQuery(
+    "traces-count-success",
+    selectedProject?.id,
+    {
+      ...queryParams,
+      status: "success",
+      limit: 1,
+      offset: 0,
+    },
+  );
+  const errorCountQuery = useTracesQuery(
+    "traces-count-error",
+    selectedProject?.id,
+    {
+      ...queryParams,
+      status: "error",
+      limit: 1,
+      offset: 0,
+    },
+  );
 
   const STATS_WINDOW_DAYS = 7;
   const analyticsRange = useMemo(() => {
@@ -316,14 +346,22 @@ export default function Traces() {
     return { date_from: from.toISOString(), date_to: to.toISOString() };
   }, []);
 
-  const analyticsQuery = useAnalyticsQuery("traces-analytics", selectedProject?.id, {
-    ...analyticsRange,
-    group_by: "day",
-  });
-  const spansQuery = useSpansAnalyticsQuery("traces-spans-analytics", selectedProject?.id, {
-    ...analyticsRange,
-    group_by: "day",
-  });
+  const analyticsQuery = useAnalyticsQuery(
+    "traces-analytics",
+    selectedProject?.id,
+    {
+      ...analyticsRange,
+      group_by: "day",
+    },
+  );
+  const spansQuery = useSpansAnalyticsQuery(
+    "traces-spans-analytics",
+    selectedProject?.id,
+    {
+      ...analyticsRange,
+      group_by: "day",
+    },
+  );
 
   const traces = tracesQuery.data?.traces ?? [];
   const total = tracesQuery.data?.total ?? 0;
@@ -450,13 +488,18 @@ export default function Traces() {
     setSelectedTrace(null);
   };
 
+  const handleStatsModeChange = (mode: TraceStatsMode) => {
+    setTraceUiPref("statsMode", mode);
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Header */}
-      <header className="h-14 flex items-center justify-between px-6 border-b border-neutral-800 flex-shrink-0 bg-neutral-950">
+      <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-line bg-topbar px-5 backdrop-blur">
         <div className="flex items-center gap-4">
-          <h1 className="text-sm font-medium">Traces</h1>
-          <span className="text-xs text-neutral-500">
+          <h1 className="text-[19px] font-semibold tracking-[-0.022em] text-fg">
+            Traces
+          </h1>
+          <span className="text-[12.5px] text-faint">
             {total.toLocaleString()} total
           </span>
         </div>
@@ -475,9 +518,11 @@ export default function Traces() {
             onChange={handleSourceChange}
           />
           <button
+            type="button"
+            aria-label="Refresh traces"
             onClick={() => tracesQuery.refetch()}
             disabled={loading || tracesQuery.isFetching}
-            className="p-1.5 rounded border border-neutral-700 hover:bg-neutral-850 hover:border-neutral-600 transition-colors disabled:opacity-50"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-line-strong bg-surface-2 text-fg-4 transition-colors hover:bg-hover hover:text-fg disabled:opacity-50"
           >
             <span
               className={
@@ -487,7 +532,7 @@ export default function Traces() {
               <RefreshIcon />
             </span>
           </button>
-          <div className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-500">
+          <div className="hidden items-center gap-1.5 px-1 py-1.5 text-xs text-dim sm:flex">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
@@ -510,7 +555,7 @@ export default function Traces() {
               <SegmentedControl
                 ariaLabel="Stats display"
                 value={statsMode}
-                onChange={setStatsMode}
+                onChange={handleStatsModeChange}
                 options={[
                   { value: "trend", label: "Trend" },
                   { value: "compact", label: "Compact" },
@@ -643,6 +688,7 @@ export default function Traces() {
                 >
                   <TracesTable
                     traces={traces}
+                    rowDensity={traceUiPrefs.rowDensity}
                     onRowClick={handleRowClick}
                     pagination={{
                       page,

@@ -591,20 +591,34 @@ export async function getSpanCountsOverTime(
   }));
 }
 
+/**
+ * Average wall-clock span of a session, measured from its own spans.
+ *
+ * Reading `durationMs` off a `session` span only works for sources that emit
+ * one; SDK and agent traffic often does not, which reported every session as
+ * zero. Deriving the boundaries works for any source.
+ */
 export async function getAvgSessionSpanDuration(
   db: Database,
   projectId: string,
   dateRange: DateRange,
 ): Promise<number> {
-  const result = await db
-    .select({ avgDuration: avg(spans.durationMs) })
+  const sessionSpans = db
+    .select({
+      sessionId: spans.sessionId,
+      durationMs:
+        sql<number>`MAX(${spans.timestamp} + COALESCE(${spans.durationMs}, 0)) - MIN(${spans.timestamp})`.as(
+          "session_duration_ms",
+        ),
+    })
     .from(spans)
-    .where(
-      and(
-        buildSpanDateConditions(projectId, dateRange),
-        eq(spans.kind, "session"),
-      ),
-    );
+    .where(buildSpanDateConditions(projectId, dateRange))
+    .groupBy(spans.sessionId)
+    .as("session_spans");
+
+  const result = await db
+    .select({ avgDuration: avg(sessionSpans.durationMs) })
+    .from(sessionSpans);
 
   return Number(result[0]?.avgDuration ?? 0);
 }

@@ -283,6 +283,12 @@ export default function Dashboard() {
   const successRate = spansAnalytics?.successRate ?? 100 - errorRate;
   const topTools = spansAnalytics?.topTools ?? [];
 
+  // Error and success rate must come from the same population or the two cards
+  // contradict each other; analytics.errorRate covers llm_call spans only.
+  const totalSpans = spansAnalytics?.totalSpans ?? 0;
+  const spanErrorRate = spansAnalytics?.errorRate ?? 0;
+  const failedSpans = Math.round(totalSpans * (spanErrorRate / 100));
+
   // Sparkline series come straight from the analytics time buckets.
   const spansSeries = (spansAnalytics?.spansOverTime ?? []).map((p) => p.count);
   const costSeries = (analytics?.costOverTime ?? []).map((point) =>
@@ -399,14 +405,10 @@ export default function Dashboard() {
             />
             <StatCard
               label="Error Rate"
-              value={analytics ? analytics.errorRate.toFixed(1) + "%" : "--"}
+              value={spanErrorRate.toFixed(1) + "%"}
               icon={<AlertIcon />}
               color="rose"
-              subtitle={
-                analytics
-                  ? `${Math.round(analytics.totalRequests * (analytics.errorRate / 100))} failed`
-                  : `${timeRange} period`
-              }
+              subtitle={`${failedSpans} of ${formatNumber(totalSpans)} spans failed`}
             />
             <StatCard
               label="Success Rate"

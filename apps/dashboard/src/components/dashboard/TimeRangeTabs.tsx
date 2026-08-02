@@ -13,15 +13,15 @@ const tabs: { value: TimeRange; label: string }[] = [
 
 export function TimeRangeTabs({ value, onChange }: TimeRangeTabsProps) {
   return (
-    <div className="flex items-center gap-1 bg-neutral-850 p-0.5 rounded">
+    <div className="flex items-center gap-0.5 rounded-[10px] border border-line-strong bg-surface-2 p-0.5">
       {tabs.map((tab) => (
         <button
           key={tab.value}
           onClick={() => onChange(tab.value)}
-          className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${
+          className={`rounded-[7px] px-3 py-1 text-[11.5px] transition-colors ${
             value === tab.value
-              ? "bg-neutral-800 text-white"
-              : "text-neutral-500 hover:text-neutral-300"
+              ? "bg-fill-2 text-fg"
+              : "text-dim hover:bg-hover hover:text-fg-3"
           }`}
         >
           {tab.label}

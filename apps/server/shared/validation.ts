@@ -61,6 +61,29 @@ export const spanAnalyticsQuerySchema = z.object({
   group_by: spanAnalyticsGroupBySchema.optional(),
 });
 
+export const overviewMeasureSchema = z.enum([
+  "requests",
+  "cost",
+  "latency",
+  "tokens",
+]);
+
+export const overviewSplitBySchema = z.enum([
+  "none",
+  "model",
+  "provider",
+  "source",
+  "service",
+]);
+
+export const overviewExtendedQuerySchema = z.object({
+  date_from: z.string().datetime({ offset: true }),
+  date_to: z.string().datetime({ offset: true }),
+  measure: overviewMeasureSchema.optional(),
+  split_by: overviewSplitBySchema.optional(),
+  group_by: z.enum(["day", "hour"]).optional(),
+});
+
 /**
  * Span kind categorizes what the span represents.
  *

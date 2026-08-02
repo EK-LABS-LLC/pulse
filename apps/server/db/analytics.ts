@@ -89,6 +89,26 @@ export interface CostOverTimeByProvider {
   costCents: number;
 }
 
+export type OverviewMeasure = "requests" | "cost" | "latency" | "tokens";
+export type OverviewSplitBy =
+  | "none"
+  | "model"
+  | "provider"
+  | "source"
+  | "service";
+
+export interface OverviewSeriesRow {
+  period: string;
+  dimension: string;
+  value: number;
+}
+
+export interface OverviewLatencyPercentiles {
+  p50: number;
+  p95: number;
+  p99: number;
+}
+
 function buildSpanDateConditions(projectId: string, dateRange: DateRange) {
   return and(
     eq(spans.projectId, projectId),
@@ -462,6 +482,98 @@ export async function getCostOverTimeByProvider(
     (a, b) =>
       a.period.localeCompare(b.period) || a.provider.localeCompare(b.provider),
   );
+}
+
+function overviewDimensionExpr(splitBy: OverviewSplitBy): ReturnType<typeof sql> {
+  switch (splitBy) {
+    case "model":
+      return spanModelExpr;
+    case "provider":
+      return spanProviderExpr;
+    case "source":
+      return sql<string>`COALESCE(${spans.source}, 'unknown')`;
+    case "service":
+      return sql<string>`COALESCE(${spans.service}, 'unknown')`;
+    case "none":
+    default:
+      return sql<string>`'all'`;
+  }
+}
+
+/**
+ * Get a time-series overview metric from request-level LLM spans.
+ *
+ * A request is an `llm_call` span, matching the existing request, cost, token,
+ * and latency analytics semantics. The split dimension is intentionally
+ * applied to those same spans so overview totals remain internally consistent.
+ */
+export async function getOverviewSeries(
+  db: Database,
+  projectId: string,
+  dateRange: DateRange,
+  measure: OverviewMeasure,
+  splitBy: OverviewSplitBy,
+  groupBy: "day" | "hour" = "day",
+): Promise<OverviewSeriesRow[]> {
+  const periodExpr = spanPeriodExpr(groupBy);
+  const dimensionExpr = overviewDimensionExpr(splitBy);
+  const valueExpr =
+    measure === "requests"
+      ? count()
+      : measure === "cost"
+        ? sum(spans.costCents)
+        : measure === "tokens"
+          ? sql<number>`SUM(COALESCE(${spans.inputTokens}, 0) + COALESCE(${spans.outputTokens}, 0))`
+          : avg(spans.durationMs);
+
+  const rows = await db
+    .select({
+      period: periodExpr.as("period"),
+      dimension: dimensionExpr.as("dimension"),
+      value: valueExpr.as("value"),
+    })
+    .from(spans)
+    .where(buildLlmSpanConditions(projectId, dateRange))
+    .groupBy(periodExpr, dimensionExpr)
+    .orderBy(periodExpr, dimensionExpr);
+
+  return (rows as any[]).map((row) => ({
+    period: String(row.period),
+    dimension: String(row.dimension ?? "unknown"),
+    // Costs are stored in cents; overview chart values are displayed in dollars.
+    value: measure === "cost" ? Number(row.value ?? 0) / 100 : Number(row.value ?? 0),
+  }));
+}
+
+/**
+ * Calculate latency percentiles from request-level durations.
+ *
+ * SQLite and Postgres do not share a portable percentile aggregate, so this
+ * small result set is calculated in application code until the analytics store
+ * grows a dialect-specific percentile implementation.
+ */
+export async function getOverviewLatencyPercentiles(
+  db: Database,
+  projectId: string,
+  dateRange: DateRange,
+): Promise<OverviewLatencyPercentiles> {
+  const rows = await db
+    .select({ durationMs: spans.durationMs })
+    .from(spans)
+    .where(
+      and(buildLlmSpanConditions(projectId, dateRange), isNotNull(spans.durationMs)),
+    );
+  const values = (rows as Array<{ durationMs: number | null }>)
+    .map((row) => Number(row.durationMs))
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b);
+
+  const percentile = (fraction: number) => {
+    if (values.length === 0) return 0;
+    return values[Math.min(values.length - 1, Math.ceil(values.length * fraction) - 1)] ?? 0;
+  };
+
+  return { p50: percentile(0.5), p95: percentile(0.95), p99: percentile(0.99) };
 }
 
 export interface SpanCountByKind {

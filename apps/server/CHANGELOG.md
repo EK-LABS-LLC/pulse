@@ -14,6 +14,8 @@ Changed: Sign-in moves to a split layout on the new palette.
 Added: `recordSpan` in the TypeScript SDK emits agent, tool and provider spans directly, so callers no longer have to wrap a provider client; `shutdownPulse` flushes and stops the flush interval so short-lived processes exit.
 Fixed: Average session duration is measured from a session's own spans instead of a lifecycle span, which agent and SDK traffic often never emits and which reported every session as zero.
 Fixed: Overview error rate and success rate are drawn from the same spans, so the two no longer contradict each other.
+Added: `GET /v1/analytics/spans` reports per-service request, error and average duration rollups.
+Changed: Traces opens on an overview strip and a Services table, and filters move to status and source chips carrying live counts; selecting a service scopes the query.
 
 ### Allow Test Changes To Rebaseline The Integrity Guard
 

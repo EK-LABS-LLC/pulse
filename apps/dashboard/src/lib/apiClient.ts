@@ -227,6 +227,12 @@ export interface SpansAnalyticsResponse {
   spansByKind: Array<{ kind: string; count: number }>;
   spansBySource: Array<{ source: string; count: number }>;
   spansOverTime: Array<{ period: string; count: number }>;
+  serviceStats?: Array<{
+    service: string;
+    requests: number;
+    errors: number;
+    avgDurationMs: number;
+  }>;
 }
 
 export interface GetSpansAnalyticsParams {

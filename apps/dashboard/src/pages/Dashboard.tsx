@@ -283,6 +283,14 @@ export default function Dashboard() {
   const successRate = spansAnalytics?.successRate ?? 100 - errorRate;
   const topTools = spansAnalytics?.topTools ?? [];
 
+  // Sparkline series come straight from the analytics time buckets.
+  const spansSeries = (spansAnalytics?.spansOverTime ?? []).map((p) => p.count);
+  const costSeries = (analytics?.costOverTime ?? []).map((point) =>
+    Object.entries(point)
+      .filter(([key]) => key !== "period")
+      .reduce((sum, [, value]) => sum + (Number(value) || 0), 0),
+  );
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
@@ -345,6 +353,7 @@ export default function Dashboard() {
               value={formatNumber(agentRuns)}
               icon={<BoltIcon />}
               color="blue"
+              series={spansSeries}
               subtitle={`${timeRange} period`}
             />
             <StatCard
@@ -352,6 +361,7 @@ export default function Dashboard() {
               value={formatNumber(toolCalls)}
               icon={<WrenchIcon />}
               color="cyan"
+              series={spansSeries}
               subtitle={`${timeRange} period`}
             />
             <StatCard
@@ -370,6 +380,7 @@ export default function Dashboard() {
               value={analytics ? formatCost(analytics.totalCost) : "--"}
               icon={<DollarIcon />}
               color="emerald"
+              series={costSeries}
               subtitle={`${timeRange} period`}
             />
             <StatCard

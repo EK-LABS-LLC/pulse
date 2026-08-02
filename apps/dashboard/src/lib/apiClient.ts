@@ -169,6 +169,8 @@ export interface GetAnalyticsParams {
   date_from?: string;
   date_to?: string;
   group_by?: AnalyticsGroupBy;
+  measure?: "requests" | "cost" | "latency" | "tokens";
+  split_by?: "none" | "model" | "provider" | "source" | "service";
 }
 
 export interface OverviewLatencyPercentiles {

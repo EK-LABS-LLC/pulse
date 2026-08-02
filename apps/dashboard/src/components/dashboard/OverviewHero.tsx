@@ -67,6 +67,22 @@ function SeriesChart({ series }: { series: OverviewSeries[] }) {
 
     return { left, right, top, bottom, width, height, x, y };
   }, [maxValue, pointCount]);
+  const tickIndices = Array.from(
+    { length: Math.min(7, pointCount) },
+    (_, index) =>
+      pointCount === 1
+        ? 0
+        : Math.round((index / Math.max(1, Math.min(7, pointCount) - 1)) * (pointCount - 1)),
+  ).filter((index, position, all) => all.indexOf(index) === position);
+
+  const periodLabel = (period: string | undefined) => {
+    if (!period) return "";
+    const date = new Date(period);
+    if (Number.isNaN(date.getTime())) return period;
+    return pointCount > 24
+      ? date.toLocaleTimeString([], { hour: "numeric" })
+      : date.toLocaleDateString([], { month: "short", day: "numeric" });
+  };
 
   if (series.length === 0 || series.every((s) => s.points.length === 0)) {
     return (
@@ -111,6 +127,15 @@ function SeriesChart({ series }: { series: OverviewSeries[] }) {
             </button>
           );
         })}
+        {hiddenSeries.size > 0 ? (
+          <button
+            type="button"
+            onClick={() => setHiddenSeries(new Set())}
+            className="cursor-pointer border-0 bg-transparent px-1.5 py-1 text-xs text-blue"
+          >
+            Show all
+          </button>
+        ) : null}
         <span className="ml-auto text-xs text-faint">Click a series to compare</span>
       </div>
 
@@ -147,6 +172,19 @@ function SeriesChart({ series }: { series: OverviewSeries[] }) {
               </g>
             );
           })}
+
+          {tickIndices.map((index) => (
+            <text
+              key={index}
+              x={chart.x(index)}
+              y={278}
+              textAnchor="middle"
+              fill="var(--dim)"
+              fontSize="11.5"
+            >
+              {periodLabel(visibleSeries[0]?.points[index]?.period)}
+            </text>
+          ))}
 
           {hoverIndex !== null && (
             <line x1={chart.x(hoverIndex)} x2={chart.x(hoverIndex)} y1={chart.top} y2={chart.bottom} stroke="var(--crosshair)" strokeWidth="1" vectorEffect="non-scaling-stroke" />

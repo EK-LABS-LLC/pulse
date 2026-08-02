@@ -56,13 +56,19 @@ function colorFor(span: Span): string {
   return KIND_COLORS[span.kind] ?? "var(--neutral)";
 }
 
+/**
+ * The server sets `label` to the event type for most spans, which reads as
+ * "provider_call" everywhere. Derive from the fields that actually identify a
+ * span first, and fall back to `label` only when it carries something else.
+ */
 export function spanLabel(span: Span): string {
-  if (span.label) return span.label;
-  if (span.kind === "tool_use") return span.toolName ?? "Tool call";
+  if (span.kind === "tool_use")
+    return span.toolName ?? span.label ?? "Tool call";
   if (span.kind === "llm_call") {
     return span.model ? `Model turn · ${span.model}` : "Model turn";
   }
   if (span.kind === "agent_run") return span.agentName ?? "Agent run";
+  if (span.label && span.label !== span.eventType) return span.label;
   return span.eventType || span.kind;
 }
 

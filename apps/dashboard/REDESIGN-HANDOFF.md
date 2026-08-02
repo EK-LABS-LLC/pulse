@@ -142,6 +142,32 @@ cards out — do not ship a synthetic sine curve.
 (duration, agentRuns, toolCalls, traceCount, tokens, cost, errorCount, sources,
 cwd, agentName, model). API keys view is backed including reveal/copy.
 
+## Real data — no fixtures
+
+`apps/server/scripts/ingest-dev-data.ts` fills a running server by driving the
+**real SDK** (`initPulse` / `recordSpan` / `flush`) over the real OTLP
+transport. Nothing writes to the database directly and no response is faked.
+
+```sh
+cd apps/server && PULSE_PROJECTS=2 bun run scripts/ingest-dev-data.ts
+```
+
+Creates at most 3 projects (default 2), each with a distinct `service.name`,
+reusing what signup already made rather than piling up new ones. Verified
+output on a live server:
+
+```
+total traces: 50   error traces: 10   service=pulse-api total: 50
+{'status':'success','services':['pulse-api'],'modelUsed':'claude-sonnet-4.5',
+ 'inputTokens':4264,'outputTokens':1244,'costCents':3.1452,'spanCount':6}
+{'status':'error','services':['pulse-api'],'errorService':'pulse-api'}
+```
+
+So tokens, cost, model, `services[]` and `errorService` are all exercised for
+real — the columns that read `—` under the old seed script now carry values.
+
+Prefer this over `scripts/seed.ts` for anything the dashboard is judged on.
+
 ## Running it — verified working setup
 
 Use an isolated `PULSE_HOME`. **Do not use the default** — the user has a real
@@ -167,7 +193,7 @@ VITE_API_PROXY_TARGET=http://127.0.0.1:3399 bunx vite --port 5199 --strictPort &
 `PULSE_ALLOWED_ORIGINS` is required or better-auth rejects the Vite origin with
 `INVALID_ORIGIN`. Vite binds `localhost`, not `127.0.0.1` — curl accordingly.
 
-Seed (already run once against the DB above):
+Then ingest through the SDK (preferred). The older seed script:
 
 ```sh
 cd apps/server
@@ -200,13 +226,12 @@ await fetch("/api/auth/sign-in/email", {
 });
 ```
 
-## Known state of the seeded data
+## Note on scripts/seed.ts
 
-Seed spans are agent-style: no tokens, no cost, no `service`. So the Service
-column shows `—`, Tokens `0`, Model `—` on those rows. That is correct
-behaviour on that data, not a rendering bug. To exercise those columns, ingest
-SDK spans with `serviceName` set — see the PR #4 e2e approach (import
-`sendSpans` from `sdks/typescript/src/transport/http`).
+The older `scripts/seed.ts` emits agent-style spans with no tokens, cost or
+service, so Service reads `—` and Tokens `0`. That is correct on that data, not
+a rendering bug — but use `ingest-dev-data.ts` instead so those columns are
+actually exercised.
 
 ## Verification standard
 

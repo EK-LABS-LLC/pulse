@@ -14,7 +14,7 @@ type SourceFilter =
 
 const CalendarIcon = () => (
   <svg
-    className="w-4 h-4 text-neutral-500"
+    className="h-4 w-4 text-dim"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -30,7 +30,7 @@ const CalendarIcon = () => (
 
 const SearchIcon = () => (
   <svg
-    className="w-4 h-4 text-neutral-500"
+    className="h-3.5 w-3.5 text-dim"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -46,7 +46,7 @@ const SearchIcon = () => (
 
 const FilterIcon = () => (
   <svg
-    className="w-4 h-4 text-neutral-500"
+    className="h-4 w-4 text-dim"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -62,7 +62,7 @@ const FilterIcon = () => (
 
 const ChevronDownIcon = () => (
   <svg
-    className="w-3.5 h-3.5 text-neutral-500"
+    className="h-3.5 w-3.5 text-dim"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -78,7 +78,7 @@ const ChevronDownIcon = () => (
 
 const SortIcon = () => (
   <svg
-    className="w-4 h-4 text-neutral-500"
+    className="h-4 w-4 text-dim"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -184,15 +184,13 @@ function ToolbarMenu<T extends string>({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="group inline-flex h-8 items-center gap-2 rounded border border-neutral-800 bg-neutral-900/80 px-3 text-sm text-neutral-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-colors hover:border-neutral-700 hover:bg-neutral-850 focus:outline-none focus:ring-1 focus:ring-accent/50"
+        className="group inline-flex h-8 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-xs text-fg-3 transition-colors hover:border-line-strong hover:bg-hover focus:outline-none focus:ring-1 focus:ring-blue/50"
       >
         {icon}
-        {prefix ? <span className="text-neutral-500">{prefix}</span> : null}
-        <span className="whitespace-nowrap text-neutral-300">
-          {selected?.label}
-        </span>
+        {prefix ? <span className="text-dim">{prefix}</span> : null}
+        <span className="whitespace-nowrap text-fg-3">{selected?.label}</span>
         <span
-          className={`text-neutral-500 transition-transform group-hover:text-neutral-400 ${
+          className={`text-dim transition-transform group-hover:text-fg-4 ${
             open ? "rotate-180" : ""
           }`}
         >
@@ -204,7 +202,7 @@ function ToolbarMenu<T extends string>({
         <div
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute right-0 top-full z-50 mt-1.5 min-w-full overflow-hidden rounded border border-neutral-800 bg-neutral-950/95 p-1 shadow-xl shadow-black/30 backdrop-blur"
+          className="absolute right-0 top-full z-50 mt-1.5 min-w-full overflow-hidden rounded-lg border border-line bg-surface p-1 shadow-xl shadow-black/30"
         >
           {options.map((option) => {
             const active = option.value === value;
@@ -220,8 +218,8 @@ function ToolbarMenu<T extends string>({
                 }}
                 className={`flex w-full items-center justify-between gap-4 rounded-sm px-2.5 py-1.5 text-left text-sm transition-colors ${
                   active
-                    ? "bg-neutral-850 text-white"
-                    : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200"
+                    ? "bg-fill text-fg"
+                    : "text-fg-4 hover:bg-hover hover:text-fg-2"
                 }`}
               >
                 <span className="whitespace-nowrap">{option.label}</span>
@@ -375,6 +373,7 @@ export default function Sessions() {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return [
+      s.agentName,
       s.displayName,
       s.subtitle,
       s.sessionId,
@@ -388,109 +387,111 @@ export default function Sessions() {
   const returnTo = `${location.pathname}${location.search}`;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <header className="h-14 flex items-center justify-between px-6 border-b border-neutral-800 flex-shrink-0 bg-neutral-950">
-        <div className="flex items-center gap-4">
-          <h1 className="text-sm font-medium">Sessions</h1>
-          <span className="text-xs text-neutral-500">
-            {(searchQuery ? filteredSessions.length : total).toLocaleString()}{" "}
-            total
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-line bg-topbar px-5 backdrop-blur">
+        <div className="flex items-center gap-3.5">
+          <h1 className="text-[19px] font-semibold tracking-[-0.022em] text-fg">
+            Sessions
+          </h1>
+          <span className="text-[12.5px] text-faint">
+            {(searchQuery
+              ? filteredSessions.length
+              : total === 0
+                ? 0
+                : endItem - startItem + 1
+            ).toLocaleString()}{" "}
+            of {total.toLocaleString()} sessions
           </span>
         </div>
-        <div className="flex items-center gap-3">
-          <ToolbarMenu
-            ariaLabel="Source"
-            icon={<FilterIcon />}
-            prefix="Source:"
-            value={source}
-            options={(Object.keys(SOURCE_FILTER_LABELS) as SourceFilter[]).map(
-              (value) => ({
-                value,
-                label: SOURCE_FILTER_LABELS[value],
-              }),
-            )}
-            onChange={selectSource}
+        <div className="flex w-[230px] flex-none items-center gap-2 rounded-[10px] border border-line bg-surface-2 px-2.5 py-[7px]">
+          <SearchIcon />
+          <input
+            type="search"
+            aria-label="Search sessions"
+            placeholder="Search agent, directory, model…"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="w-full bg-transparent text-[12.5px] text-fg outline-none placeholder:text-faint"
           />
-          <ToolbarMenu
-            ariaLabel="Date range"
-            icon={<CalendarIcon />}
-            value={dateRange}
-            options={(Object.keys(DATE_RANGE_LABELS) as DateRange[]).map(
-              (range) => ({
-                value: range,
-                label: DATE_RANGE_LABELS[range],
-              }),
-            )}
-            onChange={selectDateRange}
-          />
-          <div className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-neutral-500">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
-            </span>
-            Live
-          </div>
         </div>
       </header>
 
-      <div className="px-6 py-3 border-b border-neutral-800 flex-shrink-0">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 max-w-md">
-            <div className="flex items-center gap-2 px-3 py-2 bg-neutral-900 border border-neutral-800 rounded">
-              <SearchIcon />
-              <input
-                type="text"
-                placeholder="Filter this page by name, folder, model, or session ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent text-sm text-neutral-300 placeholder:text-neutral-500 outline-none"
+      <div className="flex-1 overflow-auto">
+        <div className="mx-auto max-w-[1240px] p-6">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <ToolbarMenu
+                ariaLabel="Source"
+                icon={<FilterIcon />}
+                prefix="Source:"
+                value={source}
+                options={(
+                  Object.keys(SOURCE_FILTER_LABELS) as SourceFilter[]
+                ).map((value) => ({
+                  value,
+                  label: SOURCE_FILTER_LABELS[value],
+                }))}
+                onChange={selectSource}
+              />
+              <ToolbarMenu
+                ariaLabel="Date range"
+                icon={<CalendarIcon />}
+                value={dateRange}
+                options={(Object.keys(DATE_RANGE_LABELS) as DateRange[]).map(
+                  (range) => ({
+                    value: range,
+                    label: DATE_RANGE_LABELS[range],
+                  }),
+                )}
+                onChange={selectDateRange}
+              />
+              <ToolbarMenu
+                ariaLabel="Sort sessions"
+                icon={<SortIcon />}
+                prefix="Sort:"
+                value={sort}
+                options={(Object.keys(SORT_LABELS) as SessionSort[]).map(
+                  (sortOption) => ({
+                    value: sortOption,
+                    label: SORT_LABELS[sortOption],
+                  }),
+                )}
+                onChange={selectSort}
               />
             </div>
-          </div>
-          <ToolbarMenu
-            ariaLabel="Sort sessions"
-            icon={<SortIcon />}
-            prefix="Sort:"
-            value={sort}
-            options={(Object.keys(SORT_LABELS) as SessionSort[]).map(
-              (sortOption) => ({
-                value: sortOption,
-                label: SORT_LABELS[sortOption],
-              }),
-            )}
-            onChange={selectSort}
-          />
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto p-6">
-        {error && (
-          <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded">
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-rose-400 text-sm">{error}</p>
-              <button
-                onClick={() => sessionsQuery.refetch()}
-                className="text-sm text-accent hover:underline whitespace-nowrap"
-              >
-                Retry
-              </button>
+            <div className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-dim">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+              Live
             </div>
           </div>
-        )}
 
-        {!error &&
-          (loading ? (
-            <div className="max-w-7xl mx-auto">
-              <div className="bg-neutral-900 border border-neutral-800 rounded overflow-hidden">
-                <TableSkeleton rows={10} columns={9} />
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-border bg-red-tint p-4">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm text-red-text">{error}</p>
+                <button
+                  onClick={() => sessionsQuery.refetch()}
+                  className="whitespace-nowrap text-sm text-blue hover:underline"
+                >
+                  Retry
+                </button>
               </div>
             </div>
-          ) : filteredSessions.length === 0 ? (
-            <div className="max-w-7xl mx-auto">
-              <div className="bg-neutral-900 border border-neutral-800 rounded p-8 text-center">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-neutral-800 flex items-center justify-center">
+          )}
+
+          {!error &&
+            (loading ? (
+              <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+                <TableSkeleton rows={10} columns={7} />
+              </div>
+            ) : filteredSessions.length === 0 ? (
+              <div className="rounded-2xl border border-line bg-surface p-8 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-fill">
                   <svg
-                    className="w-6 h-6 text-neutral-500"
+                    className="h-6 w-6 text-dim"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -503,77 +504,80 @@ export default function Sessions() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-sm font-medium text-neutral-300 mb-2">
+                <h3 className="mb-2 text-sm font-medium text-fg-3">
                   {searchQuery && total > 0
                     ? "No matching sessions"
                     : "No Sessions"}
                 </h3>
-                <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                <p className="mx-auto max-w-sm text-xs text-dim">
                   {searchQuery && total > 0
                     ? "No sessions on this page match your search."
                     : "Sessions with span data will appear here when available."}
                 </p>
               </div>
-            </div>
-          ) : (
-            <div className="max-w-7xl mx-auto">
-              <SessionsTable sessions={filteredSessions} returnTo={returnTo} />
-              <div className="mt-3 flex items-center justify-between text-xs text-neutral-500">
-                <div className="flex items-center gap-2">
-                  <span>
-                    {startItem.toLocaleString()}–{endItem.toLocaleString()} of{" "}
-                    {total.toLocaleString()}
-                  </span>
-                  <select
-                    value={pageSize}
-                    onChange={(event) =>
-                      updateSearchParams({
-                        pageSize:
-                          event.target.value === "50"
-                            ? null
-                            : event.target.value,
-                        page: null,
-                      })
-                    }
-                    className="rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-neutral-400 outline-none"
-                    aria-label="Sessions per page"
-                  >
-                    <option value={25}>25 per page</option>
-                    <option value={50}>50 per page</option>
-                    <option value={100}>100 per page</option>
-                  </select>
+            ) : (
+              <>
+                <SessionsTable
+                  sessions={filteredSessions}
+                  returnTo={returnTo}
+                />
+                <div className="mt-3 flex items-center justify-between text-xs text-dim">
+                  <div className="flex items-center gap-2">
+                    <span>
+                      {startItem.toLocaleString()}–{endItem.toLocaleString()} of{" "}
+                      {total.toLocaleString()}
+                    </span>
+                    <select
+                      value={pageSize}
+                      onChange={(event) =>
+                        updateSearchParams({
+                          pageSize:
+                            event.target.value === "50"
+                              ? null
+                              : event.target.value,
+                          page: null,
+                        })
+                      }
+                      className="rounded-lg border border-line bg-surface px-2 py-1 text-fg-4 outline-none focus:ring-1 focus:ring-blue/50"
+                      aria-label="Sessions per page"
+                    >
+                      <option value={25}>25 per page</option>
+                      <option value={50}>50 per page</option>
+                      <option value={100}>100 per page</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={page <= 1}
+                      onClick={() =>
+                        updateSearchParams({
+                          page: page - 1 === 1 ? null : String(page - 1),
+                        })
+                      }
+                      className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-fg-4 hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Previous
+                    </button>
+                    <span>
+                      Page {page.toLocaleString()} of{" "}
+                      {totalPages.toLocaleString()}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={page >= totalPages}
+                      onClick={() =>
+                        updateSearchParams({ page: String(page + 1) })
+                      }
+                      className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-fg-4 hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={page <= 1}
-                    onClick={() =>
-                      updateSearchParams({
-                        page: page - 1 === 1 ? null : String(page - 1),
-                      })
-                    }
-                    className="rounded border border-neutral-800 px-2.5 py-1.5 text-neutral-400 hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Previous
-                  </button>
-                  <span>
-                    Page {page.toLocaleString()} of{" "}
-                    {totalPages.toLocaleString()}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={page >= totalPages}
-                    onClick={() =>
-                      updateSearchParams({ page: String(page + 1) })
-                    }
-                    className="rounded border border-neutral-800 px-2.5 py-1.5 text-neutral-400 hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+              </>
+            ))}
+        </div>
       </div>
     </div>
   );

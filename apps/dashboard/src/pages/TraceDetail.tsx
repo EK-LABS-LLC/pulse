@@ -1,47 +1,165 @@
-import { useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
-import TraceHeader from "../components/traces/TraceHeader";
-import TraceMetadata from "../components/traces/TraceMetadata";
-import JsonViewer from "../components/traces/JsonViewer";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, Link, useLocation } from "react-router-dom";
 import TraceSpanTree from "../components/traces/TraceSpanTree";
+import { SpanDetailPanel } from "../components/traces/SpanDetailPanel";
+import { JsonBlock } from "../components/traces/JsonBlock";
+import { SegmentedControl } from "../components/ui/SegmentedControl";
+import { StatusDot } from "../components/ui/StatusDot";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { useTraceDetailQuery } from "../api";
 import { useProject } from "../hooks/useProject";
+import { fmtCost, fmtLatency, fmtRel, fmtTokens } from "../lib/format";
+import { sourceName } from "../lib/sources";
+import {
+  getTraceUiPrefs,
+  setTraceUiPref,
+  TRACE_UI_PREFS_EVENT,
+  type TraceIoFormat,
+} from "../lib/traceUiPrefs";
 
-function NotFoundState() {
+function Centered({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex-1 flex items-center justify-center">
+    <div className="flex flex-1 items-center justify-center">{children}</div>
+  );
+}
+
+function NotFoundState({ backTo }: { backTo: string }) {
+  return (
+    <Centered>
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-neutral-100 mb-4">404</h1>
-        <p className="text-neutral-400 mb-6">Trace not found</p>
-        <Link to="/traces" className="text-accent hover:underline">
-          Back to Traces
-        </Link>
+        <h1 className="mb-4 text-4xl font-bold">404</h1>
+        <p className="mb-6" style={{ color: "var(--dim)" }}>
+          Trace not found
+        </p>
+        <Link to={backTo}>Back</Link>
       </div>
+    </Centered>
+  );
+}
+
+function SummaryMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-line bg-surface-3 p-3">
+      <span className="mb-1.5 block text-[11.5px] text-faint">{label}</span>
+      <span
+        className="block truncate text-xl font-semibold tracking-[-0.02em] tabular-nums"
+        style={{ color: tone ?? "var(--text)" }}
+      >
+        {value}
+      </span>
     </div>
   );
 }
 
-function LoadingState() {
-  return (
-    <div className="flex-1 flex items-center justify-center">
-      <LoadingSpinner text="Loading trace..." />
-    </div>
-  );
+function resolveBackTarget(returnTo: unknown): {
+  to: string;
+  label: string;
+} {
+  if (
+    typeof returnTo === "string" &&
+    returnTo.startsWith("/dashboard/sessions")
+  ) {
+    return { to: returnTo, label: "← Sessions" };
+  }
+  return { to: "/dashboard/traces", label: "← Traces" };
 }
 
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+function contentAsText(content: unknown): string | null {
+  if (typeof content === "string" && content.trim()) return content;
+  if (Array.isArray(content)) {
+    const parts = content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part === "object" && "text" in part) {
+          const text = (part as { text?: unknown }).text;
+          return typeof text === "string" ? text : "";
+        }
+        return "";
+      })
+      .filter(Boolean);
+    return parts.length ? parts.join("\n") : null;
+  }
+  return null;
+}
+
+function extractChatBubbles(
+  requestBody: unknown,
+  responseBody: unknown,
+  outputText?: string,
+): Array<{ role: string; text: string }> {
+  const bubbles: Array<{ role: string; text: string }> = [];
+
+  if (requestBody && typeof requestBody === "object") {
+    const messages = (requestBody as { messages?: unknown }).messages;
+    if (Array.isArray(messages)) {
+      for (const message of messages) {
+        if (!message || typeof message !== "object") continue;
+        const role =
+          typeof (message as { role?: unknown }).role === "string"
+            ? (message as { role: string }).role
+            : "message";
+        const text = contentAsText((message as { content?: unknown }).content);
+        if (text) bubbles.push({ role, text });
+      }
+    }
+  }
+
+  if (outputText?.trim()) {
+    bubbles.push({ role: "assistant", text: outputText });
+  } else if (responseBody && typeof responseBody === "object") {
+    const body = responseBody as Record<string, unknown>;
+    if (Array.isArray(body.choices)) {
+      const choice = body.choices[0] as
+        { message?: { content?: unknown }; text?: unknown } | undefined;
+      const text =
+        contentAsText(choice?.message?.content) ??
+        (typeof choice?.text === "string" ? choice.text : null);
+      if (text) bubbles.push({ role: "assistant", text });
+    } else {
+      const text = contentAsText(body.content);
+      if (text) bubbles.push({ role: "assistant", text });
+    }
+  }
+
+  return bubbles;
+}
+
+function ChatBubbles({
+  bubbles,
+}: {
+  bubbles: Array<{ role: string; text: string }>;
+}) {
   return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-center">
-        <p className="text-rose-400 mb-4">{message}</p>
-        <button
-          onClick={onRetry}
-          className="px-4 py-2 bg-accent hover:bg-accent/90 rounded text-sm"
-        >
-          Retry
-        </button>
-      </div>
+    <div className="flex max-h-[280px] flex-col gap-2.5 overflow-auto">
+      {bubbles.map((bubble, index) => {
+        const isUser = bubble.role === "user";
+        return (
+          <div
+            key={`${bubble.role}-${index}`}
+            className={`max-w-[92%] rounded-xl px-3 py-2 text-[12.5px] leading-relaxed whitespace-pre-wrap ${
+              isUser ? "self-end" : "self-start"
+            }`}
+            style={{
+              background: isUser ? "var(--blue-tint)" : "var(--surface-3)",
+              border: `1px solid ${isUser ? "var(--blue-border)" : "var(--border-soft)"}`,
+              color: "var(--text-2)",
+            }}
+          >
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-faint">
+              {bubble.role}
+            </div>
+            {bubble.text}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -49,12 +167,31 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 export default function TraceDetail() {
   const { selectedProject } = useProject();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const locationState = location.state as { returnTo?: unknown } | null;
+  const back = resolveBackTarget(locationState?.returnTo);
+  const [activeSpanId, setActiveSpanId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [ioFormat, setIoFormat] = useState<TraceIoFormat>(
+    () => getTraceUiPrefs().ioFormat,
+  );
+
+  useEffect(() => {
+    const sync = () => setIoFormat(getTraceUiPrefs().ioFormat);
+    window.addEventListener("storage", sync);
+    window.addEventListener(TRACE_UI_PREFS_EVENT, sync);
+    window.addEventListener("focus", sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(TRACE_UI_PREFS_EVENT, sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, []);
 
   const traceQuery = useTraceDetailQuery(selectedProject?.id, id);
-
-  const loading = traceQuery.isPending;
   const trace = traceQuery.data ?? null;
-  const errorMessage = traceQuery.error instanceof Error ? traceQuery.error.message : null;
+  const errorMessage =
+    traceQuery.error instanceof Error ? traceQuery.error.message : null;
 
   const notFound = useMemo(() => {
     if (!id) return true;
@@ -63,70 +200,214 @@ export default function TraceDetail() {
     return message.includes("404") || message.includes("not found");
   }, [id, errorMessage]);
 
-  if (loading) {
-    return <LoadingState />;
-  }
+  const spans = useMemo(() => trace?.spans ?? [], [trace]);
+  const activeSpan = useMemo(
+    () => spans.find((span) => span.spanId === activeSpanId) ?? null,
+    [spans, activeSpanId],
+  );
 
-  if (notFound) {
-    return <NotFoundState />;
+  if (traceQuery.isPending) {
+    return (
+      <Centered>
+        <LoadingSpinner text="Loading trace..." />
+      </Centered>
+    );
   }
-
+  if (notFound || !trace) return <NotFoundState backTo={back.to} />;
   if (errorMessage) {
-    return <ErrorState message={errorMessage} onRetry={() => traceQuery.refetch()} />;
+    return (
+      <Centered>
+        <div className="text-center">
+          <p className="mb-4" style={{ color: "var(--red-text)" }}>
+            {errorMessage}
+          </p>
+          <button
+            onClick={() => traceQuery.refetch()}
+            className="cursor-pointer rounded-lg border-0 px-4 py-2 text-sm"
+            style={{ background: "var(--blue)", color: "#fff" }}
+          >
+            Retry
+          </button>
+        </div>
+      </Centered>
+    );
   }
 
-  if (!trace) {
-    return <NotFoundState />;
-  }
+  const totalTokens = (trace.inputTokens ?? 0) + (trace.outputTokens ?? 0);
+  const shortId =
+    trace.traceId.length > 18
+      ? `${trace.traceId.slice(0, 10)}…${trace.traceId.slice(-6)}`
+      : trace.traceId;
+  const copyTraceId = async () => {
+    try {
+      await navigator.clipboard.writeText(trace.traceId);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const payload =
+    trace.status === "error" && trace.error != null
+      ? trace.error
+      : trace.responseBody;
+  const chatBubbles = extractChatBubbles(
+    trace.requestBody,
+    trace.responseBody,
+    trace.outputText,
+  );
+  const showChat = ioFormat === "chat" && chatBubbles.length > 0;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <TraceHeader
-        traceId={trace.traceId}
-        status={trace.status}
-        timestamp={trace.timestamp}
-        provider={trace.provider}
-        model={trace.modelRequested}
-      />
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-line bg-topbar px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            to={back.to}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12.5px] text-fg-4 no-underline transition-colors hover:bg-hover hover:text-fg"
+          >
+            {back.label}
+          </Link>
+          <span className="h-4 w-px shrink-0 bg-line-strong" />
+          <span
+            title={trace.traceId}
+            className="truncate font-mono text-[12.5px] text-fg-3"
+          >
+            {shortId}
+          </span>
+          <span
+            className="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold capitalize"
+            style={{
+              background:
+                trace.status === "error"
+                  ? "var(--red-tint-2)"
+                  : "var(--green-tint)",
+              color: trace.status === "error" ? "var(--red)" : "var(--green)",
+            }}
+          >
+            <StatusDot status={trace.status} />
+            {trace.status}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={copyTraceId}
+          className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-line-strong bg-surface-2 px-2.5 py-1.5 text-xs text-fg-4 transition-colors hover:bg-hover hover:text-fg"
+        >
+          <svg
+            className="h-3 w-3"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 12h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z" />
+          </svg>
+          {copied ? "Copied" : "Copy ID"}
+        </button>
+      </header>
 
-      <div className="flex-1 overflow-auto p-6">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <TraceMetadata trace={trace} />
-
-          {trace.spans && trace.spans.length > 0 && (
-            <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-              <h3 className="text-xs text-neutral-500 uppercase tracking-wide mb-4">
-                Timeline
-              </h3>
-              <TraceSpanTree spans={trace.spans} />
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="mx-auto max-w-[1180px] p-6">
+          <section className="mb-4 rounded-2xl border border-line bg-surface p-5">
+            <h1 className="mb-1.5 text-[22px] font-semibold tracking-[-0.022em] text-fg">
+              {trace.summary || "Trace detail"}
+            </h1>
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-dim">
+              <span className="rounded-md bg-fill px-1.5 py-0.5 font-semibold text-fg-4">
+                {sourceName(trace.source)}
+              </span>
+              <span className="font-mono">
+                {trace.modelUsed ?? trace.modelRequested ?? "No model"}
+              </span>
+              <span>·</span>
+              <span>{fmtRel(trace.timestamp)}</span>
+              {trace.errorService ? (
+                <>
+                  <span>·</span>
+                  <span className="text-red-text">
+                    Failed in {trace.errorService}
+                  </span>
+                </>
+              ) : null}
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <SummaryMetric
+                label="Latency"
+                value={fmtLatency(trace.latencyMs)}
+              />
+              <SummaryMetric label="Spans" value={String(trace.spanCount)} />
+              <SummaryMetric label="Tokens" value={fmtTokens(totalTokens)} />
+              <SummaryMetric label="Cost" value={fmtCost(trace.costCents)} />
+              <SummaryMetric
+                label="Status"
+                value={trace.status}
+                tone={trace.status === "error" ? "var(--red)" : "var(--green)"}
+              />
+            </div>
+          </section>
 
-          {trace.metadata && Object.keys(trace.metadata).length > 0 && (
-            <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-              <h3 className="text-xs text-neutral-500 uppercase tracking-wide mb-4">
-                Custom Metadata
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {Object.entries(trace.metadata).map(([key, value]) => (
-                  <div key={key}>
-                    <dt className="text-xs text-neutral-500 mb-1">{key}</dt>
-                    <dd className="text-sm text-neutral-100 font-mono">
-                      {typeof value === "string" ? value : JSON.stringify(value)}
-                    </dd>
+          <div className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+            <div className="flex min-w-0 flex-col gap-4">
+              <section
+                className="rounded-2xl p-5"
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <h3 className="mb-3.5 text-[12.5px] font-semibold text-fg-3">
+                  Span timeline
+                </h3>
+                <TraceSpanTree
+                  spans={spans}
+                  activeSpanId={activeSpanId}
+                  onSelect={setActiveSpanId}
+                />
+              </section>
+
+              {(trace.requestBody != null ||
+                trace.responseBody != null ||
+                trace.error != null) && (
+                <section
+                  className="rounded-2xl p-5"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-[12.5px] font-semibold text-fg-3">
+                      {trace.status === "error" && trace.error != null
+                        ? "Error"
+                        : "Request / response"}
+                    </h3>
+                    <SegmentedControl
+                      ariaLabel="Request and response format"
+                      value={ioFormat}
+                      onChange={(value) => {
+                        setIoFormat(value);
+                        setTraceUiPref("ioFormat", value);
+                      }}
+                      options={[
+                        { value: "chat", label: "Chat" },
+                        { value: "json", label: "JSON" },
+                      ]}
+                    />
                   </div>
-                ))}
-              </div>
+                  {showChat ? (
+                    <ChatBubbles bubbles={chatBubbles} />
+                  ) : (
+                    <JsonBlock value={payload} maxHeight="280px" />
+                  )}
+                </section>
+              )}
             </div>
-          )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <JsonViewer data={trace.requestBody || {}} title="Request" />
-            {trace.status === "error" && trace.error ? (
-              <JsonViewer data={trace.error} title="Error" />
-            ) : (
-              <JsonViewer data={trace.responseBody || {}} title="Response" />
-            )}
+            <div className="min-h-0 lg:sticky lg:top-0 lg:self-start">
+              <SpanDetailPanel span={activeSpan} />
+            </div>
           </div>
         </div>
       </div>

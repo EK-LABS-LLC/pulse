@@ -2,10 +2,12 @@ import type { ApiAgentSessionSummary } from "./apiClient";
 
 export interface AgentSessionSummary {
   sessionId: string;
+  agentName: string;
   displayName: string;
   subtitle: string;
   timestamp: string;
   status: "success" | "error";
+  errorCount: number;
   durationMs: number;
   totalSpans: number;
   traceCount: number;
@@ -60,10 +62,11 @@ export function summarizeApiAgentSession(
   const sourceLabel = sources.map(formatAgentSource).join(" / ") || "Unknown";
   const shortId = shortSessionId(session.sessionId);
   const folderName = pathBaseName(session.cwd);
+  const agentName = session.agentName || sourceLabel;
   const displayName = folderName
     ? `Session in ${folderName}`
-    : session.agentName
-      ? session.agentName
+    : agentName
+      ? agentName
       : `Session ${shortId}`;
   const subtitleParts = [
     sourceLabel,
@@ -74,10 +77,12 @@ export function summarizeApiAgentSession(
 
   return {
     sessionId: session.sessionId,
+    agentName,
     displayName,
     subtitle: subtitleParts.join(" / "),
     timestamp: session.lastTimestamp,
     status: session.status,
+    errorCount: session.errorCount,
     durationMs: session.durationMs,
     totalSpans: session.totalSpans,
     traceCount: session.traceCount,

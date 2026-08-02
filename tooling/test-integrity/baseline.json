@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "artifact_count": 79,
-  "aggregate_sha256": "72179a1666cdcc04d7b8e873f23bbbcf23005e1560ac2bb2bae55cea8ee40e38",
+  "artifact_count": 80,
+  "aggregate_sha256": "b76347bb068a3c3866343d6ef602919a79a6ee6ef4456532770f410727f91bb8",
   "artifacts": [
     {
       "kind": "cli-cargo-test",
@@ -427,8 +427,8 @@
       "kind": "server-bun-test",
       "path": "apps/server/tests/analytics.test.ts",
       "mode": "100644",
-      "bytes": 6631,
-      "sha256": "5a4d39794d7f255924fba67d9b20076b774f114661dfd8e5e07980a0fcb6f743"
+      "bytes": 8423,
+      "sha256": "493e2e42ed3e5ed44ccfcf27b4fdb7f4b701fa6a6182e6a02c44dd1fd304d07e"
     },
     {
       "kind": "server-bun-test",
@@ -534,6 +534,13 @@
       "mode": "100644",
       "bytes": 7533,
       "sha256": "c3a31cfa0cd22912233a343b8eebb8204a303925587f4f69ed9bd8b676393787"
+    },
+    {
+      "kind": "typescript-bun-test",
+      "path": "sdks/typescript/tests/record.test.ts",
+      "mode": "100644",
+      "bytes": 3046,
+      "sha256": "d236238a7d1feb18c6385f32befa3faefb81b08b399348d23691b661f8f66c68"
     },
     {
       "kind": "typescript-bun-test",

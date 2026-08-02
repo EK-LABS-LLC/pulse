@@ -1,6 +1,76 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Trace } from "../../lib/apiClient";
+import { StatusDot } from "../ui/StatusDot";
+import { sourceLabel, sourceName } from "../../lib/sources";
+import { fmtCost, fmtLatency, fmtTokens } from "../../lib/format";
+import type { TraceRowDensity } from "../../lib/traceUiPrefs";
+
+function latencyColor(ms: number, isError: boolean): string {
+  if (isError) return "var(--red)";
+  if (ms < 1500) return "var(--green)";
+  if (ms < 4500) return "var(--blue)";
+  return "var(--orange)";
+}
+
+function MeterCell({
+  label,
+  pct,
+  color,
+}: {
+  label: string;
+  pct: number;
+  color: string;
+}) {
+  return (
+    <div className="flex min-w-[92px] flex-col gap-1">
+      <span className="text-sm tabular-nums" style={{ color: "var(--text-3)" }}>
+        {label}
+      </span>
+      <span
+        className="block h-[3px] w-full overflow-hidden rounded-full"
+        style={{ background: "var(--track)" }}
+      >
+        <span
+          className="block h-full rounded-full"
+          style={{ width: `${pct.toFixed(0)}%`, background: color }}
+        />
+      </span>
+    </div>
+  );
+}
+
+function ServiceCell({ trace }: { trace: Trace }) {
+  const services = trace.services ?? [];
+  const label =
+    services.length === 0
+      ? "—"
+      : services.length === 1
+        ? services[0]
+        : `${services.length} services`;
+  const failed = trace.errorService;
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span
+        className="max-w-[140px] truncate text-sm"
+        style={{ color: services.length ? "var(--text-3)" : "var(--faint)" }}
+        title={services.join(", ")}
+      >
+        {label}
+      </span>
+      {failed && (
+        <span
+          className="max-w-[140px] truncate text-[11px]"
+          style={{ color: "var(--red-text)" }}
+          title={`First failure in ${failed}`}
+        >
+          {failed}
+        </span>
+      )}
+    </div>
+  );
+}
 
 interface PaginationProps {
   page: number;
@@ -12,6 +82,7 @@ interface PaginationProps {
 
 interface TracesTableProps {
   traces: Trace[];
+  rowDensity?: TraceRowDensity;
   onRowClick?: (trace: Trace) => void;
   pagination?: PaginationProps;
 }
@@ -86,32 +157,6 @@ const getRelativeTime = (date: Date) => {
     return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
   return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
 };
-
-const formatLatency = (ms: number | null | undefined) => {
-  if (ms === null || ms === undefined) return "--";
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(2)}s`;
-};
-
-const formatCost = (cents: number | null | undefined) => {
-  if (cents === null || cents === undefined) return "--";
-  return `$${(cents / 100).toFixed(4)}`;
-};
-
-const formatTokens = (tokens: number | null | undefined) => {
-  if (tokens === null || tokens === undefined) return "--";
-  return tokens.toLocaleString();
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-  claude_code: "Claude Code",
-  codex: "Codex",
-  opencode: "OpenCode",
-  openclaw: "OpenClaw",
-  sdk: "SDK",
-};
-
-const sourceLabel = (source: string) => SOURCE_LABELS[source] ?? source;
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 
@@ -285,6 +330,7 @@ function SortableHeader({
 
 export default function TracesTable({
   traces,
+  rowDensity = "rich",
   onRowClick,
   pagination,
 }: TracesTableProps) {
@@ -335,6 +381,9 @@ export default function TracesTable({
     return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
   });
 
+  const maxLatency = Math.max(0, ...traces.map((t) => t.latencyMs ?? 0));
+  const rowPadding = rowDensity === "minimal" ? "py-1.5" : "py-2.5";
+
   const handleRowClick = (trace: Trace) => {
     setSelectedId(trace.traceId);
     if (onRowClick) {
@@ -369,6 +418,9 @@ export default function TracesTable({
               Summary
             </th>
             <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
+              Service
+            </th>
+            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
               Model
             </th>
             <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
@@ -381,17 +433,7 @@ export default function TracesTable({
                 sortField={sortField}
                 sortDirection={sortDirection}
               >
-                Input
-              </SortableHeader>
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              <SortableHeader
-                field="outputTokens"
-                onSort={handleSort}
-                sortField={sortField}
-                sortDirection={sortDirection}
-              >
-                Output
+                Tokens
               </SortableHeader>
             </th>
             <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
@@ -415,9 +457,6 @@ export default function TracesTable({
               </SortableHeader>
             </th>
             <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              Status
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
               Session
             </th>
           </tr>
@@ -427,94 +466,119 @@ export default function TracesTable({
             const { display, relative } = formatTimestamp(trace.timestamp);
             const isError = trace.status === "error";
             const isSelected = selectedId === trace.traceId;
+            const totalTokens =
+              (trace.inputTokens ?? 0) + (trace.outputTokens ?? 0);
+            const model = trace.modelUsed ?? trace.modelRequested;
 
             return (
               <tr
                 key={trace.traceId}
                 onClick={() => handleRowClick(trace)}
-                className={`
-                  border-b border-neutral-800 cursor-pointer transition-colors
-                  ${isError ? "bg-error/5 hover:bg-error/[0.08]" : "bg-neutral-900 hover:bg-neutral-850"}
-                  ${isSelected ? "bg-accent/[0.08]" : ""}
-                `}
+                className="cursor-pointer border-b transition-colors"
+                style={{
+                  borderColor: "var(--border-soft)",
+                  background: isSelected
+                    ? "var(--blue-tint)"
+                    : isError
+                      ? "var(--red-tint)"
+                      : "var(--surface)",
+                }}
               >
-                <td className="py-2.5 px-4">
-                  <span className="text-xs px-1.5 py-0.5 bg-neutral-800 text-neutral-400 rounded">
-                    {sourceLabel(trace.source)}
-                  </span>
+                <td className={`px-4 ${rowPadding}`}>
+                  <div className="flex items-center gap-2">
+                    <StatusDot status={trace.status} />
+                    <span
+                      className="rounded px-1.5 py-0.5 text-[11px] font-medium"
+                      style={{
+                        background: "var(--fill)",
+                        color: "var(--text-4)",
+                      }}
+                      title={sourceName(trace.source)}
+                    >
+                      {sourceLabel(trace.source)}
+                    </span>
+                  </div>
                 </td>
-                <td className="py-2.5 px-4">
-                  <span className="text-sm font-mono text-accent/80 truncate max-w-[100px] inline-block">
-                    {trace.traceId.length > 12
-                      ? `${trace.traceId.slice(0, 12)}`
-                      : trace.traceId}
-                  </span>
-                </td>
-                <td className="py-2.5 px-4">
-                  <div className="text-sm">{display}</div>
-                  <div className="text-xs text-neutral-500">{relative}</div>
-                </td>
-                <td className="py-2.5 px-4">
+                <td className={`px-4 ${rowPadding}`}>
                   <span
-                    className="text-sm text-neutral-300 truncate max-w-[280px] inline-block"
+                    className="inline-block max-w-[100px] truncate font-mono text-sm"
+                    style={{ color: "var(--blue)" }}
+                  >
+                    {trace.traceId.slice(0, 12)}
+                  </span>
+                </td>
+                <td className={`px-4 ${rowPadding}`}>
+                  <div className="text-sm whitespace-nowrap">{display}</div>
+                  {rowDensity === "rich" && (
+                    <div className="text-xs" style={{ color: "var(--dim)" }}>
+                      {relative}
+                    </div>
+                  )}
+                </td>
+                <td className={`px-4 ${rowPadding}`}>
+                  <span
+                    className="inline-block max-w-[280px] truncate text-sm"
+                    style={{ color: "var(--text-3)" }}
                     title={trace.summary}
                   >
                     {trace.summary}
                   </span>
                 </td>
-                <td className="py-2.5 px-4">
+                <td className={`px-4 ${rowPadding}`}>
+                  <ServiceCell trace={trace} />
+                </td>
+                <td className={`px-4 ${rowPadding}`}>
                   <span
-                    className="text-sm truncate max-w-[120px] inline-block"
-                    title={trace.modelRequested ?? undefined}
+                    className="inline-block max-w-[120px] truncate text-sm"
+                    title={model ?? undefined}
+                    style={{ color: "var(--text-4)" }}
                   >
-                    {trace.modelRequested == null ? "--" : trace.modelRequested}
+                    {model ?? "—"}
                   </span>
                 </td>
-                <td className="py-2.5 px-4">
-                  <span className="text-sm text-neutral-400">
+                <td className={`px-4 ${rowPadding}`}>
+                  <span className="text-sm" style={{ color: "var(--text-4)" }}>
                     {trace.spanCount}
                   </span>
                 </td>
-                <td className="py-2.5 px-4">
-                  <span className="text-sm text-neutral-400">
-                    {formatTokens(trace.inputTokens)}
+                <td className={`px-4 ${rowPadding}`}>
+                  <MeterCell
+                    label={fmtTokens(totalTokens)}
+                    pct={Math.min((totalTokens / 7000) * 100, 100)}
+                    color="var(--teal)"
+                  />
+                </td>
+                <td className={`px-4 ${rowPadding}`}>
+                  <MeterCell
+                    label={fmtLatency(trace.latencyMs)}
+                    pct={
+                      maxLatency > 0
+                        ? Math.min((trace.latencyMs / maxLatency) * 100, 100)
+                        : 0
+                    }
+                    color={latencyColor(trace.latencyMs, isError)}
+                  />
+                </td>
+                <td className={`px-4 ${rowPadding}`}>
+                  <span
+                    className="text-sm tabular-nums"
+                    style={{ color: "var(--text-4)" }}
+                  >
+                    {fmtCost(trace.costCents)}
                   </span>
                 </td>
-                <td className="py-2.5 px-4">
-                  <span className="text-sm text-neutral-400">
-                    {isError ? "--" : formatTokens(trace.outputTokens)}
-                  </span>
-                </td>
-                <td className="py-2.5 px-4">
-                  <span className="text-sm">
-                    {isError ? "--" : formatLatency(trace.latencyMs)}
-                  </span>
-                </td>
-                <td className="py-2.5 px-4">
-                  <span className="text-sm">
-                    {isError ? "--" : formatCost(trace.costCents)}
-                  </span>
-                </td>
-                <td className="py-2.5 px-4">
-                  {isError ? (
-                    <span className="text-xs px-1.5 py-0.5 bg-error/10 text-error rounded">
-                      ERR
-                    </span>
-                  ) : (
-                    <span className="text-xs px-1.5 py-0.5 bg-success/10 text-success rounded">
-                      OK
-                    </span>
-                  )}
-                </td>
-                <td className="py-2.5 px-4">
+                <td className={`px-4 ${rowPadding}`}>
                   {trace.sessionId ? (
-                    <span className="text-xs font-mono text-neutral-500 truncate max-w-[80px] inline-block">
-                      {trace.sessionId.length > 10
-                        ? `${trace.sessionId.slice(0, 10)}...`
-                        : trace.sessionId}
+                    <span
+                      className="inline-block max-w-[80px] truncate font-mono text-xs"
+                      style={{ color: "var(--dim)" }}
+                    >
+                      {trace.sessionId.slice(0, 10)}
                     </span>
                   ) : (
-                    <span className="text-xs text-neutral-600">--</span>
+                    <span className="text-xs" style={{ color: "var(--faint)" }}>
+                      —
+                    </span>
                   )}
                 </td>
               </tr>

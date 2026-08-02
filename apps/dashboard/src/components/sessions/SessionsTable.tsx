@@ -1,56 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import {
-  formatAgentSource,
-  type AgentSessionSummary,
-} from "../../lib/agentSessions";
+import type { AgentSessionSummary } from "../../lib/agentSessions";
+import { fmtCost, fmtRel, fmtTokens } from "../../lib/format";
 
 interface SessionsTableProps {
   sessions: AgentSessionSummary[];
   returnTo?: string;
 }
 
-function formatTimeAgo(timestamp: string): string {
-  const now = new Date();
-  const time = new Date(timestamp);
-  const diffMs = now.getTime() - time.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return time.toLocaleDateString();
-}
-
-function formatDuration(ms: number): string {
-  if (ms >= 3600000) {
-    const hours = Math.floor(ms / 3600000);
-    const mins = Math.floor((ms % 3600000) / 60000);
-    return `${hours}h ${mins}m`;
-  }
-  if (ms >= 60000) {
-    const mins = Math.floor(ms / 60000);
-    const secs = Math.floor((ms % 60000) / 1000);
-    return `${mins}m ${secs}s`;
-  }
-  if (ms >= 1000) {
-    return `${(ms / 1000).toFixed(1)}s`;
-  }
-  return `${ms}ms`;
-}
-
-function formatTokens(inputTokens: number, outputTokens: number): string {
-  const total = inputTokens + outputTokens;
-  if (total === 0) return "--";
-  return Intl.NumberFormat("en-US", { notation: "compact" }).format(total);
-}
-
-function formatCost(cents: number): string {
-  if (cents === 0) return "--";
-  return `$${(cents / 100).toFixed(2)}`;
-}
+const GRID_COLUMNS =
+  "120px minmax(160px, 1.3fr) minmax(120px, 1fr) 70px 64px 76px 90px";
 
 export default function SessionsTable({
   sessions,
@@ -58,142 +16,159 @@ export default function SessionsTable({
 }: SessionsTableProps) {
   const navigate = useNavigate();
 
-  const handleRowClick = (sessionId: string) => {
-    navigate(`/dashboard/sessions/${encodeURIComponent(sessionId)}`, {
-      state: { returnTo: returnTo ?? "/dashboard/sessions" },
+  const handleRowClick = (session: AgentSessionSummary) => {
+    navigate(`/dashboard/sessions/${encodeURIComponent(session.sessionId)}`, {
+      state: {
+        returnTo: returnTo ?? "/dashboard/sessions",
+        agentName: session.agentName,
+        cwd: session.cwd,
+      },
     });
   };
 
   if (sessions.length === 0) {
     return (
-      <div className="bg-neutral-900 border border-neutral-800 rounded p-8 text-center">
-        <p className="text-sm text-neutral-500">No sessions found</p>
+      <div className="rounded-2xl border border-line bg-surface p-8 text-center">
+        <p className="text-sm text-dim">No sessions found</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded overflow-x-auto">
-      <table className="w-full min-w-[1050px]">
-        <thead>
-          <tr className="border-b border-neutral-800">
-            <th className="text-left py-3 px-4 text-xs font-medium text-neutral-500">
-              Session
-            </th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-neutral-500">
-              Source
-            </th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-neutral-500">
-              Time
-            </th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-neutral-500">
-              Status
-            </th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-neutral-500">
-              Duration
-            </th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-neutral-500">
-              Traces
-            </th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-neutral-500">
-              Spans
-            </th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-neutral-500">
-              Tokens
-            </th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-neutral-500">
-              Cost
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sessions.map((session) => (
-            <tr
-              key={session.sessionId}
-              onClick={() => handleRowClick(session.sessionId)}
-              className="border-b border-neutral-800 cursor-pointer hover:bg-neutral-850 transition-colors"
+    <div
+      role="table"
+      aria-label="Sessions"
+      className="overflow-x-auto rounded-2xl border border-line bg-surface"
+    >
+      <div className="min-w-[880px]">
+        <div
+          role="row"
+          className="grid gap-2.5 border-b border-line px-5 py-2.5"
+          style={{ gridTemplateColumns: GRID_COLUMNS }}
+        >
+          {[
+            "Session",
+            "Agent · directory",
+            "Models",
+            "Traces",
+            "Errors",
+            "Cost",
+            "Last active",
+          ].map((header, index) => (
+            <span
+              key={header}
+              role="columnheader"
+              className={`text-[11.5px] font-semibold text-dim ${
+                index >= 3 ? "text-right" : ""
+              }`}
             >
-              <td className="py-3 px-4">
-                <div className="min-w-0">
+              {header}
+            </span>
+          ))}
+        </div>
+
+        <div role="rowgroup">
+          {sessions.map((session) => {
+            const isError =
+              session.status === "error" || session.errorCount > 0;
+            const totalTokens = session.inputTokens + session.outputTokens;
+
+            return (
+              <div
+                key={session.sessionId}
+                role="row"
+                tabIndex={0}
+                onClick={() => handleRowClick(session)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleRowClick(session);
+                  }
+                }}
+                className="grid cursor-pointer items-center gap-2.5 border-b border-line-soft px-5 py-[13px] transition-colors last:border-b-0 hover:bg-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-blue"
+                style={{
+                  gridTemplateColumns: GRID_COLUMNS,
+                  background: isError ? "var(--red-tint)" : undefined,
+                  boxShadow: isError ? "inset 2px 0 0 var(--red)" : undefined,
+                }}
+              >
+                <span
+                  role="cell"
+                  className="truncate font-mono text-xs text-fg-3"
+                  title={session.sessionId}
+                >
+                  {session.shortId}
+                </span>
+
+                <div role="cell" className="min-w-0">
                   <div
-                    className="text-sm font-medium text-neutral-200 truncate max-w-[360px]"
-                    title={session.displayName}
+                    className="truncate text-[13px] text-fg"
+                    title={session.agentName}
                   >
-                    {session.displayName}
+                    {session.agentName}
                   </div>
-                  <div className="text-xs text-neutral-500 truncate max-w-[360px]">
-                    {session.subtitle}
+                  <div
+                    className="mt-0.5 truncate font-mono text-[11px] text-faint"
+                    title={session.cwd}
+                  >
+                    {session.cwd || "—"}
                   </div>
                 </div>
-              </td>
-              <td className="py-3 px-4">
-                <div className="flex flex-wrap gap-1">
-                  {session.sources.length > 0 ? (
-                    session.sources.map((source) => (
-                      <span
-                        key={source}
-                        className="text-xs px-1.5 py-0.5 bg-neutral-800 text-neutral-400 rounded"
-                      >
-                        {formatAgentSource(source)}
-                      </span>
-                    ))
+
+                <div
+                  role="cell"
+                  className="flex min-w-0 flex-wrap items-center gap-1.5"
+                >
+                  {session.model ? (
+                    <span
+                      className="max-w-full truncate rounded-md bg-fill px-1.5 py-0.5 font-mono text-[10.5px] text-fg-4"
+                      title={`${session.model} · ${fmtTokens(totalTokens)} tokens`}
+                    >
+                      {session.model}
+                    </span>
                   ) : (
-                    <span className="text-xs text-neutral-600">--</span>
+                    <span className="text-xs text-faint">—</span>
                   )}
                 </div>
-              </td>
-              <td className="py-3 px-4">
-                <span className="text-sm text-neutral-500">
-                  {formatTimeAgo(session.timestamp)}
-                </span>
-              </td>
-              <td className="py-3 px-4">
-                {session.status === "error" ? (
-                  <span className="text-xs px-1.5 py-0.5 bg-rose-500/10 text-rose-400 rounded font-medium">
-                    Error
-                  </span>
-                ) : (
-                  <span className="text-xs px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded font-medium">
-                    OK
-                  </span>
-                )}
-              </td>
-              <td className="py-3 px-4">
-                <span className="text-sm text-neutral-300">
-                  {formatDuration(session.durationMs)}
-                </span>
-              </td>
-              <td className="py-3 px-4">
-                <span className="text-sm text-neutral-300">
+
+                <span
+                  role="cell"
+                  className="text-right text-[12.5px] tabular-nums text-fg"
+                >
                   {session.traceCount.toLocaleString()}
                 </span>
-              </td>
-              <td className="py-3 px-4">
-                <span className="text-sm text-neutral-300">
-                  {session.totalSpans.toLocaleString()}
+
+                <span role="cell" className="text-right">
+                  <span
+                    className="inline-flex min-w-7 justify-center rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums"
+                    style={{
+                      background: isError ? "var(--red-tint-2)" : "var(--fill)",
+                      color: isError ? "var(--red-text)" : "var(--faint)",
+                    }}
+                  >
+                    {session.errorCount.toLocaleString()}
+                  </span>
                 </span>
-              </td>
-              <td className="py-3 px-4">
+
                 <span
-                  className="text-sm text-neutral-300"
-                  title={
-                    session.inputTokens + session.outputTokens > 0
-                      ? `${session.inputTokens.toLocaleString()} input / ${session.outputTokens.toLocaleString()} output`
-                      : undefined
-                  }
+                  role="cell"
+                  className="text-right text-[12.5px] tabular-nums text-fg-3"
                 >
-                  {formatTokens(session.inputTokens, session.outputTokens)}
+                  {fmtCost(session.costCents)}
                 </span>
-              </td>
-              <td className="py-3 px-4">
-                <span className="text-sm text-neutral-300">
-                  {formatCost(session.costCents)}
+
+                <span
+                  role="cell"
+                  className="text-right text-xs text-faint"
+                  title={new Date(session.timestamp).toLocaleString()}
+                >
+                  {fmtRel(session.timestamp)}
                 </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

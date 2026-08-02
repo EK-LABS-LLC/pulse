@@ -71,6 +71,16 @@ export interface LatencyPercentiles {
 }
 
 /**
+ * Per-service request, error and latency rollup.
+ */
+export interface ServiceStats {
+  service: string;
+  requests: number;
+  errors: number;
+  avgDurationMs: number;
+}
+
+/**
  * Cost over time by provider data point.
  */
 export interface CostOverTimeByProvider {
@@ -591,20 +601,34 @@ export async function getSpanCountsOverTime(
   }));
 }
 
+/**
+ * Average wall-clock span of a session, measured from its own spans.
+ *
+ * Reading `durationMs` off a `session` span only works for sources that emit
+ * one; SDK and agent traffic often does not, which reported every session as
+ * zero. Deriving the boundaries works for any source.
+ */
 export async function getAvgSessionSpanDuration(
   db: Database,
   projectId: string,
   dateRange: DateRange,
 ): Promise<number> {
-  const result = await db
-    .select({ avgDuration: avg(spans.durationMs) })
+  const sessionSpans = db
+    .select({
+      sessionId: spans.sessionId,
+      durationMs:
+        sql<number>`MAX(${spans.timestamp} + COALESCE(${spans.durationMs}, 0)) - MIN(${spans.timestamp})`.as(
+          "session_duration_ms",
+        ),
+    })
     .from(spans)
-    .where(
-      and(
-        buildSpanDateConditions(projectId, dateRange),
-        eq(spans.kind, "session"),
-      ),
-    );
+    .where(buildSpanDateConditions(projectId, dateRange))
+    .groupBy(spans.sessionId)
+    .as("session_spans");
+
+  const result = await db
+    .select({ avgDuration: avg(sessionSpans.durationMs) })
+    .from(sessionSpans);
 
   return Number(result[0]?.avgDuration ?? 0);
 }
@@ -635,5 +659,41 @@ export async function getTopTools(
   return result.map((row: any) => ({
     name: row.name ?? "unknown",
     count: row.count,
+  }));
+}
+
+/**
+ * Rolls spans up by service. Errors stay attributed to the service whose span
+ * carried the failing status, rather than to the trace's entry point.
+ */
+export async function getServiceStats(
+  db: Database,
+  projectId: string,
+  dateRange: DateRange,
+  limit: number = 8,
+): Promise<ServiceStats[]> {
+  const result = await db
+    .select({
+      service: spans.service,
+      requests: count(),
+      errors: sql<number>`SUM(CASE WHEN ${spans.status} = 'error' THEN 1 ELSE 0 END)`,
+      avgDurationMs: avg(spans.durationMs),
+    })
+    .from(spans)
+    .where(
+      and(
+        buildSpanDateConditions(projectId, dateRange),
+        isNotNull(spans.service),
+      ),
+    )
+    .groupBy(spans.service)
+    .orderBy(desc(count()))
+    .limit(limit);
+
+  return (result as any[]).map((row) => ({
+    service: row.service ?? "unknown",
+    requests: Number(row.requests ?? 0),
+    errors: Number(row.errors ?? 0),
+    avgDurationMs: Number(row.avgDurationMs ?? 0),
   }));
 }

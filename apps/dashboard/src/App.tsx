@@ -1,8 +1,9 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProjectProvider } from "./contexts/ProjectContext";
 import { ToastProvider } from "./contexts/ToastContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { Layout } from "./components/layout/Layout";
 import { ProtectedRoute } from "./components/layout/ProtectedRoute";
 import { queryClient } from "./lib/queryClient";
@@ -13,7 +14,6 @@ import TraceDetail from "./pages/TraceDetail";
 import Sessions from "./pages/Sessions";
 import SessionDetail from "./pages/SessionDetail";
 import Analytics from "./pages/Analytics";
-import ApiKeys from "./pages/ApiKeys";
 import Settings from "./pages/Settings";
 import Account from "./pages/Account";
 
@@ -34,42 +34,49 @@ function NotFound() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ProjectProvider>
-          <ToastProvider>
-            <BrowserRouter>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Login />} />
-                <Route path="/login" element={<Login />} />
+      <ThemeProvider>
+        <AuthProvider>
+          <ProjectProvider>
+            <ToastProvider>
+              <BrowserRouter>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<Login />} />
+                  <Route path="/login" element={<Login />} />
 
-                {/* Protected dashboard routes */}
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <Layout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route index element={<Dashboard />} />
-                  <Route path="traces" element={<Traces />} />
-                  <Route path="traces/:id" element={<TraceDetail />} />
-                  <Route path="sessions" element={<Sessions />} />
-                  <Route path="sessions/:id" element={<SessionDetail />} />
-                  <Route path="analytics" element={<Analytics />} />
-                  <Route path="api-keys" element={<ApiKeys />} />
-                  <Route path="settings" element={<Settings />} />
-                  <Route path="account" element={<Account />} />
-                </Route>
+                  {/* Protected dashboard routes */}
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <Layout />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<Dashboard />} />
+                    <Route path="traces" element={<Traces />} />
+                    <Route path="traces/:id" element={<TraceDetail />} />
+                    <Route path="sessions" element={<Sessions />} />
+                    <Route path="sessions/:id" element={<SessionDetail />} />
+                    <Route path="analytics" element={<Analytics />} />
+                    <Route
+                      path="api-keys"
+                      element={
+                        <Navigate to="/dashboard/settings#api-keys" replace />
+                      }
+                    />
+                    <Route path="settings" element={<Settings />} />
+                    <Route path="account" element={<Account />} />
+                  </Route>
 
-                {/* Catch-all for 404 */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </ToastProvider>
-        </ProjectProvider>
-      </AuthProvider>
+                  {/* Catch-all for 404 */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </ToastProvider>
+          </ProjectProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

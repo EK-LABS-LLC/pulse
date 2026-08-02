@@ -7,7 +7,9 @@
  *
  *   bun run scripts/ingest-dev-data.ts
  *
- * Env: PULSE_BASE_URL, PULSE_EMAIL, PULSE_PASSWORD, PULSE_PROJECTS (1-3).
+ * Env: PULSE_BASE_URL, PULSE_EMAIL, PULSE_PASSWORD, PULSE_PROJECTS (1-3),
+ * PULSE_DAYS_BACK (1-30), PULSE_SERVICES (1-5),
+ * PULSE_SESSIONS_PER_SERVICE (1-50).
  */
 import {
   initPulse,
@@ -23,13 +25,32 @@ const PROJECT_COUNT = Math.min(
   Math.max(Number(process.env.PULSE_PROJECTS ?? 2), 1),
   3,
 );
+const DAYS_BACK = Math.min(
+  Math.max(Number(process.env.PULSE_DAYS_BACK ?? 30), 1),
+  30,
+);
+const SERVICE_COUNT = Math.min(
+  Math.max(Number(process.env.PULSE_SERVICES ?? 4), 1),
+  5,
+);
+const SESSIONS_PER_SERVICE = Math.min(
+  Math.max(Number(process.env.PULSE_SESSIONS_PER_SERVICE ?? 24), 1),
+  50,
+);
 
 interface Project {
   name: string;
   projectId: string;
   apiKey: string;
-  serviceName: string;
 }
+
+const SERVICES = [
+  "pulse-api",
+  "checkout-api",
+  "payments-worker",
+  "search-api",
+  "notification-worker",
+];
 
 const MODELS = [
   {
@@ -153,14 +174,13 @@ async function resolveProjects(cookie: string): Promise<Project[]> {
     0,
     PROJECT_COUNT,
   );
-  const services = ["pulse-api", "checkout-agent", "research-agent"];
 
   const existing = (await (
     await api("/dashboard/api/projects", {}, cookie)
   ).json()) as { projects: Array<{ id: string; name: string }> };
 
   const projects: Project[] = [];
-  for (const [index, name] of names.entries()) {
+  for (const name of names) {
     let projectId = existing.projects.find((p) => p.name === name)?.id;
     let apiKey: string | undefined;
 
@@ -192,7 +212,6 @@ async function resolveProjects(cookie: string): Promise<Project[]> {
       name,
       projectId,
       apiKey,
-      serviceName: services[index]!,
     });
   }
   return projects;
@@ -264,30 +283,46 @@ async function main() {
   console.log(`Ingesting through the SDK into ${projects.length} project(s)\n`);
 
   for (const project of projects) {
-    initPulse({
-      apiKey: project.apiKey,
-      apiUrl: BASE_URL,
-      serviceName: project.serviceName,
-      batchSize: 100,
-      flushInterval: 60000,
-    });
-
-    const sessions = between(4, 6);
+    const serviceNames = SERVICES.slice(0, SERVICE_COUNT);
+    let sessions = 0;
     let turns = 0;
-    for (let s = 0; s < sessions; s++) {
-      const sessionId = crypto.randomUUID();
-      let at = Date.now() - between(1, 7) * 86400000;
-      const turnCount = between(3, 7);
-      for (let t = 0; t < turnCount; t++) {
-        emitTurn(sessionId, at, rand() < 0.18);
-        at += between(30000, 600000);
-        turns++;
+
+    for (const serviceName of serviceNames) {
+      initPulse({
+        apiKey: project.apiKey,
+        apiUrl: BASE_URL,
+        serviceName,
+        batchSize: 100,
+        flushInterval: 60000,
+      });
+
+      for (let s = 0; s < SESSIONS_PER_SERVICE; s++) {
+        const sessionId = crypto.randomUUID();
+        const todaySessionCount = Math.ceil(SESSIONS_PER_SERVICE / 3);
+        const recentSessionCount = Math.ceil((SESSIONS_PER_SERVICE * 2) / 3);
+        const dayOffset =
+          DAYS_BACK === 1 || s < todaySessionCount
+            ? 0
+            : s < recentSessionCount
+              ? between(1, Math.min(6, DAYS_BACK - 1))
+              : between(0, DAYS_BACK - 1);
+        let at =
+          Date.now() - dayOffset * 86400000 - between(0, 23 * 60 * 60 * 1000);
+        const turnCount = between(3, 7);
+        const errorRate = 0.08 + (dayOffset % 5) * 0.035;
+        for (let t = 0; t < turnCount; t++) {
+          emitTurn(sessionId, at, rand() < errorRate);
+          at += between(30000, 600000);
+          turns++;
+        }
+        sessions++;
       }
+
+      await flush();
     }
 
-    await flush();
     console.log(
-      `  ${project.name.padEnd(16)} service=${project.serviceName.padEnd(16)} sessions=${sessions} turns=${turns}`,
+      `  ${project.name.padEnd(16)} services=${serviceNames.length} sessions=${sessions} turns=${turns} days=${DAYS_BACK}`,
     );
     console.log(`  ${" ".repeat(16)} ${project.projectId}`);
   }

@@ -10,6 +10,7 @@ const SQLITE_SPANS_TABLE_BODY = `(
     "timestamp" integer DEFAULT (cast((julianday('now') - 2440587.5)*86400000 as integer)) NOT NULL,
     "duration_ms" integer,
     "source" text NOT NULL,
+    "service" text,
     "kind" text NOT NULL,
     "event_type" text NOT NULL,
     "status" text NOT NULL,
@@ -40,6 +41,7 @@ const SQLITE_SPANS_INDEX_STATEMENTS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS "spans_project_trace_idx" ON "spans" ("project_id", "trace_id");`,
   `CREATE INDEX IF NOT EXISTS "spans_project_session_idx" ON "spans" ("project_id", "session_id");`,
   `CREATE INDEX IF NOT EXISTS "spans_project_kind_idx" ON "spans" ("project_id", "kind");`,
+  `CREATE INDEX IF NOT EXISTS "spans_project_service_idx" ON "spans" ("project_id", "service");`,
 ];
 
 const SQLITE_BOOTSTRAP_STATEMENTS: readonly string[] = [
@@ -106,6 +108,7 @@ const SQLITE_BOOTSTRAP_STATEMENTS: readonly string[] = [
   );`,
   `CREATE TABLE IF NOT EXISTS "spans" ${SQLITE_SPANS_TABLE_BODY};`,
   `ALTER TABLE "spans" ADD COLUMN "trace_id" text;`,
+  `ALTER TABLE "spans" ADD COLUMN "service" text;`,
   `ALTER TABLE "spans" ADD COLUMN "provider" text;`,
   `ALTER TABLE "spans" ADD COLUMN "model_used" text;`,
   `ALTER TABLE "spans" ADD COLUMN "input_tokens" integer;`,
@@ -200,6 +203,7 @@ const POSTGRES_BOOTSTRAP_STATEMENTS: readonly string[] = [
     "timestamp" timestamp with time zone DEFAULT now() NOT NULL,
     "duration_ms" integer,
     "source" text NOT NULL,
+    "service" text,
     "kind" text NOT NULL,
     "event_type" text NOT NULL,
     "status" text NOT NULL,
@@ -225,6 +229,7 @@ const POSTGRES_BOOTSTRAP_STATEMENTS: readonly string[] = [
     FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON UPDATE no action ON DELETE cascade
   );`,
   `ALTER TABLE "spans" ADD COLUMN IF NOT EXISTS "trace_id" text;`,
+  `ALTER TABLE "spans" ADD COLUMN IF NOT EXISTS "service" text;`,
   `ALTER TABLE "spans" ADD COLUMN IF NOT EXISTS "provider" text;`,
   `ALTER TABLE "spans" ADD COLUMN IF NOT EXISTS "model_used" text;`,
   `ALTER TABLE "spans" ADD COLUMN IF NOT EXISTS "input_tokens" integer;`,
@@ -253,6 +258,7 @@ const POSTGRES_BOOTSTRAP_STATEMENTS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS "spans_project_trace_idx" ON "spans" ("project_id", "trace_id");`,
   `CREATE INDEX IF NOT EXISTS "spans_project_session_idx" ON "spans" ("project_id", "session_id");`,
   `CREATE INDEX IF NOT EXISTS "spans_project_kind_idx" ON "spans" ("project_id", "kind");`,
+  `CREATE INDEX IF NOT EXISTS "spans_project_service_idx" ON "spans" ("project_id", "service");`,
   `CREATE TABLE IF NOT EXISTS "user_projects" (
     "id" text PRIMARY KEY NOT NULL,
     "user_id" text NOT NULL,

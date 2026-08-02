@@ -16,7 +16,14 @@ export enum Provider {
 
 export type TraceStatus = "success" | "error";
 export type SpanSource = "sdk";
-export type SpanKind = "llm_call" | "tool_use";
+export type SpanKind =
+  | "llm_call"
+  | "tool_use"
+  | "agent_run"
+  | "session"
+  | "user_prompt"
+  | "llm_response"
+  | "notification";
 
 export interface Trace {
   trace_id: string;
@@ -120,22 +127,25 @@ export interface PulseParams {
   pulseMetadata?: Record<string, unknown>;
 }
 
-export type ObservedOpenAI<T extends import("openai").default = import("openai").default> = Omit<
-  T,
-  "chat" | "responses"
-> & {
+export type ObservedOpenAI<
+  T extends import("openai").default = import("openai").default,
+> = Omit<T, "chat" | "responses"> & {
   chat: Omit<T["chat"], "completions"> & {
     completions: Omit<T["chat"]["completions"], "create"> & {
       create: {
         (
-          body: import("openai").default.ChatCompletionCreateParamsNonStreaming & PulseParams,
-          options?: import("openai").default.RequestOptions
+          body: import("openai").default.ChatCompletionCreateParamsNonStreaming &
+            PulseParams,
+          options?: import("openai").default.RequestOptions,
         ): Promise<import("openai").default.Chat.ChatCompletion>;
         (
-          body: import("openai").default.ChatCompletionCreateParamsStreaming & PulseParams,
-          options?: import("openai").default.RequestOptions
+          body: import("openai").default.ChatCompletionCreateParamsStreaming &
+            PulseParams,
+          options?: import("openai").default.RequestOptions,
         ): Promise<
-          import("openai/streaming").Stream<import("openai").default.Chat.ChatCompletionChunk>
+          import("openai/streaming").Stream<
+            import("openai").default.Chat.ChatCompletionChunk
+          >
         >;
       };
     };
@@ -143,12 +153,14 @@ export type ObservedOpenAI<T extends import("openai").default = import("openai")
   responses: Omit<T["responses"], "create"> & {
     create: {
       (
-        body: import("openai").default.Responses.ResponseCreateParamsNonStreaming & PulseParams,
-        options?: import("openai").default.RequestOptions
+        body: import("openai").default.Responses.ResponseCreateParamsNonStreaming &
+          PulseParams,
+        options?: import("openai").default.RequestOptions,
       ): Promise<import("openai").default.Responses.Response>;
       (
-        body: import("openai").default.Responses.ResponseCreateParamsStreaming & PulseParams,
-        options?: import("openai").default.RequestOptions
+        body: import("openai").default.Responses.ResponseCreateParamsStreaming &
+          PulseParams,
+        options?: import("openai").default.RequestOptions,
       ): Promise<
         import("openai/streaming").Stream<
           import("openai").default.Responses.ResponseStreamEvent
@@ -159,17 +171,20 @@ export type ObservedOpenAI<T extends import("openai").default = import("openai")
 };
 
 export type ObservedAnthropic<
-  T extends import("@anthropic-ai/sdk").default = import("@anthropic-ai/sdk").default,
+  T extends import("@anthropic-ai/sdk").default =
+    import("@anthropic-ai/sdk").default,
 > = Omit<T, "messages"> & {
   messages: Omit<T["messages"], "create"> & {
     create: {
       (
-        body: import("@anthropic-ai/sdk").default.MessageCreateParamsNonStreaming & PulseParams,
-        options?: import("@anthropic-ai/sdk").default.RequestOptions
+        body: import("@anthropic-ai/sdk").default.MessageCreateParamsNonStreaming &
+          PulseParams,
+        options?: import("@anthropic-ai/sdk").default.RequestOptions,
       ): Promise<import("@anthropic-ai/sdk").default.Message>;
       (
-        body: import("@anthropic-ai/sdk").default.MessageCreateParamsStreaming & PulseParams,
-        options?: import("@anthropic-ai/sdk").default.RequestOptions
+        body: import("@anthropic-ai/sdk").default.MessageCreateParamsStreaming &
+          PulseParams,
+        options?: import("@anthropic-ai/sdk").default.RequestOptions,
       ): Promise<
         import("@anthropic-ai/sdk/streaming").Stream<
           import("@anthropic-ai/sdk").default.RawMessageStreamEvent

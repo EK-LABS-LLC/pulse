@@ -7,14 +7,14 @@ interface ApiKeyCardProps {
   createdAt: string;
   lastUsedAt?: string;
   status: "active" | "never_used";
-  onCopy: (keyValue: string) => void;
-  onRevoke: (id: string) => void;
+  isNew?: boolean;
+  onCopy: (keyValue: string) => void | Promise<void>;
+  onRevoke: (id: string) => void | Promise<void>;
   onNameChange?: (id: string, newName: string) => void;
 }
 
 function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
+  return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -23,87 +23,49 @@ function formatDate(dateString: string): string {
 
 function formatLastUsed(dateString?: string): string {
   if (!dateString) return "Never used";
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-  return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const minutes = Math.floor(diffMs / 60_000);
+  const hours = Math.floor(diffMs / 3_600_000);
+  const days = Math.floor(diffMs / 86_400_000);
+  if (minutes < 1) return "Last used just now";
+  if (minutes < 60)
+    return `Last used ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  if (hours < 24) return `Last used ${hours} hour${hours === 1 ? "" : "s"} ago`;
+  return `Last used ${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-// Icons
 const CopyIcon = () => (
   <svg
-    className="w-4 h-4"
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    viewBox="0 0 24 24"
+    strokeWidth="1.8"
   >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={1.5}
-      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-    />
+    <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
   </svg>
 );
 
-const CheckIcon = () => (
+const EyeIcon = ({ hidden }: { hidden: boolean }) => (
   <svg
-    className="w-4 h-4"
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    viewBox="0 0 24 24"
+    strokeWidth="1.6"
   >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M5 13l4 4L19 7"
-    />
-  </svg>
-);
-
-const EyeIcon = () => (
-  <svg
-    className="w-4 h-4"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={1.5}
-      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-    />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={1.5}
-      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-    />
-  </svg>
-);
-
-const EyeOffIcon = () => (
-  <svg
-    className="w-4 h-4"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={1.5}
-      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-    />
+    {hidden ? (
+      <>
+        <path d="M2.5 12C3.7 7.9 7.5 5 12 5s8.3 2.9 9.5 7c-1.2 4.1-5 7-9.5 7S3.7 16.1 2.5 12z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ) : (
+      <>
+        <path d="M3 3l18 18M10.6 10.7a2 2 0 002.7 2.7M9.9 5.2A10 10 0 0112 5c4.5 0 8.3 2.9 9.5 7a10.7 10.7 0 01-2.1 3.8M6.2 6.2A10.3 10.3 0 002.5 12c1.2 4.1 5 7 9.5 7a10 10 0 004.1-.9" />
+      </>
+    )}
   </svg>
 );
 
@@ -114,110 +76,133 @@ export default function ApiKeyCard({
   createdAt,
   lastUsedAt,
   status,
+  isNew = false,
   onCopy,
   onRevoke,
   onNameChange,
 }: ApiKeyCardProps) {
-  const [isRevealed, setIsRevealed] = useState(false);
+  const [isRevealed, setIsRevealed] = useState(isNew);
   const [copied, setCopied] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(name);
 
+  const maskedKey = isRevealed
+    ? keyValue
+    : `${keyValue.slice(0, 7)}${"•".repeat(Math.max(8, keyValue.length - 11))}${keyValue.slice(-4)}`;
+
   const handleCopy = async () => {
-    onCopy(keyValue);
+    await onCopy(keyValue);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    window.setTimeout(() => setCopied(false), 2_000);
+  };
+
+  const handleRevoke = async () => {
+    if (!confirmRevoke) {
+      setConfirmRevoke(true);
+      return;
+    }
+    await onRevoke(id);
+    setConfirmRevoke(false);
   };
 
   const handleNameSave = () => {
-    if (editedName.trim() && editedName !== name && onNameChange) {
-      onNameChange(id, editedName.trim());
-    }
+    const nextName = editedName.trim();
+    if (nextName && nextName !== name) onNameChange?.(id, nextName);
+    else setEditedName(name);
     setIsEditingName(false);
   };
 
-  const handleNameKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleNameSave();
-    } else if (e.key === "Escape") {
-      setEditedName(name);
-      setIsEditingName(false);
-    }
-  };
-
-  // Mask the key, showing only first 7 chars and last 4
-  const maskedKey = isRevealed
-    ? keyValue
-    : `${keyValue.substring(0, 7)}${"*".repeat(Math.max(0, keyValue.length - 11))}${keyValue.slice(-4)}`;
-
   return (
-    <div className="flex items-center justify-between px-4 py-4 hover:bg-neutral-850 transition-colors">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3 mb-1">
+    <div className="border-t border-line-soft py-3">
+      {isNew && (
+        <div className="mb-2.5 rounded-[10px] border border-red-border bg-red-tint px-3 py-2 text-xs text-red-text">
+          Copy this key now — you won&apos;t be able to see it again.
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2">
           {isEditingName ? (
             <input
-              type="text"
-              value={editedName}
-              onChange={(e) => setEditedName(e.target.value)}
-              onBlur={handleNameSave}
-              onKeyDown={handleNameKeyDown}
               autoFocus
-              className="text-sm font-medium bg-neutral-950 border border-neutral-700 rounded px-2 py-0.5 focus:border-accent focus:outline-none"
+              value={editedName}
+              onChange={(event) => setEditedName(event.currentTarget.value)}
+              onBlur={handleNameSave}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") handleNameSave();
+                if (event.key === "Escape") {
+                  setEditedName(name);
+                  setIsEditingName(false);
+                }
+              }}
+              className="w-40 rounded-lg border border-line-strong bg-surface-2 px-2 py-1 text-[13px] font-semibold text-fg outline-none focus:border-blue"
             />
           ) : (
-            <span
-              className={`text-sm font-medium ${onNameChange ? "cursor-pointer hover:text-accent" : ""}`}
+            <button
+              type="button"
               onClick={() => onNameChange && setIsEditingName(true)}
-              title={onNameChange ? "Click to edit" : undefined}
+              className="cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold text-fg"
+              title={onNameChange ? "Edit key name" : undefined}
             >
               {name}
-            </span>
+            </button>
           )}
           <span
-            className={`text-xs px-1.5 py-0.5 rounded ${
+            className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
               status === "active"
-                ? "bg-success/10 text-success"
-                : "bg-warning/10 text-warning"
+                ? "bg-green-tint text-green"
+                : "bg-fill text-fg-4"
             }`}
           >
-            {status === "active" ? "Active" : "Never Used"}
+            {status === "active" ? "Active" : "Never used"}
           </span>
         </div>
-        <div className="flex items-center gap-4 text-xs text-neutral-500">
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono truncate max-w-[280px]">
-              {maskedKey}
-            </span>
-            <button
-              onClick={() => setIsRevealed(!isRevealed)}
-              className="p-0.5 hover:text-neutral-300 transition-colors"
-              title={isRevealed ? "Hide key" : "Reveal key"}
-            >
-              {isRevealed ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
-          <span>Created {formatDate(createdAt)}</span>
-          <span className={!lastUsedAt ? "text-neutral-600" : ""}>
-            {lastUsedAt
-              ? `Last used ${formatLastUsed(lastUsedAt)}`
-              : "Never used"}
-          </span>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line-strong bg-transparent px-2.5 py-1 text-[11.5px] text-fg-4 hover:bg-hover"
+          >
+            <CopyIcon />
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <button
+            type="button"
+            onClick={handleRevoke}
+            onBlur={() => setConfirmRevoke(false)}
+            className={`cursor-pointer rounded-lg border px-2.5 py-1 text-[11.5px] ${
+              confirmRevoke
+                ? "border-red bg-red text-white"
+                : "border-red-border bg-transparent text-red-text hover:bg-red-tint"
+            }`}
+          >
+            {confirmRevoke ? "Confirm revoke" : "Revoke"}
+          </button>
         </div>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-        <button
-          onClick={handleCopy}
-          className="px-3 py-1.5 text-xs text-neutral-400 border border-neutral-700 hover:bg-neutral-850 hover:border-neutral-600 rounded transition-colors flex items-center gap-1.5"
-        >
-          {copied ? <CheckIcon /> : <CopyIcon />}
-          {copied ? "Copied!" : "Copy"}
-        </button>
-        <button
-          onClick={() => onRevoke(id)}
-          className="px-3 py-1.5 text-xs text-error border border-error/30 hover:bg-error/10 hover:border-error/50 rounded transition-colors"
-        >
-          Revoke
-        </button>
+
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="max-w-[310px] truncate font-mono text-[11.5px] text-fg-3">
+            {maskedKey}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsRevealed((revealed) => !revealed)}
+            className="flex cursor-pointer border-0 bg-transparent p-0.5 text-faint"
+            aria-label={isRevealed ? "Hide key" : "Reveal key"}
+          >
+            <EyeIcon hidden={!isRevealed} />
+          </button>
+        </div>
+        <span className="text-[11px] text-faint">
+          Created {formatDate(createdAt)}
+        </span>
+        <span className="text-[11px] text-faint">
+          {formatLastUsed(lastUsedAt)}
+        </span>
       </div>
     </div>
   );

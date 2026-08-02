@@ -12,98 +12,101 @@ interface ApiKey {
 interface ApiKeyListProps {
   keys: ApiKey[];
   loading: boolean;
+  newKeyValue?: string;
   onCreateClick: () => void;
-  onCopyKey: (keyValue: string) => void;
-  onRevokeKey: (keyId: string) => void;
+  onCopyKey: (keyValue: string) => void | Promise<void>;
+  onRevokeKey: (keyId: string) => void | Promise<void>;
   onNameChange?: (keyId: string, newName: string) => void;
 }
+
+const PlusIcon = () => (
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <path d="M12 4v16m8-8H4" />
+  </svg>
+);
 
 export default function ApiKeyList({
   keys,
   loading,
+  newKeyValue,
   onCreateClick,
   onCopyKey,
   onRevokeKey,
   onNameChange,
 }: ApiKeyListProps) {
-  if (loading) {
-    return (
-      <div className="bg-neutral-900 border border-neutral-800 rounded">
-        <div className="px-4 py-3 border-b border-neutral-800">
-          <h2 className="text-sm font-medium">Active Keys</h2>
+  return (
+    <section
+      id="api-keys"
+      className="scroll-mt-4 rounded-2xl border border-line bg-surface p-5"
+    >
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold tracking-[-0.015em] text-fg">
+            API keys
+          </h2>
+          <p className="mt-0.5 text-xs text-dim">
+            Used to authenticate requests to the Traces API.
+          </p>
         </div>
-        <div className="flex items-center justify-center py-12">
-          <div className="flex items-center gap-3 text-neutral-500">
-            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="none"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-            <span>Loading keys...</span>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={onCreateClick}
+          className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-[9px] border-0 bg-blue px-3 py-1.5 text-[12.5px] font-semibold text-white hover:opacity-90"
+        >
+          <PlusIcon />
+          Create key
+        </button>
       </div>
-    );
-  }
 
-  if (keys.length === 0) {
-    return (
-      <div className="bg-neutral-900 border border-neutral-800 rounded">
-        <div className="px-4 py-3 border-b border-neutral-800">
-          <h2 className="text-sm font-medium">Active Keys</h2>
+      {newKeyValue && !keys.some((key) => key.key === newKeyValue) && (
+        <div className="mb-2.5 rounded-[10px] border border-red-border bg-red-tint px-3 py-2 text-xs text-red-text">
+          Copy the key shown in the creation dialog now — you won&apos;t be able
+          to see it again.
         </div>
-        <div className="py-12 text-center">
-          <p className="text-sm text-neutral-500">No API keys</p>
+      )}
+
+      {loading ? (
+        <div className="border-t border-line-soft py-8 text-center text-xs text-dim">
+          Loading keys...
+        </div>
+      ) : keys.length === 0 ? (
+        <div className="border-t border-line-soft py-8 text-center">
+          <p className="text-xs text-dim">No API keys yet.</p>
           <button
+            type="button"
             onClick={onCreateClick}
-            className="mt-3 text-sm text-accent hover:underline"
+            className="mt-2 cursor-pointer border-0 bg-transparent text-xs text-blue"
           >
             Create your first key
           </button>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded">
-      <div className="px-4 py-3 border-b border-neutral-800">
-        <h2 className="text-sm font-medium">Active Keys</h2>
-      </div>
-      <div>
-        {keys.map((key, index) => (
-          <div
-            key={key.id}
-            className={
-              index < keys.length - 1 ? "border-b border-neutral-800" : ""
-            }
-          >
+      ) : (
+        <div>
+          {keys.map((key) => (
             <ApiKeyCard
+              key={key.id}
               id={key.id}
               name={key.name}
               keyValue={key.key}
               createdAt={key.created_at}
               lastUsedAt={key.last_used_at}
               status={key.status}
+              isNew={Boolean(newKeyValue && key.key === newKeyValue)}
               onCopy={onCopyKey}
               onRevoke={onRevokeKey}
               onNameChange={onNameChange}
             />
-          </div>
-        ))}
-      </div>
-    </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

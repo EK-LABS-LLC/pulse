@@ -1,6 +1,12 @@
-import { useState } from "react";
-import ProjectSettings from "../components/settings/ProjectSettings";
+import { useEffect, useState } from "react";
+import ApiKeys from "./ApiKeys";
+import AppearanceSettings from "../components/settings/AppearanceSettings";
 import DangerZone from "../components/settings/DangerZone";
+import ProfileCard from "../components/settings/ProfileCard";
+import ProjectSettings from "../components/settings/ProjectSettings";
+import TraceDefaultsSettings from "../components/settings/TraceDefaultsSettings";
+import { useProjectUsersQuery } from "../api";
+import { useAuth } from "../hooks/useAuth";
 import { useProject } from "../hooks/useProject";
 
 export interface ProjectInfo {
@@ -10,10 +16,21 @@ export interface ProjectInfo {
 }
 
 export default function Settings() {
+  const { user } = useAuth();
   const { selectedProject } = useProject();
+  const usersQuery = useProjectUsersQuery(selectedProject?.id);
   const [projectNameOverrides, setProjectNameOverrides] = useState<
     Record<string, string>
   >({});
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+
+  useEffect(() => {
+    if (window.location.hash !== "#api-keys") return;
+    const target = document.getElementById("api-keys");
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   const project = selectedProject
     ? {
@@ -23,92 +40,76 @@ export default function Settings() {
       }
     : null;
 
-  const [error] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
+  const projectUser = usersQuery.data?.users.find(
+    (candidate) =>
+      candidate.userId === user?.id || candidate.email === user?.email,
+  );
+  const role = projectUser?.role
+    ? `${projectUser.role[0]?.toUpperCase()}${projectUser.role.slice(1)}`
+    : "Member";
 
   const handleSaveProject = async (name: string) => {
     setSaveStatus("saving");
     try {
-      // TODO: Replace with actual API call when endpoint is available
+      // Preserve the existing local-only behavior until a project update
+      // endpoint is available.
       await new Promise((resolve) => setTimeout(resolve, 500));
       if (selectedProject) {
-        setProjectNameOverrides((prev) => ({
-          ...prev,
+        setProjectNameOverrides((current) => ({
+          ...current,
           [selectedProject.id]: name,
         }));
       }
       setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 2000);
-    } catch (err) {
+      window.setTimeout(() => setSaveStatus("idle"), 2_000);
+    } catch (error) {
       setSaveStatus("error");
-      console.error("Failed to save project:", err);
+      console.error("Failed to save project:", error);
     }
   };
 
   const handleDeleteProject = async () => {
-    // TODO: Implement project deletion API
+    // Preserve the existing placeholder behavior until deletion is supported.
     window.location.href = "/login";
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Header */}
-      <header className="h-14 flex items-center px-6 border-b border-neutral-800 flex-shrink-0 bg-neutral-950">
-        <h1 className="text-sm font-medium">Settings</h1>
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <header className="flex h-14 shrink-0 items-center border-b border-line bg-topbar px-5 backdrop-blur-lg">
+        <h1 className="text-[19px] font-semibold tracking-[-0.022em]">
+          Settings
+        </h1>
       </header>
 
-      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto p-8">
-          {/* Error Banner */}
-          {error && (
-            <div className="bg-error/5 border border-error/20 rounded p-4 mb-6">
-              <div className="flex gap-3">
-                <svg
-                  className="w-5 h-5 text-error flex-shrink-0 mt-0.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+        <main className="mx-auto flex max-w-[640px] flex-col gap-4 p-6">
+          {user && (
+            <ProfileCard name={user.name} email={user.email} role={role} />
+          )}
+          <AppearanceSettings />
+          <TraceDefaultsSettings />
+          <ApiKeys
+            embedded
+            afterKeys={
+              <>
+                {project && (
+                  <ProjectSettings
+                    key={project.id}
+                    project={project}
+                    saveStatus={saveStatus}
+                    onSave={handleSaveProject}
                   />
-                </svg>
-                <div>
-                  <p className="text-sm text-error">{error}</p>
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="text-sm text-accent hover:underline mt-1 inline-block"
-                  >
-                    Retry
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Project Settings Section */}
-          {project && (
-            <ProjectSettings
-              project={project}
-              saveStatus={saveStatus}
-              onSave={handleSaveProject}
-            />
-          )}
-
-          {/* Danger Zone Section */}
-          {project && (
-            <DangerZone
-              projectName={project.name}
-              onDeleteProject={handleDeleteProject}
-            />
-          )}
-        </div>
+                )}
+                {project && (
+                  <DangerZone
+                    projectName={project.name}
+                    onDeleteProject={handleDeleteProject}
+                  />
+                )}
+              </>
+            }
+          />
+        </main>
       </div>
     </div>
   );

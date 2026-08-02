@@ -303,7 +303,7 @@ export default function TraceDetailPanel({
               <div className="text-xs text-neutral-500 uppercase tracking-wide mb-2">
                 Timeline
               </div>
-              <TraceSpanTree spans={trace.spans} indentPx={12} />
+              <TraceSpanTree spans={trace.spans} />
             </div>
           )}
 

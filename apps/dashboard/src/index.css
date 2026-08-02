@@ -46,6 +46,15 @@
   --green-tint: rgba(48, 209, 88, 0.16);
   --scroll-thumb: #3a3a3c;
   --scroll-thumb-hover: #48484a;
+  --pink: #ff6482;
+  --neutral: rgba(255, 255, 255, 0.42);
+  --neutral-soft: rgba(255, 255, 255, 0.2);
+  --seg-active: #3a3a3c;
+  --blue-border: rgba(10, 132, 255, 0.35);
+  --green-border: rgba(48, 209, 88, 0.35);
+  --json-key: #7fb2ff;
+  --json-str: #8fd69b;
+  --json-bool: #c7a6e8;
 }
 
 [data-theme="light"] {
@@ -86,6 +95,15 @@
   --green-tint: rgba(30, 158, 74, 0.12);
   --scroll-thumb: #c7c7cc;
   --scroll-thumb-hover: #aeaeb2;
+  --pink: #d6236a;
+  --neutral: rgba(0, 0, 0, 0.45);
+  --neutral-soft: rgba(0, 0, 0, 0.26);
+  --seg-active: #ffffff;
+  --blue-border: rgba(10, 108, 232, 0.32);
+  --green-border: rgba(30, 158, 74, 0.35);
+  --json-key: #0057b7;
+  --json-str: #177245;
+  --json-bool: #6c2bd9;
 }
 
 @theme {
@@ -127,6 +145,15 @@
   --color-red-tint-2: var(--red-tint-2);
   --color-red-border: var(--red-border);
   --color-green-tint: var(--green-tint);
+  --color-pink: var(--pink);
+  --color-neutral-fg: var(--neutral);
+  --color-neutral-soft: var(--neutral-soft);
+  --color-seg-active: var(--seg-active);
+  --color-blue-border: var(--blue-border);
+  --color-green-border: var(--green-border);
+  --color-json-key: var(--json-key);
+  --color-json-str: var(--json-str);
+  --color-json-bool: var(--json-bool);
 
   /* Custom neutral colors */
   --color-neutral-950: #0a0a0a;

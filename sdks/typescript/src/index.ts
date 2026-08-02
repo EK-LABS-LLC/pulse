@@ -58,15 +58,23 @@ export function initPulse(config: PulseConfig): void {
 export function observe<T extends OpenAI>(
   client: T,
   provider: Provider,
-  options?: ObserveOptions
+  options?: ObserveOptions,
 ): ObservedOpenAI<T>;
 export function observe<T extends Anthropic>(
   client: T,
   provider: Provider,
-  options?: ObserveOptions
+  options?: ObserveOptions,
 ): ObservedAnthropic<T>;
-export function observe<T>(client: T, provider: Provider, options?: ObserveOptions): T;
-export function observe<T>(client: T, provider: Provider, options?: ObserveOptions): T {
+export function observe<T>(
+  client: T,
+  provider: Provider,
+  options?: ObserveOptions,
+): T;
+export function observe<T>(
+  client: T,
+  provider: Provider,
+  options?: ObserveOptions,
+): T {
   switch (provider) {
     case Provider.OpenAI:
     case Provider.OpenRouter:
@@ -80,10 +88,25 @@ export function observe<T>(client: T, provider: Provider, options?: ObserveOptio
 
 export { Provider };
 
+export { recordSpan, isRecording } from "./core/record";
+export { flushBuffer as flush } from "./core/state";
+export type { RecordSpanInput } from "./core/record";
+
+/**
+ * Flushes anything buffered and stops the periodic flush, so a short-lived
+ * process can exit instead of being held open by the interval.
+ */
+export async function shutdownPulse(): Promise<void> {
+  await flushBuffer();
+  stopFlushInterval();
+}
+
 export type {
   PulseConfig,
   TraceStatus,
   Trace,
+  Span,
+  SpanKind,
   NormalizedResponse,
   ObserveOptions,
   PulseParams,

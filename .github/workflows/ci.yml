@@ -542,7 +542,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run --cwd sdks/typescript build
       - run: bun run --cwd sdks/typescript typecheck
-      - run: bun test tests/pricing.test.ts tests/sdk-spans.test.ts tests/transport.test.ts
+      - run: bun test tests/pricing.test.ts tests/sdk-spans.test.ts tests/transport.test.ts tests/record.test.ts
         working-directory: sdks/typescript
 
   sdk-py:

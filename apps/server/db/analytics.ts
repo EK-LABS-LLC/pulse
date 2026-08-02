@@ -71,6 +71,16 @@ export interface LatencyPercentiles {
 }
 
 /**
+ * Per-service request, error and latency rollup.
+ */
+export interface ServiceStats {
+  service: string;
+  requests: number;
+  errors: number;
+  avgDurationMs: number;
+}
+
+/**
  * Cost over time by provider data point.
  */
 export interface CostOverTimeByProvider {
@@ -649,5 +659,41 @@ export async function getTopTools(
   return result.map((row: any) => ({
     name: row.name ?? "unknown",
     count: row.count,
+  }));
+}
+
+/**
+ * Rolls spans up by service. Errors stay attributed to the service whose span
+ * carried the failing status, rather than to the trace's entry point.
+ */
+export async function getServiceStats(
+  db: Database,
+  projectId: string,
+  dateRange: DateRange,
+  limit: number = 8,
+): Promise<ServiceStats[]> {
+  const result = await db
+    .select({
+      service: spans.service,
+      requests: count(),
+      errors: sql<number>`SUM(CASE WHEN ${spans.status} = 'error' THEN 1 ELSE 0 END)`,
+      avgDurationMs: avg(spans.durationMs),
+    })
+    .from(spans)
+    .where(
+      and(
+        buildSpanDateConditions(projectId, dateRange),
+        isNotNull(spans.service),
+      ),
+    )
+    .groupBy(spans.service)
+    .orderBy(desc(count()))
+    .limit(limit);
+
+  return (result as any[]).map((row) => ({
+    service: row.service ?? "unknown",
+    requests: Number(row.requests ?? 0),
+    errors: Number(row.errors ?? 0),
+    avgDurationMs: Number(row.avgDurationMs ?? 0),
   }));
 }

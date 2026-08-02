@@ -1,4 +1,5 @@
 import type { Database } from "../db/index";
+import type { ServiceStats } from "../db/analytics";
 import type { GroupBy, SpanAnalyticsGroupBy } from "../shared/validation";
 import {
   getTotalCost,
@@ -19,6 +20,7 @@ import {
   getSpanCountsOverTime,
   getAvgSessionSpanDuration,
   getTopTools,
+  getServiceStats,
   type CostByProvider,
   type StatsByModel,
   type CostOverTimeByProvider,
@@ -80,6 +82,7 @@ export interface SpanAnalyticsResult {
   spansByKind: SpanCountByKind[];
   spansBySource: SpanCountBySource[];
   spansOverTime: SpanCountOverTime[];
+  serviceStats: ServiceStats[];
 }
 
 /**
@@ -200,6 +203,7 @@ export async function getSpanAnalytics(
     spansOverTime,
     avgSessionDurationMs,
     topTools,
+    serviceStats,
   ] =
     await Promise.all([
       getTotalSpanEvents(db, projectId, dbDateRange),
@@ -210,6 +214,7 @@ export async function getSpanAnalytics(
       getSpanCountsOverTime(db, projectId, dbDateRange, groupBy),
       getAvgSessionSpanDuration(db, projectId, dbDateRange),
       getTopTools(db, projectId, dbDateRange),
+      getServiceStats(db, projectId, dbDateRange),
     ]);
 
   const byKind = new Map(spansByKind.map((row) => [row.kind, row.count]));
@@ -229,5 +234,6 @@ export async function getSpanAnalytics(
     spansByKind,
     spansBySource,
     spansOverTime,
+    serviceStats,
   };
 }

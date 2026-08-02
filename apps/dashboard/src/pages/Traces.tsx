@@ -1,8 +1,16 @@
 import { type ReactNode, useEffect, useRef, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Trace, GetTracesParams } from "../lib/apiClient";
-import { useTracesQuery } from "../api";
+import {
+  useTracesQuery,
+  useAnalyticsQuery,
+  useSpansAnalyticsQuery,
+} from "../api";
 import FilterSidebar from "../components/traces/FilterSidebar";
+import { ServicesTable } from "../components/traces/ServicesTable";
+import { StatCard } from "../components/ui/StatCard";
+import { SegmentedControl } from "../components/ui/SegmentedControl";
+import { fmtCost, fmtLatency } from "../lib/format";
 import TracesTable from "../components/traces/TracesTable";
 import TraceDetailPanel from "../components/traces/TraceDetailPanel";
 import { TableSkeleton } from "../components/ui/TableSkeleton";
@@ -256,6 +264,9 @@ export default function Traces() {
   );
 
   const [selectedTrace, setSelectedTrace] = useState<Trace | null>(null);
+  const [serviceFilter, setServiceFilter] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [statsMode, setStatsMode] = useState<"trend" | "compact">("trend");
 
   const queryParams = useMemo<GetTracesParams>(() => {
     const params: GetTracesParams = {
@@ -272,15 +283,47 @@ export default function Traces() {
       params.date_to = toIsoDateRangeParam(filters.date_to, "end");
     if (filters.session_id) params.session_id = filters.session_id;
     if (source) params.source = source;
+    if (serviceFilter) params.service = serviceFilter;
 
     return params;
-  }, [filters, page, pageSize, source]);
+  }, [filters, page, pageSize, source, serviceFilter]);
 
   const tracesQuery = useTracesQuery(
     "traces",
     selectedProject?.id,
     queryParams,
   );
+
+  // Status chip counts need trace-level totals, which the list query only
+  // reports for the active filter; these ask for the totals alone.
+  const successCountQuery = useTracesQuery("traces-count-success", selectedProject?.id, {
+    ...queryParams,
+    status: "success",
+    limit: 1,
+    offset: 0,
+  });
+  const errorCountQuery = useTracesQuery("traces-count-error", selectedProject?.id, {
+    ...queryParams,
+    status: "error",
+    limit: 1,
+    offset: 0,
+  });
+
+  const STATS_WINDOW_DAYS = 7;
+  const analyticsRange = useMemo(() => {
+    const to = new Date();
+    const from = new Date(to.getTime() - STATS_WINDOW_DAYS * 86400000);
+    return { date_from: from.toISOString(), date_to: to.toISOString() };
+  }, []);
+
+  const analyticsQuery = useAnalyticsQuery("traces-analytics", selectedProject?.id, {
+    ...analyticsRange,
+    group_by: "day",
+  });
+  const spansQuery = useSpansAnalyticsQuery("traces-spans-analytics", selectedProject?.id, {
+    ...analyticsRange,
+    group_by: "day",
+  });
 
   const traces = tracesQuery.data?.traces ?? [];
   const total = tracesQuery.data?.total ?? 0;
@@ -361,6 +404,52 @@ export default function Traces() {
     ? traces.findIndex((t) => t.traceId === selectedTrace.traceId)
     : -1;
 
+  const analytics = analyticsQuery.data;
+  const spansAnalytics = spansQuery.data;
+  const serviceStats = spansAnalytics?.serviceStats ?? [];
+
+  const statCards = [
+    {
+      label: "Requests",
+      value: analytics ? analytics.totalRequests.toLocaleString() : "—",
+      accent: "var(--blue)",
+      series: (spansAnalytics?.spansOverTime ?? []).map((p) => p.count),
+    },
+    {
+      label: "Error rate",
+      value: spansAnalytics ? `${spansAnalytics.errorRate.toFixed(1)}%` : "—",
+      accent: "var(--red)",
+      series: [] as number[],
+    },
+    {
+      label: "Avg latency",
+      value: analytics ? fmtLatency(analytics.avgLatency) : "—",
+      accent: "var(--purple)",
+      series: [] as number[],
+    },
+    {
+      label: "Cost",
+      value: analytics ? fmtCost(analytics.totalCost) : "—",
+      accent: "var(--orange)",
+      series: [] as number[],
+    },
+  ];
+
+  const chipCounts = {
+    status: {
+      all: total,
+      success: successCountQuery.data?.total ?? 0,
+      error: errorCountQuery.data?.total ?? 0,
+    },
+    source: {} as Record<string, number>,
+  };
+
+  const handleServiceSelect = (service: string | null) => {
+    setServiceFilter(service);
+    setPage(1);
+    setSelectedTrace(null);
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
@@ -408,85 +497,176 @@ export default function Traces() {
         </div>
       </header>
 
-      {/* Content Area - Two Column Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        <FilterSidebar
-          filters={filters}
-          onApplyFilters={applyFilters}
-          onClearFilters={clearFilters}
-        />
+      <div className="relative flex-1 overflow-auto">
+        <div className={selectedTrace ? "pr-[460px]" : ""}>
+          <section className="px-5 pt-5">
+            <div className="mb-3 flex items-center justify-between">
+              <span
+                className="text-[11px] font-semibold"
+                style={{ color: "var(--dim)" }}
+              >
+                Overview · last 7d
+              </span>
+              <SegmentedControl
+                ariaLabel="Stats display"
+                value={statsMode}
+                onChange={setStatsMode}
+                options={[
+                  { value: "trend", label: "Trend" },
+                  { value: "compact", label: "Compact" },
+                ]}
+              />
+            </div>
 
-        <main className="flex-1 overflow-hidden relative">
-          <div
-            className={`h-full overflow-auto p-6 ${selectedTrace ? "pr-[460px]" : ""}`}
-          >
-            {error && (
-              <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-lg">
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-rose-400 text-sm">{error}</p>
-                  <button
-                    onClick={() => tracesQuery.refetch()}
-                    className="text-sm text-accent hover:underline whitespace-nowrap"
-                  >
-                    Retry
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {loading ? (
-              <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
-                <TableSkeleton rows={pageSize} columns={12} />
-              </div>
-            ) : traces.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <svg
-                  className="w-12 h-12 text-neutral-700 mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M4 6h16M4 12h16M4 18h7"
+            {statsMode === "trend" ? (
+              <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {statCards.map((card) => (
+                  <StatCard
+                    key={card.label}
+                    label={card.label}
+                    value={card.value}
+                    accent={card.accent}
+                    series={card.series}
                   />
-                </svg>
-                <h3 className="text-sm font-medium text-neutral-400 mb-1">
-                  No traces found
-                </h3>
-                <p className="text-xs text-neutral-500">
-                  Try adjusting your filters or check back later
-                </p>
+                ))}
               </div>
             ) : (
-              <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
-                <TracesTable
-                  traces={traces}
-                  onRowClick={handleRowClick}
-                  pagination={{
-                    page,
-                    pageSize,
-                    total,
-                    onPageChange: handlePageChange,
-                    onPageSizeChange: handlePageSizeChange,
-                  }}
-                />
+              <div
+                className="mb-5 flex flex-wrap overflow-hidden rounded-2xl"
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                {statCards.map((card) => (
+                  <div
+                    key={card.label}
+                    className="flex flex-1 items-center gap-2.5 px-4.5 py-3.5"
+                    style={{ borderRight: "1px solid var(--border)" }}
+                  >
+                    <span className="text-xl font-semibold tabular-nums">
+                      {card.value}
+                    </span>
+                    <span
+                      className="text-[11.5px]"
+                      style={{ color: "var(--dim)" }}
+                    >
+                      {card.label}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
-          </div>
+          </section>
 
-          {selectedTrace && (
-            <TraceDetailPanel
-              trace={selectedTrace}
-              onClose={handleClosePanel}
-              onNavigate={handleNavigateTrace}
-              hasPrev={selectedTraceIndex > 0}
-              hasNext={selectedTraceIndex < traces.length - 1}
+          <section className="px-5">
+            <ServicesTable
+              services={serviceStats}
+              selected={serviceFilter}
+              onSelect={handleServiceSelect}
             />
-          )}
-        </main>
+          </section>
+
+          <section className="flex items-start gap-4 px-5 pb-6">
+            <FilterSidebar
+              filters={filters}
+              source={source}
+              onSourceChange={(value) =>
+                handleSourceChange(value as typeof source)
+              }
+              counts={chipCounts}
+              collapsed={!filtersOpen}
+              onToggle={() => setFiltersOpen((open) => !open)}
+              onApplyFilters={applyFilters}
+              onClearFilters={clearFilters}
+            />
+
+            <div className="min-w-0 flex-1">
+              {error && (
+                <div
+                  className="mb-4 rounded-xl p-4"
+                  style={{
+                    background: "var(--red-tint)",
+                    border: "1px solid var(--red-border)",
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-sm" style={{ color: "var(--red-text)" }}>
+                      {error}
+                    </p>
+                    <button
+                      onClick={() => tracesQuery.refetch()}
+                      className="cursor-pointer border-0 bg-transparent text-sm whitespace-nowrap"
+                      style={{ color: "var(--blue)" }}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {loading ? (
+                <div
+                  className="overflow-hidden rounded-2xl"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <TableSkeleton rows={pageSize} columns={11} />
+                </div>
+              ) : traces.length === 0 ? (
+                <div
+                  className="flex flex-col items-center justify-center rounded-2xl py-12 text-center"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <h3
+                    className="mb-1 text-sm font-medium"
+                    style={{ color: "var(--text-4)" }}
+                  >
+                    No traces found
+                  </h3>
+                  <p className="text-xs" style={{ color: "var(--dim)" }}>
+                    Try adjusting your filters or check back later
+                  </p>
+                </div>
+              ) : (
+                <div
+                  className="overflow-hidden rounded-2xl"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <TracesTable
+                    traces={traces}
+                    onRowClick={handleRowClick}
+                    pagination={{
+                      page,
+                      pageSize,
+                      total,
+                      onPageChange: handlePageChange,
+                      onPageSizeChange: handlePageSizeChange,
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+
+        {selectedTrace && (
+          <TraceDetailPanel
+            trace={selectedTrace}
+            onClose={handleClosePanel}
+            onNavigate={handleNavigateTrace}
+            hasPrev={selectedTraceIndex > 0}
+            hasNext={selectedTraceIndex < traces.length - 1}
+          />
+        )}
       </div>
     </div>
   );

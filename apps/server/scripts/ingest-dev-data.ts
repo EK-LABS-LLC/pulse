@@ -102,7 +102,11 @@ function rand(): number {
   seed = (seed * 1103515245 + 12345) % 2147483648;
   return seed / 2147483648;
 }
-const pick = <T>(items: T[]): T => items[Math.floor(rand() * items.length)];
+const pick = <T>(items: T[]): T => {
+  const item = items[Math.floor(rand() * items.length)];
+  if (item === undefined) throw new Error("pick() called with an empty list");
+  return item;
+};
 const between = (min: number, max: number) =>
   Math.round(min + rand() * (max - min));
 
@@ -137,7 +141,7 @@ async function signIn(): Promise<string> {
     method: "POST",
     body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
   });
-  return (signin.headers.get("set-cookie") ?? "").split(";")[0];
+  return (signin.headers.get("set-cookie") ?? "").split(";")[0] ?? "";
 }
 
 /**
@@ -184,7 +188,12 @@ async function resolveProjects(cookie: string): Promise<Project[]> {
     if (!apiKey) {
       throw new Error(`No usable API key for project "${name}"`);
     }
-    projects.push({ name, projectId, apiKey, serviceName: services[index] });
+    projects.push({
+      name,
+      projectId,
+      apiKey,
+      serviceName: services[index]!,
+    });
   }
   return projects;
 }
@@ -284,7 +293,7 @@ async function main() {
   }
 
   console.log("\nWaiting for the span WAL to drain...");
-  const first = projects[0];
+  const first = projects[0]!;
   for (let attempt = 0; attempt < 60; attempt++) {
     const res = await fetch(`${BASE_URL}/v1/traces?limit=1`, {
       headers: { Authorization: `Bearer ${first.apiKey}` },

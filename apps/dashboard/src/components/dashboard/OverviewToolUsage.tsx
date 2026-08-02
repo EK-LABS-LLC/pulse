@@ -9,14 +9,6 @@ interface OverviewToolUsageProps {
   maxItems?: number;
 }
 
-const BAR_COLORS = [
-  "var(--purple)",
-  "var(--blue)",
-  "var(--teal)",
-  "var(--green)",
-  "var(--orange)",
-];
-
 export function OverviewToolUsage({
   data,
   rangeLabel,
@@ -40,7 +32,7 @@ export function OverviewToolUsage({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {rows.map((tool, index) => (
+          {rows.map((tool) => (
             <div key={tool.name}>
               <div className="mb-1.5 flex items-center justify-between gap-3">
                 <span className="truncate font-mono text-[12.5px] text-fg-2">
@@ -55,7 +47,7 @@ export function OverviewToolUsage({
                   className="h-full rounded-full"
                   style={{
                     width: `${(tool.count / maxCount) * 100}%`,
-                    background: BAR_COLORS[index % BAR_COLORS.length],
+                    background: "var(--blue)",
                   }}
                 />
               </div>

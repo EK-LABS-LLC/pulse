@@ -19,6 +19,17 @@ Fixed: Average session duration is measured from a session's own spans instead o
 Fixed: Overview error rate and success rate are drawn from the same spans, so the two no longer contradict each other.
 Added: `GET /v1/analytics/spans` reports per-service request, error and average duration rollups.
 Changed: Traces opens on an overview strip and a Services table, and filters move to status and source chips carrying live counts; selecting a service scopes the query.
+Fixed: Server startup adds the span service column and index to fresh and existing databases, preventing service analytics and filters from returning an internal server error.
+Changed: The SDK-driven dashboard fixture fills up to 30 days with multiple services, models, providers, latency bands, token usage, costs, and failures, with extra recent sessions so sub-day charts remain representative.
+Changed: Overview uses the dashboard's existing Recharts stack for smooth monotone area curves on one shared timeline, with a darker layered shadow and richer gradient fill for every series, empty additive buckets shown as zero, and missing latency buckets kept as gaps.
+Added: Overview charts can group millisecond-resolution span data into 15-minute, hourly, or daily buckets, with Auto choosing 15 minutes for 24 hours, hourly for 7 days, and daily for 30 days.
+Changed: Overview uses the same segmented picker for chart intervals as its other chart controls, removes the standalone latency percentile labels, shows the calendar window beside the selected range, chooses a sensible interval when the range changes, and keeps dates visible on sub-day chart axes and tooltips.
+Changed: Overview curves use natural interpolation and a short animated transition when measures, splits, or intervals change.
+Changed: Tool usage bars use one consistent blue accent across every tool.
+Changed: Overview shows a live period trend beside the primary metric, uses the design's system-first font stack, and tightens the most-failures controls.
+Changed: Light mode uses slightly darker borders to improve separation between overview surfaces and controls.
+Added: Overview has a reusable From/To calendar picker at the far right of the chart summary, with chart interval selection in the same anchored panel and 24-hour, 7-day, or 30-day shortcuts.
+Changed: Overview centers the most-failing service and its label as a compact status group without a redundant Investigate action.
 
 ### Allow Test Changes To Rebaseline The Integrity Guard
 

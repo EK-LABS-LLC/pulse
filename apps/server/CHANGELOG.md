@@ -7,7 +7,8 @@
 Date: 2026-08-02 CDT; Status: In Progress
 Task: Move the dashboard onto the new design and let the SDK emit the spans that design assumes.
 Added: Dashboard ships a light and a dark theme with a toggle in the top bar and on the sign-in page, and remembers the choice.
-Changed: Navigation collapses to an icon rail with hover labels, and project selection, account and theme controls move into a new top bar.
+Changed: Navigation collapses to an icon rail with hover labels, and account and theme controls move into the bottom of the rail.
+Changed: The Overview chart shows detailed time-series lines with hover values and clickable series tags.
 Changed: Trace detail shows the span waterfall beside an inspector for the selected span, and names the service that owned the first failure.
 Changed: Traces list rows carry a status dot, source badge, service, and latency and token meters.
 Changed: Sign-in moves to a split layout on the new palette.

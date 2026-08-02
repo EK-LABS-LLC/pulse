@@ -1,4 +1,4 @@
-import { sparkPath } from "../../lib/format";
+import { useMemo, useState } from "react";
 import type { OverviewSeries } from "../../lib/apiClient";
 import { SegmentedControl } from "../ui/SegmentedControl";
 
@@ -42,6 +42,32 @@ const SPLIT_OPTIONS: Array<{ value: OverviewSplit; label: string }> = [
 ];
 
 function SeriesChart({ series }: { series: OverviewSeries[] }) {
+  const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  const visibleSeries = series.filter((item) => !hiddenSeries.has(item.id));
+  const pointCount = Math.max(
+    1,
+    ...visibleSeries.map((item) => item.points.length),
+  );
+  const maxValue = Math.max(
+    1,
+    ...visibleSeries.flatMap((item) => item.points.map((point) => point.value)),
+  );
+  const chart = useMemo(() => {
+    const left = 64;
+    const right = 982;
+    const top = 18;
+    const bottom = 252;
+    const width = right - left;
+    const height = bottom - top;
+    const x = (index: number) =>
+      left + (pointCount === 1 ? width / 2 : (index / (pointCount - 1)) * width);
+    const y = (value: number) => bottom - (value / maxValue) * height;
+
+    return { left, right, top, bottom, width, height, x, y };
+  }, [maxValue, pointCount]);
+
   if (series.length === 0 || series.every((s) => s.points.length === 0)) {
     return (
       <div className="flex h-[220px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-line-soft bg-surface-3">
@@ -54,47 +80,92 @@ function SeriesChart({ series }: { series: OverviewSeries[] }) {
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {series.map((item) => {
-        const values = item.points.map((p) => p.value);
-        const path = sparkPath(values);
-        const total = values.reduce((sum, value) => sum + value, 0);
-        return (
-          <div
-            key={item.id}
-            className="rounded-xl border border-line bg-surface-3 p-3"
-          >
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: item.color }}
-                />
-                <span className="truncate text-xs text-fg-3">{item.name}</span>
-              </div>
-              <span className="text-xs tabular-nums text-dim">
-                {total.toLocaleString()}
-              </span>
-            </div>
-            <svg
-              viewBox="0 0 64 22"
-              className="h-12 w-full overflow-visible"
-              preserveAspectRatio="none"
+    <div>
+      <div className="mb-4 flex min-h-8 flex-wrap items-center gap-2">
+        {series.map((item) => {
+          const total = item.points.reduce((sum, point) => sum + point.value, 0);
+          const hidden = hiddenSeries.has(item.id);
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                setHiddenSeries((current) => {
+                  const next = new Set(current);
+                  if (next.has(item.id)) next.delete(item.id);
+                  else if (next.size < series.length - 1) next.add(item.id);
+                  return next;
+                });
+              }}
+              className="flex cursor-pointer items-center gap-2 rounded-full border px-2.5 py-1 text-xs transition-colors"
+              style={{
+                background: hidden ? "transparent" : "var(--fill)",
+                borderColor: hidden ? "var(--border-soft)" : "var(--border-strong)",
+                color: hidden ? "var(--faint)" : "var(--text-3)",
+                opacity: hidden ? 0.65 : 1,
+              }}
             >
-              {path ? (
-                <polyline
-                  points={path}
-                  fill="none"
-                  stroke={item.color}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              ) : null}
-            </svg>
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: item.color }} />
+              <span>{item.name}</span>
+              <span className="tabular-nums" style={{ color: "var(--dim)" }}>{total.toLocaleString()}</span>
+            </button>
+          );
+        })}
+        <span className="ml-auto text-xs text-faint">Click a series to compare</span>
+      </div>
+
+      <div className="relative" onMouseLeave={() => setHoverIndex(null)}>
+        <svg
+          viewBox="0 0 1000 300"
+          className="block h-[300px] w-full overflow-visible"
+          preserveAspectRatio="none"
+          onMouseMove={(event) => {
+            const bounds = event.currentTarget.getBoundingClientRect();
+            const ratio = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
+            setHoverIndex(Math.round(ratio * (pointCount - 1)));
+          }}
+        >
+          {Array.from({ length: 5 }, (_, index) => {
+            const value = maxValue * (1 - index / 4);
+            const lineY = chart.y(value);
+            return (
+              <g key={value}>
+                <line x1={chart.left} x2={chart.right} y1={lineY} y2={lineY} stroke="var(--grid)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                <text x={chart.left - 10} y={lineY + 4} textAnchor="end" fill="var(--dim)" fontSize="11.5">{Math.round(value).toLocaleString()}</text>
+              </g>
+            );
+          })}
+
+          {visibleSeries.map((item) => {
+            const points = item.points.map((point, index) => `${chart.x(index)},${chart.y(point.value)}`);
+            const linePath = points.length > 1 ? `M ${points.join(" L ")}` : "";
+            const areaPath = points.length > 1 ? `${linePath} L ${chart.x(points.length - 1)},${chart.bottom} L ${chart.x(0)},${chart.bottom} Z` : "";
+            return (
+              <g key={item.id}>
+                {areaPath ? <path d={areaPath} fill={item.color} opacity="0.08" /> : null}
+                {linePath ? <path d={linePath} fill="none" stroke={item.color} strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" /> : null}
+              </g>
+            );
+          })}
+
+          {hoverIndex !== null && (
+            <line x1={chart.x(hoverIndex)} x2={chart.x(hoverIndex)} y1={chart.top} y2={chart.bottom} stroke="var(--crosshair)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          )}
+        </svg>
+
+        {hoverIndex !== null && (
+          <div className="pointer-events-none absolute top-2 rounded-xl border px-3 py-2 shadow-xl" style={{ left: `${(chart.x(hoverIndex) / 10)}%`, transform: "translateX(-50%)", background: "var(--surface-4)", borderColor: "var(--border-strong)" }}>
+            <div className="mb-1.5 text-[11.5px] text-dim">{visibleSeries[0]?.points[hoverIndex]?.period || "Selected period"}</div>
+            <div className="flex flex-col gap-1">
+              {visibleSeries.map((item) => {
+                const point = item.points[hoverIndex];
+                return point ? <div key={item.id} className="flex items-center gap-2 text-xs tabular-nums text-fg"><span className="h-2 w-2 rounded-full" style={{ background: item.color }} />{point.value.toLocaleString()}<span className="text-dim">{item.name}</span></div> : null;
+              })}
+            </div>
           </div>
-        );
-      })}
+        )}
+      </div>
+      <div className="mt-2 text-xs text-faint">Hover the chart for per-period figures</div>
     </div>
   );
 }

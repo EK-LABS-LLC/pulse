@@ -1,7 +1,7 @@
 {
   "version": 1,
   "artifact_count": 80,
-  "aggregate_sha256": "a7b1b731d0d4afc09ec9320bd671211d7e8cb48219aad318d0faeae5ae1021e6",
+  "aggregate_sha256": "a6eb66bb290110648d49dccbacf23d7775a938c5a21581caff5a082ed960e281",
   "artifacts": [
     {
       "kind": "cli-cargo-test",
@@ -427,8 +427,8 @@
       "kind": "server-bun-test",
       "path": "apps/server/tests/analytics.test.ts",
       "mode": "100644",
-      "bytes": 11049,
-      "sha256": "d5dc322fe82e3e427d130c476b0c4d8a493d9ea3f7755b3471c057ef783c3806"
+      "bytes": 11721,
+      "sha256": "07d05efd1ab28780a6ae3bdc320063d35fbf57a825ebdc974b558197acc18c50"
     },
     {
       "kind": "server-bun-test",
@@ -448,8 +448,8 @@
       "kind": "server-bun-test",
       "path": "apps/server/tests/legacy-tables-migration.test.ts",
       "mode": "100644",
-      "bytes": 2230,
-      "sha256": "5181485924ca127f7f5074249d815e41052be12904a6ddc09bc79205c7dd2bc8"
+      "bytes": 4395,
+      "sha256": "1ed423992d00bf523a8d5d4cc8941880c9e6eac97afd09ec1315b05656258882"
     },
     {
       "kind": "server-bun-test",

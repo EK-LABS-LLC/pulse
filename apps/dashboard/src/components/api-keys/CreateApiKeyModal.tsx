@@ -9,7 +9,7 @@ interface CreateApiKeyModalProps {
 
 const CloseIcon = () => (
   <svg
-    className="w-4 h-4 text-neutral-500"
+    className="h-4 w-4 text-faint"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -127,23 +127,23 @@ export default function CreateApiKeyModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
       onKeyDown={handleKeyDown}
     >
       {step === "confirm" ? (
-        <div className="bg-neutral-900 border border-neutral-800 rounded-lg w-full max-w-md mx-4">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+        <div className="mx-4 w-full max-w-md rounded-2xl border border-line bg-surface shadow-xl">
+          <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <h3 className="text-sm font-medium">Create API Key</h3>
             <button
               onClick={handleClose}
-              className="p-1 hover:bg-neutral-800 rounded"
+              className="cursor-pointer rounded-lg p-1 hover:bg-hover"
             >
               <CloseIcon />
             </button>
           </div>
           <div className="p-4">
-            <p className="text-sm text-neutral-400 mb-4">
+            <p className="mb-4 text-sm text-fg-4">
               Generate a new API key for the currently selected project. The key
               will be shown only once.
             </p>
@@ -153,32 +153,32 @@ export default function CreateApiKeyModal({
               </div>
             )}
           </div>
-          <div className="flex justify-end gap-2 px-4 py-3 border-t border-neutral-800">
+          <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
             <button
               onClick={handleClose}
-              className="px-4 py-2 text-sm text-neutral-400 border border-neutral-700 hover:bg-neutral-850 rounded transition-colors"
+              className="cursor-pointer rounded-lg border border-line-strong px-4 py-2 text-sm text-fg-4 transition-colors hover:bg-hover"
             >
               Cancel
             </button>
             <button
               onClick={handleCreate}
               disabled={isCreating}
-              className="px-4 py-2 text-sm text-white bg-accent hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+              className="cursor-pointer rounded-lg bg-blue px-4 py-2 text-sm text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isCreating ? "Creating..." : "Create Key"}
             </button>
           </div>
         </div>
       ) : (
-        <div className="bg-neutral-900 border border-neutral-800 rounded-lg w-full max-w-lg mx-4">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+        <div className="mx-4 w-full max-w-lg rounded-2xl border border-line bg-surface shadow-xl">
+          <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <div className="flex items-center gap-2">
               <SuccessIcon />
               <h3 className="text-sm font-medium">API Key Created</h3>
             </div>
             <button
               onClick={handleClose}
-              className="p-1 hover:bg-neutral-800 rounded"
+              className="cursor-pointer rounded-lg p-1 hover:bg-hover"
             >
               <CloseIcon />
             </button>
@@ -193,7 +193,7 @@ export default function CreateApiKeyModal({
               </div>
             </div>
             <div className="mb-4">
-              <label className="block text-xs text-neutral-500 uppercase tracking-wide mb-2">
+              <label className="mb-2 block text-xs uppercase tracking-wide text-dim">
                 Your API Key
               </label>
               <div className="flex gap-2">
@@ -201,11 +201,11 @@ export default function CreateApiKeyModal({
                   type="text"
                   readOnly
                   value={createdKey}
-                  className="flex-1 bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-sm font-mono text-neutral-300"
+                  className="flex-1 rounded-lg border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-fg-3"
                 />
                 <button
                   onClick={handleCopyKey}
-                  className="px-3 py-2 text-sm text-neutral-400 border border-neutral-700 hover:bg-neutral-850 rounded flex items-center gap-2 transition-colors"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-line-strong px-3 py-2 text-sm text-fg-4 transition-colors hover:bg-hover"
                 >
                   {copied ? (
                     "Copied!"
@@ -219,10 +219,10 @@ export default function CreateApiKeyModal({
               </div>
             </div>
           </div>
-          <div className="flex justify-end px-4 py-3 border-t border-neutral-800">
+          <div className="flex justify-end border-t border-line px-4 py-3">
             <button
               onClick={handleClose}
-              className="px-4 py-2 text-sm text-white bg-accent hover:bg-accent/90 rounded transition-colors"
+              className="cursor-pointer rounded-lg bg-blue px-4 py-2 text-sm text-white transition-opacity hover:opacity-90"
             >
               Done
             </button>

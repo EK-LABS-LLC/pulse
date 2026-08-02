@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProjectProvider } from "./contexts/ProjectContext";
 import { ToastProvider } from "./contexts/ToastContext";
@@ -14,7 +14,6 @@ import TraceDetail from "./pages/TraceDetail";
 import Sessions from "./pages/Sessions";
 import SessionDetail from "./pages/SessionDetail";
 import Analytics from "./pages/Analytics";
-import ApiKeys from "./pages/ApiKeys";
 import Settings from "./pages/Settings";
 import Account from "./pages/Account";
 
@@ -60,7 +59,12 @@ function App() {
                     <Route path="sessions" element={<Sessions />} />
                     <Route path="sessions/:id" element={<SessionDetail />} />
                     <Route path="analytics" element={<Analytics />} />
-                    <Route path="api-keys" element={<ApiKeys />} />
+                    <Route
+                      path="api-keys"
+                      element={
+                        <Navigate to="/dashboard/settings#api-keys" replace />
+                      }
+                    />
                     <Route path="settings" element={<Settings />} />
                     <Route path="account" element={<Account />} />
                   </Route>

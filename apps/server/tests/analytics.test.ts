@@ -186,8 +186,55 @@ describe("Analytics Endpoint", () => {
       expect(Array.isArray(data.topTools)).toBe(true);
     });
 
+    test("measures session duration without a session lifecycle span", async () => {
+      // Only tool_use spans, so a metric that reads durationMs off a span of
+      // kind "session" has nothing to average and reports zero.
+      const sessionId = crypto.randomUUID();
+      const start = Date.now() - 60000;
+      const spans = [0, 1, 2].map((index) => ({
+        span_id: crypto.randomUUID(),
+        session_id: sessionId,
+        timestamp: new Date(start + index * 5000).toISOString(),
+        duration_ms: 1000,
+        source: "sdk" as const,
+        kind: "tool_use" as const,
+        event_type: "tool_request",
+        status: "success" as const,
+        tool_name: "Bash",
+      }));
+
+      const ingest = await authFetch("/v1/spans/batch", testProject.apiKey, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(spans),
+      });
+      expect(ingest.ok).toBe(true);
+
+      // Sessions here span minutes of wall clock, while the lifecycle spans
+      // that used to drive this metric carry sub-second durations — so the
+      // threshold separates a derived measurement from the old one.
+      let avgSessionDurationMs = 0;
+      for (let attempt = 0; attempt < 25; attempt++) {
+        const response = await authFetch(
+          `/v1/analytics/spans?date_from=${dateFrom}&date_to=${dateTo}`,
+          testProject.apiKey,
+        );
+        const data = (await response.json()) as {
+          avgSessionDurationMs: number;
+        };
+        avgSessionDurationMs = data.avgSessionDurationMs;
+        if (avgSessionDurationMs > 10_000) break;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      expect(avgSessionDurationMs).toBeGreaterThan(10_000);
+    });
+
     test("requires date range for span analytics", async () => {
-      const response = await authFetch("/v1/analytics/spans", testProject.apiKey);
+      const response = await authFetch(
+        "/v1/analytics/spans",
+        testProject.apiKey,
+      );
       expect(response.status).toBe(400);
     });
   });

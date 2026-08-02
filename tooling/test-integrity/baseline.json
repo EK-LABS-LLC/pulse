@@ -1,7 +1,7 @@
 {
   "version": 1,
   "artifact_count": 80,
-  "aggregate_sha256": "7e21edaec54de4538f9667a6edd78d645565e4efbcd3839cbd090823d6277dc1",
+  "aggregate_sha256": "b76347bb068a3c3866343d6ef602919a79a6ee6ef4456532770f410727f91bb8",
   "artifacts": [
     {
       "kind": "cli-cargo-test",
@@ -427,8 +427,8 @@
       "kind": "server-bun-test",
       "path": "apps/server/tests/analytics.test.ts",
       "mode": "100644",
-      "bytes": 6631,
-      "sha256": "5a4d39794d7f255924fba67d9b20076b774f114661dfd8e5e07980a0fcb6f743"
+      "bytes": 8423,
+      "sha256": "493e2e42ed3e5ed44ccfcf27b4fdb7f4b701fa6a6182e6a02c44dd1fd304d07e"
     },
     {
       "kind": "server-bun-test",

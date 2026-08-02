@@ -13,7 +13,11 @@ import {
 import type { Database } from "./index";
 import { getDbDialect } from "./index";
 import { spans } from "./schema";
-import type { GroupBy, SpanAnalyticsGroupBy } from "../shared/validation";
+import type {
+  GroupBy,
+  OverviewGroupBy,
+  SpanAnalyticsGroupBy,
+} from "../shared/validation";
 
 /**
  * Date range filter for analytics queries.
@@ -128,14 +132,20 @@ const spanProviderExpr = sql<string>`COALESCE(${spans.provider}, 'sdk')`;
 const spanModelExpr = sql<string>`COALESCE(${spans.model}, 'unknown')`;
 
 function spanPeriodExpr(
-  groupBy: SpanAnalyticsGroupBy = "day",
+  groupBy: SpanAnalyticsGroupBy | OverviewGroupBy = "day",
 ): ReturnType<typeof sql> {
   if (getDbDialect() === "postgres") {
+    if (groupBy === "15m") {
+      return sql`to_char(date_bin('15 minutes', ${spans.timestamp}, TIMESTAMPTZ '2001-01-01 00:00:00+00'), 'YYYY-MM-DD HH24:MI:00')`;
+    }
     return groupBy === "hour"
       ? sql`to_char(date_trunc('hour', ${spans.timestamp}), 'YYYY-MM-DD HH24:00:00')`
       : sql`to_char(date_trunc('day', ${spans.timestamp}), 'YYYY-MM-DD')`;
   }
 
+  if (groupBy === "15m") {
+    return sql`strftime('%Y-%m-%d %H:', ${spans.timestamp} / 1000, 'unixepoch') || printf('%02d:00', (CAST(strftime('%M', ${spans.timestamp} / 1000, 'unixepoch') AS integer) / 15) * 15)`;
+  }
   return groupBy === "hour"
     ? sql`strftime('%Y-%m-%d %H:00:00', ${spans.timestamp} / 1000, 'unixepoch')`
     : sql`strftime('%Y-%m-%d', ${spans.timestamp} / 1000, 'unixepoch')`;
@@ -511,7 +521,7 @@ export async function getOverviewSeries(
   dateRange: DateRange,
   measure: OverviewMeasure,
   splitBy: OverviewSplitBy,
-  groupBy: "day" | "hour" = "day",
+  groupBy: OverviewGroupBy = "day",
 ): Promise<OverviewSeriesRow[]> {
   const periodExpr = spanPeriodExpr(groupBy);
   const dimensionExpr = overviewDimensionExpr(splitBy);

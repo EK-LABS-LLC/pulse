@@ -173,6 +173,11 @@ export interface GetAnalyticsParams {
   split_by?: "none" | "model" | "provider" | "source" | "service";
 }
 
+export interface GetOverviewExtendedParams
+  extends Omit<GetAnalyticsParams, "group_by"> {
+  group_by?: "15m" | "hour" | "day";
+}
+
 export interface OverviewLatencyPercentiles {
   p50: number;
   p95: number;
@@ -454,7 +459,7 @@ export const getAnalytics = async (
  * (404) so the Overview hero can mount against a stable contract.
  */
 export const getOverviewExtended = async (
-  params: GetAnalyticsParams = {},
+  params: GetOverviewExtendedParams = {},
 ): Promise<OverviewExtendedResponse> => {
   const url = new URL(
     `${getBaseUrl()}/dashboard/api/analytics/overview-extended`,

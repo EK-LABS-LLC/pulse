@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { getOverviewExtended, type GetAnalyticsParams } from "../lib/apiClient";
+import {
+  getOverviewExtended,
+  type GetOverviewExtendedParams,
+} from "../lib/apiClient";
 
 export function useOverviewExtendedQuery(
   scope: string,
   projectId: string | undefined,
-  params: GetAnalyticsParams,
+  params: GetOverviewExtendedParams,
 ) {
   return useQuery({
     queryKey: [

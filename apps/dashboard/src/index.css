@@ -59,9 +59,9 @@
   --surface-3: #f7f7f9;
   --surface-4: #ffffff;
   --topbar: rgba(255, 255, 255, 0.92);
-  --border: rgba(0, 0, 0, 0.15);
-  --border-soft: rgba(0, 0, 0, 0.1);
-  --border-strong: rgba(0, 0, 0, 0.24);
+  --border: rgba(0, 0, 0, 0.18);
+  --border-soft: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.28);
   --text: #1d1d1f;
   --text-2: #2c2c2e;
   --text-3: #3a3a3c;
@@ -102,7 +102,8 @@
 }
 
 @theme {
-  --font-family-sans: "Inter", system-ui, sans-serif;
+  --font-family-sans: -apple-system, BlinkMacSystemFont, "Inter", system-ui,
+    sans-serif;
 
   /* Design-token utilities. These resolve through the vars above, so they
      follow the active theme at runtime rather than being baked at build. */

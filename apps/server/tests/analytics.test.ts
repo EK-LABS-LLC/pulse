@@ -238,4 +238,80 @@ describe("Analytics Endpoint", () => {
       expect(response.status).toBe(400);
     });
   });
+
+  describe("GET /v1/analytics/overview-extended", () => {
+    const dateFrom = "2020-01-01T00:00:00Z";
+    const dateTo = "2030-12-31T23:59:59Z";
+
+    test("returns request series split by model", async () => {
+      const response = await authFetch(
+        `/v1/analytics/overview-extended?date_from=${dateFrom}&date_to=${dateTo}&measure=requests&split_by=model`,
+        testProject.apiKey,
+      );
+      const data = (await response.json()) as {
+        available: boolean;
+        series: Array<{ name: string; points: Array<{ value: number }> }>;
+      };
+
+      expect(response.status).toBe(200);
+      expect(data.available).toBe(true);
+      expect(data.series).toHaveLength(1);
+      expect(data.series[0]?.name).toBe("gpt-4o");
+      expect(
+        data.series[0]?.points.reduce((sum, point) => sum + point.value, 0),
+      ).toBe(20);
+    });
+
+    test("supports cost series split by provider", async () => {
+      const response = await authFetch(
+        `/v1/analytics/overview-extended?date_from=${dateFrom}&date_to=${dateTo}&measure=cost&split_by=provider&group_by=hour`,
+        testProject.apiKey,
+      );
+      const data = (await response.json()) as {
+        series: Array<{ name: string; points: Array<{ value: number }> }>;
+      };
+
+      expect(response.status).toBe(200);
+      expect(data.series.length).toBe(3);
+      expect(data.series.map((series) => series.name).sort()).toEqual([
+        "anthropic",
+        "openai",
+        "openrouter",
+      ]);
+      expect(
+        data.series.reduce(
+          (sum, series) =>
+            sum + series.points.reduce((seriesSum, point) => seriesSum + point.value, 0),
+          0,
+        ),
+      ).toBeGreaterThan(0);
+    });
+
+    test("returns latency percentiles", async () => {
+      const response = await authFetch(
+        `/v1/analytics/overview-extended?date_from=${dateFrom}&date_to=${dateTo}&measure=latency`,
+        testProject.apiKey,
+      );
+      const data = (await response.json()) as {
+        latencyPercentiles: { p50: number; p95: number; p99: number };
+      };
+
+      expect(response.status).toBe(200);
+      expect(data.latencyPercentiles.p50).toBeGreaterThan(0);
+      expect(data.latencyPercentiles.p95).toBeGreaterThanOrEqual(
+        data.latencyPercentiles.p50,
+      );
+      expect(data.latencyPercentiles.p99).toBeGreaterThanOrEqual(
+        data.latencyPercentiles.p95,
+      );
+    });
+
+    test("requires a date range", async () => {
+      const response = await authFetch(
+        "/v1/analytics/overview-extended",
+        testProject.apiKey,
+      );
+      expect(response.status).toBe(400);
+    });
+  });
 });

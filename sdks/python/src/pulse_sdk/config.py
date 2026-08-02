@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .types import PulseConfig
+
+
+DEFAULT_API_URL = "http://localhost:3000"
+DEFAULT_BATCH_SIZE = 10
+DEFAULT_FLUSH_INTERVAL = 5000  # ms
+DEFAULT_ENABLED = True
+DEFAULT_SERVICE_NAME = "pulse-sdk-py"
 
 
 @dataclass(frozen=True)
@@ -13,14 +19,7 @@ class ResolvedConfig:
     batch_size: int
     flush_interval: int
     enabled: bool
-    service_name: str
-
-
-DEFAULT_API_URL = "http://localhost:3000"
-DEFAULT_BATCH_SIZE = 10
-DEFAULT_FLUSH_INTERVAL = 5000  # ms
-DEFAULT_ENABLED = True
-DEFAULT_SERVICE_NAME = "pulse-sdk-py"
+    service_name: str = DEFAULT_SERVICE_NAME
 
 
 class ConfigError(ValueError):

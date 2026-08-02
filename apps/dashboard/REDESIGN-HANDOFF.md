@@ -100,16 +100,34 @@ sync with `ThemeProvider`'s resolution order (stored → system → dark).
 
 ## What is NOT done
 
-Views still on the old layout (themed, but not restructured to the mock):
+Views still on the old layout (themed and on redesign components, but not
+restructured to the mock's layout):
 
-- `pages/Dashboard.tsx` (459) — should use `StatCard` with sparklines
-- `pages/TraceDetail.tsx` (135) — should use the waterfall + a detail panel
 - `pages/Sessions.tsx` (580)
 - `pages/SessionDetail.tsx` (518)
 - `pages/Settings.tsx` (115), `pages/ApiKeys.tsx` (530)
 
-Consult `template.html` per view for layout. Build order from here:
-trace detail → home → sessions → session detail → settings/API keys.
+Done since: `TraceDetail.tsx` is a two-pane waterfall + span inspector,
+`Login.tsx` is a split layout with its own theme toggle, and
+`components/dashboard/StatCard.tsx` is on the redesign surface with sparklines
+fed from real analytics buckets.
+
+Consult `template.html` per view. Build order from here:
+sessions → session detail → settings/API keys.
+
+### Two real data discrepancies found — worth fixing, not hiding
+
+Both are visible on the Overview page against ingested data:
+
+1. **Avg Duration reads `0ms`.** `spansAnalytics.avgSessionDurationMs` is 0
+   because `ingest-dev-data.ts` emits no session-lifecycle spans. Either the
+   metric should derive duration from first/last span in a session, or the
+   generator should emit `session` spans. Decide which is correct.
+2. **Error Rate reads `0.0%` while Success Rate reads `91.2%`.** The API
+   reports 10 error traces out of 50 (20%). `analytics.errorRate` appears to
+   count only `llm_call` spans, and the generator puts failures on `tool_use`
+   and `agent_run` spans. Two metrics disagreeing on the same page is a bug in
+   the analytics query, not in the view.
 
 Also outstanding:
 
@@ -118,8 +136,35 @@ Also outstanding:
   dashboard changes are logged in `apps/server/CHANGELOG.md`. Copy that file's
   bespoke format exactly (`### Title Case`, then `Date: … ; Status: … ; PR: #N`,
   then `Task:`/`Added:`/`Changed:`/`Fixed:`). Add to `## Unreleased`.
-- No tests were added. Check whether `tooling/test-integrity/baseline.json`
-  needs rebaselining if you add any (CI now permits it for touched files).
+- Consolidate integration-test projects to 1-3. There are 22
+  `createTestProject` calls across 8 files. **Caution:** those separate
+  projects exist for isolation — assertions like `total === 5` rely on an
+  empty project. Collapsing them means re-scoping each such assertion by
+  `session_id`. Doable without losing coverage, but it is a careful pass, not
+  a find-and-replace; done carelessly it silently weakens the suite.
+- `tooling/test-integrity/baseline.json` was rebaselined at 80 artifacts for
+  the new SDK test. Rebaseline again if you add tests (CI permits it for files
+  the branch touches).
+
+## Baseline at handoff — all green
+
+| Suite | Result |
+| --- | --- |
+| Server integration (`bun run test`) | 98 pass, 0 fail, 17 files |
+| SDK TypeScript (CI set + `record.test.ts`) | 57 pass, 0 fail |
+| Dashboard build + lint | clean |
+| test-integrity | 80 artifacts verified |
+
+`sdks/typescript/tests/e2e.test.ts` throws without `PULSE_API_KEY`. That is
+pre-existing and CI does not run it.
+
+## SDK additions
+
+`recordSpan(input)` emits any span and returns it, so callers nest children
+under `span_id`. `shutdownPulse()` flushes and clears the flush interval —
+without it a short-lived process never exits. `SpanKind` was widened from
+`llm_call | tool_use` to the seven kinds the ingest contract has always
+accepted.
 
 ## Data reality — read before building views
 

@@ -163,7 +163,13 @@ export default function Dashboard() {
   const overviewExtendedQuery = useOverviewExtendedQuery(
     "dashboard-overview-extended",
     selectedProject?.id,
-    { date_from, date_to, group_by: "day" },
+    {
+      date_from,
+      date_to,
+      group_by: timeRange === "24h" ? "hour" : "day",
+      measure,
+      split_by: splitBy,
+    },
   );
 
   const recentTracesQuery = useTracesQuery(

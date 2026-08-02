@@ -14,6 +14,8 @@ export function useOverviewExtendedQuery(
       params.date_from,
       params.date_to,
       params.group_by,
+      params.measure,
+      params.split_by,
     ],
     enabled: !!projectId,
     queryFn: () => getOverviewExtended(params),

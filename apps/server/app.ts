@@ -17,7 +17,11 @@ import {
   handleGetSessionTraces,
   handleGetSessionSpans,
 } from "./routes/sessions";
-import { handleGetAnalytics, handleGetSpanAnalytics } from "./routes/analytics";
+import {
+  handleGetAnalytics,
+  handleGetOverviewExtended,
+  handleGetSpanAnalytics,
+} from "./routes/analytics";
 import { isAuthenticated } from "./routes/auth";
 import { handleSignupWithProject } from "./routes/signup";
 import { dashboard } from "./routes/dashboard";
@@ -113,6 +117,11 @@ export function createApp(): Hono {
   app.get("/v1/sessions/:id/spans", authMiddleware, handleGetSessionSpans);
   app.get("/v1/analytics", authMiddleware, handleGetAnalytics);
   app.get("/v1/analytics/spans", authMiddleware, handleGetSpanAnalytics);
+  app.get(
+    "/v1/analytics/overview-extended",
+    authMiddleware,
+    handleGetOverviewExtended,
+  );
   app.get("*", serveDashboard);
 
   return app;

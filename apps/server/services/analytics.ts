@@ -21,6 +21,8 @@ import {
   getAvgSessionSpanDuration,
   getTopTools,
   getServiceStats,
+  getOverviewSeries,
+  getOverviewLatencyPercentiles,
   type CostByProvider,
   type StatsByModel,
   type CostOverTimeByProvider,
@@ -28,6 +30,9 @@ import {
   type SpanCountBySource,
   type SpanCountOverTime,
   type TopToolUsage,
+  type OverviewMeasure,
+  type OverviewSplitBy,
+  type OverviewLatencyPercentiles,
 } from "../db/analytics";
 
 /**
@@ -84,6 +89,43 @@ export interface SpanAnalyticsResult {
   spansOverTime: SpanCountOverTime[];
   serviceStats: ServiceStats[];
 }
+
+export interface OverviewSeriesPoint {
+  period: string;
+  value: number;
+}
+
+export interface OverviewSeries {
+  id: string;
+  name: string;
+  color: string;
+  points: OverviewSeriesPoint[];
+}
+
+export interface OverviewExtendedResult {
+  available: true;
+  latencyPercentiles: OverviewLatencyPercentiles;
+  latencyHistogram: [];
+  series: OverviewSeries[];
+  errorTaxonomy: [];
+  heatmap: [];
+}
+
+const OVERVIEW_COLORS = [
+  "var(--blue)",
+  "var(--purple)",
+  "var(--teal)",
+  "var(--orange)",
+  "var(--green)",
+  "var(--pink)",
+];
+
+const MEASURE_LABELS: Record<OverviewMeasure, string> = {
+  requests: "Requests",
+  cost: "Cost",
+  latency: "Latency",
+  tokens: "Tokens",
+};
 
 /**
  * Safely divide two numbers, returning 0 if divisor is 0.
@@ -235,5 +277,39 @@ export async function getSpanAnalytics(
     spansBySource,
     spansOverTime,
     serviceStats,
+  };
+}
+
+export async function getOverviewExtended(
+  projectId: string,
+  dateRange: AnalyticsDateRange,
+  db: Database,
+  measure: OverviewMeasure = "requests",
+  splitBy: OverviewSplitBy = "none",
+  groupBy: "day" | "hour" = "day",
+): Promise<OverviewExtendedResult> {
+  const [rows, latencyPercentiles] = await Promise.all([
+    getOverviewSeries(db, projectId, dateRange, measure, splitBy, groupBy),
+    getOverviewLatencyPercentiles(db, projectId, dateRange),
+  ]);
+
+  const dimensions = [...new Set(rows.map((row) => row.dimension))];
+  const series = dimensions.map((dimension, index) => ({
+    id: `${splitBy}-${dimension}`,
+    name:
+      splitBy === "none" ? MEASURE_LABELS[measure] : dimension,
+    color: OVERVIEW_COLORS[index % OVERVIEW_COLORS.length] ?? "var(--blue)",
+    points: rows
+      .filter((row) => row.dimension === dimension)
+      .map(({ period, value }) => ({ period, value })),
+  }));
+
+  return {
+    available: true,
+    latencyPercentiles,
+    latencyHistogram: [],
+    series,
+    errorTaxonomy: [],
+    heatmap: [],
   };
 }

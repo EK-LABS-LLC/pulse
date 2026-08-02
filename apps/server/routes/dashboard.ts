@@ -20,7 +20,11 @@ import {
 } from "./dashboard-users";
 import { getTraces, getTraceById } from "./traces";
 import { handleGetSessionTraces, handleGetSessionSpans } from "./sessions";
-import { handleGetAnalytics, handleGetSpanAnalytics } from "./analytics";
+import {
+  handleGetAnalytics,
+  handleGetOverviewExtended,
+  handleGetSpanAnalytics,
+} from "./analytics";
 import { getAgentSessions } from "./agent-sessions";
 import {
   handleBatchSpans,
@@ -88,6 +92,11 @@ dashboard.get(
   "/analytics/spans",
   projectContextMiddleware,
   handleGetSpanAnalytics,
+);
+dashboard.get(
+  "/analytics/overview-extended",
+  projectContextMiddleware,
+  handleGetOverviewExtended,
 );
 dashboard.get("/agent-sessions", projectContextMiddleware, getAgentSessions);
 dashboard.post("/spans/batch", projectContextMiddleware, handleBatchSpans);

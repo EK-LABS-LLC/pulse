@@ -9,6 +9,8 @@ Task: Move the dashboard onto the new design and let the SDK emit the spans that
 Added: Dashboard ships a light and a dark theme with a toggle in the top bar and on the sign-in page, and remembers the choice.
 Changed: Navigation collapses to an icon rail with hover labels, and account and theme controls move into the bottom of the rail.
 Changed: The Overview chart shows detailed time-series lines with hover values and clickable series tags.
+Added: `GET /v1/analytics/overview-extended` returns request, cost, token, and latency series split by model, provider, source, or service.
+Added: Overview analytics reports p50, p95, and p99 latency percentiles from LLM request spans.
 Changed: Trace detail shows the span waterfall beside an inspector for the selected span, and names the service that owned the first failure.
 Changed: Traces list rows carry a status dot, source badge, service, and latency and token meters.
 Changed: Sign-in moves to a split layout on the new palette.

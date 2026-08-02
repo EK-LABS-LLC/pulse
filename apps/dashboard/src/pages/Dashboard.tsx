@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   OverviewHero,
+  type OverviewGranularity,
   type OverviewMeasure,
   type OverviewSplit,
 } from "../components/dashboard/OverviewHero";
@@ -9,7 +9,10 @@ import { OverviewMetricStrip } from "../components/dashboard/OverviewMetricStrip
 import { OverviewToolUsage } from "../components/dashboard/OverviewToolUsage";
 import { ServiceHealthTable } from "../components/dashboard/ServiceHealthTable";
 import { TimeRangeTabs } from "../components/dashboard/TimeRangeTabs";
-import type { TimeRange } from "../components/dashboard/TimeRangeTabs";
+import type {
+  TimeRange,
+  TimeRangeSelection,
+} from "../components/dashboard/TimeRangeTabs";
 import { RecentTracesTable } from "../components/dashboard/RecentTracesTable";
 import {
   useAnalyticsQuery,
@@ -19,7 +22,13 @@ import {
 } from "../api";
 import { useProject } from "../hooks/useProject";
 import type { OverviewSeries } from "../lib/apiClient";
+import {
+  formatLocalDateKey,
+  getCustomDateWindow,
+  getDateWindow,
+} from "../lib/date";
 import { fmtCost, fmtDuration, fmtLatency } from "../lib/format";
+import { calculateOverviewTrend } from "../lib/overviewChart";
 
 const RefreshIcon = () => (
   <svg
@@ -37,39 +46,23 @@ const RefreshIcon = () => (
   </svg>
 );
 
-function getDateRange(range: TimeRange): {
-  date_from: string;
-  date_to: string;
-} {
-  const now = new Date();
-  const to = now.toISOString();
-  let from: Date;
-
-  switch (range) {
-    case "24h":
-      from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      break;
-    case "7d":
-      from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      break;
-    case "30d":
-      from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      break;
-  }
-
-  return { date_from: from.toISOString(), date_to: to };
-}
-
 function formatNumber(num: number): string {
   if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
   if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
   return num.toLocaleString();
 }
 
-function rangeLabel(range: TimeRange): string {
+function rangeLabel(range: TimeRangeSelection): string {
   if (range === "24h") return "Last 24 hours";
   if (range === "7d") return "Last 7 days";
-  return "Last 30 days";
+  if (range === "30d") return "Last 30 days";
+  return "Custom range";
+}
+
+function recommendedGranularity(range: TimeRange): OverviewGranularity {
+  if (range === "24h") return "15m";
+  if (range === "7d") return "hour";
+  return "day";
 }
 
 function buildProvisionalSeries(
@@ -137,15 +130,41 @@ function buildProvisionalSeries(
 }
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const { selectedProject } = useProject();
-  const [timeRange, setTimeRange] = useState<TimeRange>("7d");
+  const [timeRange, setTimeRange] = useState<TimeRangeSelection>("7d");
+  const [endingDate, setEndingDate] = useState(() =>
+    formatLocalDateKey(new Date()),
+  );
+  const [customDateRange, setCustomDateRange] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
+  const [dateRangeAnchor, setDateRangeAnchor] = useState(() => new Date());
   const [measure, setMeasure] = useState<OverviewMeasure>("requests");
   const [splitBy, setSplitBy] = useState<OverviewSplit>("none");
+  const [granularity, setGranularity] = useState<OverviewGranularity>("hour");
 
   const { date_from, date_to } = useMemo(
-    () => getDateRange(timeRange),
-    [timeRange],
+    () =>
+      timeRange === "custom" && customDateRange
+        ? getCustomDateWindow(
+            customDateRange.from,
+            customDateRange.to,
+            dateRangeAnchor,
+          )
+        : getDateWindow(
+            timeRange === "custom" ? "7d" : timeRange,
+            endingDate,
+            dateRangeAnchor,
+          ),
+    [customDateRange, dateRangeAnchor, endingDate, timeRange],
+  );
+  const calendarDateRange = useMemo(
+    () => ({
+      from: formatLocalDateKey(new Date(date_from)),
+      to: formatLocalDateKey(new Date(date_to)),
+    }),
+    [date_from, date_to],
   );
 
   const analyticsQuery = useAnalyticsQuery(
@@ -166,9 +185,21 @@ export default function Dashboard() {
     {
       date_from,
       date_to,
-      group_by: timeRange === "24h" ? "hour" : "day",
+      group_by: granularity,
       measure,
       split_by: splitBy,
+    },
+  );
+
+  const trendOverviewQuery = useOverviewExtendedQuery(
+    "dashboard-overview-extended",
+    selectedProject?.id,
+    {
+      date_from,
+      date_to,
+      group_by: granularity,
+      measure,
+      split_by: "none",
     },
   );
 
@@ -236,6 +267,18 @@ export default function Dashboard() {
     overviewExtended.available && overviewExtended.series.length > 0
       ? overviewExtended.series
       : provisionalSeries;
+  const trendSeries =
+    trendOverviewQuery.data?.available &&
+    trendOverviewQuery.data.series.length > 0
+      ? trendOverviewQuery.data.series
+      : splitBy === "none"
+        ? heroSeries
+        : [];
+  const trendPercent = calculateOverviewTrend(trendSeries);
+  const deltaLabel =
+    trendPercent === null
+      ? undefined
+      : `${trendPercent >= 0 ? "↑" : "↓"} ${Math.abs(trendPercent).toFixed(1)}% vs. earlier in the period`;
 
   const headline = (() => {
     if (measure === "cost") {
@@ -270,14 +313,23 @@ export default function Dashboard() {
           Overview
         </h1>
         <div className="flex items-center gap-3">
-          <TimeRangeTabs value={timeRange} onChange={setTimeRange} />
+          <TimeRangeTabs
+            value={timeRange}
+            onChange={(nextRange) => {
+              setTimeRange(nextRange);
+              setCustomDateRange(null);
+              setGranularity(recommendedGranularity(nextRange));
+            }}
+          />
           <button
             type="button"
             aria-label="Refresh overview"
             onClick={() => {
+              setDateRangeAnchor(new Date());
               analyticsQuery.refetch();
               spansQuery.refetch();
               overviewExtendedQuery.refetch();
+              trendOverviewQuery.refetch();
             }}
             disabled={loading}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-line-strong bg-surface-2 text-fg-4 transition-colors hover:bg-hover hover:text-fg disabled:opacity-50"
@@ -310,25 +362,26 @@ export default function Dashboard() {
             rangeLabel={rangeLabel(timeRange)}
             measure={measure}
             splitBy={splitBy}
+            granularity={granularity}
+            dateRange={calendarDateRange}
+            dateFrom={date_from}
+            dateTo={date_to}
             onMeasureChange={setMeasure}
             onSplitChange={setSplitBy}
+            onGranularityChange={setGranularity}
+            onDateRangeChange={(nextRange) => {
+              setCustomDateRange(nextRange);
+              setEndingDate(nextRange.to);
+              setTimeRange("custom");
+              setDateRangeAnchor(new Date());
+            }}
             headline={headline}
+            deltaLabel={deltaLabel}
             successRateLabel={`${successRate.toFixed(1)}%`}
             failedLabel={failedSpans.toLocaleString()}
             topFailing={topFailing}
-            onInvestigate={() => navigate("/dashboard/traces?status=error")}
             series={heroSeries}
             extendedAvailable={overviewExtended.available}
-            latencyP50={
-              overviewExtended.latencyPercentiles
-                ? fmtLatency(overviewExtended.latencyPercentiles.p50)
-                : undefined
-            }
-            latencyP95={
-              overviewExtended.latencyPercentiles
-                ? fmtLatency(overviewExtended.latencyPercentiles.p95)
-                : undefined
-            }
           />
 
           <OverviewMetricStrip

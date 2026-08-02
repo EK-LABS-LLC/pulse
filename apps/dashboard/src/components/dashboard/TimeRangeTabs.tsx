@@ -1,7 +1,8 @@
 export type TimeRange = "24h" | "7d" | "30d";
+export type TimeRangeSelection = TimeRange | "custom";
 
 interface TimeRangeTabsProps {
-  value: TimeRange;
+  value: TimeRangeSelection;
   onChange: (range: TimeRange) => void;
 }
 

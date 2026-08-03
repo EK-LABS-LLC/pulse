@@ -221,12 +221,22 @@ export default function Dashboard() {
       errorTaxonomy: [],
       heatmap: [],
     } as const);
+  const displayedChartMeasure =
+    (overviewExtendedQuery.data?.query.measure as
+      OverviewMeasure | undefined) ?? measure;
+  const displayedChartGranularity =
+    overviewExtendedQuery.data?.query.group_by ?? granularity;
   const recentTraces = recentTracesQuery.data?.traces ?? [];
 
   const loading =
     analyticsQuery.isPending ||
     analyticsQuery.isFetching ||
-    spansQuery.isPending;
+    spansQuery.isPending ||
+    spansQuery.isFetching ||
+    overviewExtendedQuery.isPending ||
+    overviewExtendedQuery.isFetching ||
+    trendOverviewQuery.isPending ||
+    trendOverviewQuery.isFetching;
   const tracesLoading =
     recentTracesQuery.isPending || recentTracesQuery.isFetching;
   const error =
@@ -255,12 +265,17 @@ export default function Dashboard() {
   const provisionalSeries = useMemo(
     () =>
       buildProvisionalSeries(
-        measure,
+        displayedChartMeasure,
         analytics?.costOverTime ?? [],
         spansAnalytics?.spansOverTime ?? [],
         analytics?.totalTokens,
       ),
-    [measure, analytics?.costOverTime, analytics?.totalTokens, spansAnalytics],
+    [
+      displayedChartMeasure,
+      analytics?.costOverTime,
+      analytics?.totalTokens,
+      spansAnalytics,
+    ],
   );
 
   const heroSeries =
@@ -363,6 +378,8 @@ export default function Dashboard() {
             measure={measure}
             splitBy={splitBy}
             granularity={granularity}
+            chartMeasure={displayedChartMeasure}
+            chartGranularity={displayedChartGranularity}
             dateRange={calendarDateRange}
             dateFrom={date_from}
             dateTo={date_to}

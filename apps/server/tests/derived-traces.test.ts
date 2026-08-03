@@ -119,6 +119,29 @@ test("sdk trace keeps llm fields and models the summary", () => {
   expect(s.summary).toBe("gpt-4o-mini");
 });
 
+test("trace prefers a recorded run summary over the model name", () => {
+  const spans = [
+    span({
+      kind: "agent_run",
+      metadata: {
+        "pulse.metadata.summary":
+          "Fix failing auth test and refactor session helper",
+      },
+    }),
+    span({
+      source: "sdk",
+      kind: "llm_call",
+      eventType: "provider_call",
+      provider: "openai",
+      model: "gpt-4o-mini",
+    }),
+  ];
+
+  expect(deriveTraceSummary("t1", spans).summary).toBe(
+    "Fix failing auth test and refactor session helper",
+  );
+});
+
 test("trace reports the distinct services it touched", () => {
   const spans = [
     span({ service: "gateway", timestamp: new Date("2026-07-20T00:00:00Z") }),

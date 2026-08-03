@@ -1,10 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
-import { getOverviewExtended, type GetAnalyticsParams } from "../lib/apiClient";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  getOverviewExtended,
+  type GetOverviewExtendedParams,
+} from "../lib/apiClient";
 
 export function useOverviewExtendedQuery(
   scope: string,
   projectId: string | undefined,
-  params: GetAnalyticsParams,
+  params: GetOverviewExtendedParams,
 ) {
   return useQuery({
     queryKey: [
@@ -18,7 +21,15 @@ export function useOverviewExtendedQuery(
       params.split_by,
     ],
     enabled: !!projectId,
-    queryFn: () => getOverviewExtended(params),
+    queryFn: async () => ({
+      ...(await getOverviewExtended(params)),
+      query: {
+        group_by: params.group_by,
+        measure: params.measure,
+        split_by: params.split_by,
+      },
+    }),
+    placeholderData: keepPreviousData,
     // The stub returns empty on 404; avoid noisy retries until the route exists.
     retry: false,
   });

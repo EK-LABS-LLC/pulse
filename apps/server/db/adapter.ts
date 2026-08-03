@@ -9,6 +9,7 @@ export interface TraceQueryFilters {
   service?: string;
   provider?: string;
   model?: string;
+  summary?: string;
   status?: "success" | "error";
   dateFrom?: Date;
   dateTo?: Date;

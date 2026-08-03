@@ -45,6 +45,8 @@
   --neutral: rgba(255, 255, 255, 0.42);
   --neutral-soft: rgba(255, 255, 255, 0.2);
   --seg-active: #3a3a3c;
+  --filter-active: #3a3a3c;
+  --filter-active-border: #2c2c2e;
   --blue-border: rgba(10, 132, 255, 0.35);
   --green-border: rgba(48, 209, 88, 0.35);
   --json-key: #7fb2ff;
@@ -59,9 +61,9 @@
   --surface-3: #f7f7f9;
   --surface-4: #ffffff;
   --topbar: rgba(255, 255, 255, 0.92);
-  --border: rgba(0, 0, 0, 0.15);
-  --border-soft: rgba(0, 0, 0, 0.1);
-  --border-strong: rgba(0, 0, 0, 0.24);
+  --border: rgba(0, 0, 0, 0.18);
+  --border-soft: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.28);
   --text: #1d1d1f;
   --text-2: #2c2c2e;
   --text-3: #3a3a3c;
@@ -94,6 +96,8 @@
   --neutral: rgba(0, 0, 0, 0.45);
   --neutral-soft: rgba(0, 0, 0, 0.26);
   --seg-active: #ffffff;
+  --filter-active: #636366;
+  --filter-active-border: #48484a;
   --blue-border: rgba(10, 108, 232, 0.32);
   --green-border: rgba(30, 158, 74, 0.35);
   --json-key: #0057b7;
@@ -102,7 +106,8 @@
 }
 
 @theme {
-  --font-family-sans: "Inter", system-ui, sans-serif;
+  --font-family-sans: -apple-system, BlinkMacSystemFont, "Inter", system-ui,
+    sans-serif;
 
   /* Design-token utilities. These resolve through the vars above, so they
      follow the active theme at runtime rather than being baked at build. */

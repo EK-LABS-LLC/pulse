@@ -40,6 +40,7 @@ export interface GetTracesParams {
   service?: string;
   provider?: string;
   model?: string;
+  summary?: string;
   status?: string;
   date_from?: string;
   date_to?: string;
@@ -169,8 +170,15 @@ export interface GetAnalyticsParams {
   date_from?: string;
   date_to?: string;
   group_by?: AnalyticsGroupBy;
-  measure?: "requests" | "cost" | "latency" | "tokens";
+  measure?: "requests" | "errors" | "cost" | "latency" | "tokens";
   split_by?: "none" | "model" | "provider" | "source" | "service";
+}
+
+export interface GetOverviewExtendedParams extends Omit<
+  GetAnalyticsParams,
+  "group_by"
+> {
+  group_by?: "15m" | "hour" | "day";
 }
 
 export interface OverviewLatencyPercentiles {
@@ -454,7 +462,7 @@ export const getAnalytics = async (
  * (404) so the Overview hero can mount against a stable contract.
  */
 export const getOverviewExtended = async (
-  params: GetAnalyticsParams = {},
+  params: GetOverviewExtendedParams = {},
 ): Promise<OverviewExtendedResponse> => {
   const url = new URL(
     `${getBaseUrl()}/dashboard/api/analytics/overview-extended`,

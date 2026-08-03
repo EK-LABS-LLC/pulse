@@ -281,10 +281,46 @@ describe("Analytics Endpoint", () => {
       expect(
         data.series.reduce(
           (sum, series) =>
-            sum + series.points.reduce((seriesSum, point) => seriesSum + point.value, 0),
+            sum +
+            series.points.reduce(
+              (seriesSum, point) => seriesSum + point.value,
+              0,
+            ),
           0,
         ),
       ).toBeGreaterThan(0);
+    });
+
+    test("returns errored span counts over time", async () => {
+      const response = await authFetch(
+        `/v1/analytics/overview-extended?date_from=${dateFrom}&date_to=${dateTo}&measure=errors&group_by=hour`,
+        testProject.apiKey,
+      );
+      const data = (await response.json()) as {
+        series: Array<{ points: Array<{ value: number }> }>;
+      };
+
+      expect(response.status).toBe(200);
+      expect(data.series).toHaveLength(1);
+      expect(
+        data.series[0]?.points.reduce((sum, point) => sum + point.value, 0),
+      ).toBe(2);
+    });
+
+    test("supports fifteen-minute overview buckets", async () => {
+      const response = await authFetch(
+        `/v1/analytics/overview-extended?date_from=${dateFrom}&date_to=${dateTo}&measure=requests&group_by=15m`,
+        testProject.apiKey,
+      );
+      const data = (await response.json()) as {
+        series: Array<{ points: Array<{ period: string }> }>;
+      };
+
+      expect(response.status).toBe(200);
+      expect(data.series[0]?.points.length).toBeGreaterThan(0);
+      for (const point of data.series[0]?.points ?? []) {
+        expect(point.period).toMatch(/:(00|15|30|45):00$/);
+      }
     });
 
     test("returns latency percentiles", async () => {

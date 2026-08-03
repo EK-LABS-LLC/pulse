@@ -1,6 +1,10 @@
 import type { Database } from "../db/index";
 import type { ServiceStats } from "../db/analytics";
-import type { GroupBy, SpanAnalyticsGroupBy } from "../shared/validation";
+import type {
+  GroupBy,
+  OverviewGroupBy,
+  SpanAnalyticsGroupBy,
+} from "../shared/validation";
 import {
   getTotalCost,
   getTotalTokens,
@@ -122,6 +126,7 @@ const OVERVIEW_COLORS = [
 
 const MEASURE_LABELS: Record<OverviewMeasure, string> = {
   requests: "Requests",
+  errors: "Errors",
   cost: "Cost",
   latency: "Latency",
   tokens: "Tokens",
@@ -246,18 +251,17 @@ export async function getSpanAnalytics(
     avgSessionDurationMs,
     topTools,
     serviceStats,
-  ] =
-    await Promise.all([
-      getTotalSpanEvents(db, projectId, dbDateRange),
-      getSpanErrorRate(db, projectId, dbDateRange),
-      getAvgSpanDuration(db, projectId, dbDateRange),
-      getSpanCountsByKind(db, projectId, dbDateRange),
-      getSpanCountsBySource(db, projectId, dbDateRange),
-      getSpanCountsOverTime(db, projectId, dbDateRange, groupBy),
-      getAvgSessionSpanDuration(db, projectId, dbDateRange),
-      getTopTools(db, projectId, dbDateRange),
-      getServiceStats(db, projectId, dbDateRange),
-    ]);
+  ] = await Promise.all([
+    getTotalSpanEvents(db, projectId, dbDateRange),
+    getSpanErrorRate(db, projectId, dbDateRange),
+    getAvgSpanDuration(db, projectId, dbDateRange),
+    getSpanCountsByKind(db, projectId, dbDateRange),
+    getSpanCountsBySource(db, projectId, dbDateRange),
+    getSpanCountsOverTime(db, projectId, dbDateRange, groupBy),
+    getAvgSessionSpanDuration(db, projectId, dbDateRange),
+    getTopTools(db, projectId, dbDateRange),
+    getServiceStats(db, projectId, dbDateRange),
+  ]);
 
   const byKind = new Map(spansByKind.map((row) => [row.kind, row.count]));
   const agentRuns = byKind.get("agent_run") ?? 0;
@@ -286,7 +290,7 @@ export async function getOverviewExtended(
   db: Database,
   measure: OverviewMeasure = "requests",
   splitBy: OverviewSplitBy = "none",
-  groupBy: "day" | "hour" = "day",
+  groupBy: OverviewGroupBy = "day",
 ): Promise<OverviewExtendedResult> {
   const [rows, latencyPercentiles] = await Promise.all([
     getOverviewSeries(db, projectId, dateRange, measure, splitBy, groupBy),
@@ -296,8 +300,7 @@ export async function getOverviewExtended(
   const dimensions = [...new Set(rows.map((row) => row.dimension))];
   const series = dimensions.map((dimension, index) => ({
     id: `${splitBy}-${dimension}`,
-    name:
-      splitBy === "none" ? MEASURE_LABELS[measure] : dimension,
+    name: splitBy === "none" ? MEASURE_LABELS[measure] : dimension,
     color: OVERVIEW_COLORS[index % OVERVIEW_COLORS.length] ?? "var(--blue)",
     points: rows
       .filter((row) => row.dimension === dimension)

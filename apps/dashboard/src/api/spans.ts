@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   getAgentSessions,
   getSpansAnalytics,
@@ -23,6 +23,7 @@ export function useSpansAnalyticsQuery(
     ],
     enabled: !!projectId,
     queryFn: () => getSpansAnalytics(params),
+    placeholderData: keepPreviousData,
   });
 }
 

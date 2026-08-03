@@ -32,6 +32,7 @@ export const traceQuerySchema = z.object({
   service: z.string().optional(),
   provider: z.string().optional(),
   model: z.string().optional(),
+  summary: z.string().trim().min(1).max(200).optional(),
   status: statusSchema.optional(),
   date_from: z.union([z.string(), z.coerce.number()]).optional(),
   date_to: z.union([z.string(), z.coerce.number()]).optional(),
@@ -63,6 +64,7 @@ export const spanAnalyticsQuerySchema = z.object({
 
 export const overviewMeasureSchema = z.enum([
   "requests",
+  "errors",
   "cost",
   "latency",
   "tokens",
@@ -76,12 +78,14 @@ export const overviewSplitBySchema = z.enum([
   "service",
 ]);
 
+export const overviewGroupBySchema = z.enum(["15m", "hour", "day"]);
+
 export const overviewExtendedQuerySchema = z.object({
   date_from: z.string().datetime({ offset: true }),
   date_to: z.string().datetime({ offset: true }),
   measure: overviewMeasureSchema.optional(),
   split_by: overviewSplitBySchema.optional(),
-  group_by: z.enum(["day", "hour"]).optional(),
+  group_by: overviewGroupBySchema.optional(),
 });
 
 /**
@@ -257,6 +261,7 @@ export type GroupBy = z.infer<typeof groupBySchema>;
 export type AnalyticsQueryParams = z.infer<typeof analyticsQuerySchema>;
 export type SpanAnalyticsGroupBy = z.infer<typeof spanAnalyticsGroupBySchema>;
 export type SpanAnalyticsQueryParams = z.infer<typeof spanAnalyticsQuerySchema>;
+export type OverviewGroupBy = z.infer<typeof overviewGroupBySchema>;
 
 export type SpanSource = z.infer<typeof spanSourceSchema>;
 export type SpanKind = z.infer<typeof spanKindSchema>;

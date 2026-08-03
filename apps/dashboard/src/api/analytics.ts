@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getAnalytics, type GetAnalyticsParams } from "../lib/apiClient";
 
 export function useAnalyticsQuery(
@@ -16,5 +16,6 @@ export function useAnalyticsQuery(
     ],
     enabled: !!projectId,
     queryFn: () => getAnalytics(params),
+    placeholderData: keepPreviousData,
   });
 }

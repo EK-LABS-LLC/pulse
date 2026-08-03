@@ -1,29 +1,50 @@
 import { useMemo, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import type { OverviewSeries } from "../../lib/apiClient";
+import {
+  formatOverviewPeriodLabel,
+  normalizeOverviewSeries,
+} from "../../lib/overviewChart";
+import { DatePicker, type CalendarDateRange } from "../ui/DatePicker";
 import { SegmentedControl } from "../ui/SegmentedControl";
 
 export type OverviewMeasure = "requests" | "cost" | "latency" | "tokens";
 export type OverviewSplit =
   "none" | "provider" | "source" | "service" | "model";
+export type OverviewGranularity = "15m" | "hour" | "day";
 
 interface OverviewHeroProps {
   rangeLabel: string;
   measure: OverviewMeasure;
   splitBy: OverviewSplit;
+  granularity: OverviewGranularity;
+  chartMeasure: OverviewMeasure;
+  chartGranularity: OverviewGranularity;
+  dateRange: CalendarDateRange;
+  dateFrom: string;
+  dateTo: string;
   onMeasureChange: (value: OverviewMeasure) => void;
   onSplitChange: (value: OverviewSplit) => void;
+  onGranularityChange: (value: OverviewGranularity) => void;
+  onDateRangeChange: (value: CalendarDateRange) => void;
   headline: string;
   deltaLabel?: string;
   successRateLabel: string;
   failedLabel: string;
   topFailing?: string | null;
-  onInvestigate?: () => void;
   /** Series from extended API or derived provisional series from existing analytics. */
   series: OverviewSeries[];
   /** True when the extended endpoint is live. */
   extendedAvailable: boolean;
-  latencyP50?: string;
-  latencyP95?: string;
 }
 
 const MEASURE_OPTIONS: Array<{ value: OverviewMeasure; label: string }> = [
@@ -41,48 +62,112 @@ const SPLIT_OPTIONS: Array<{ value: OverviewSplit; label: string }> = [
   { value: "model", label: "Model" },
 ];
 
-function SeriesChart({ series }: { series: OverviewSeries[] }) {
+const GRANULARITY_OPTIONS: Array<{
+  value: OverviewGranularity;
+  label: string;
+}> = [
+  { value: "15m", label: "15 min" },
+  { value: "hour", label: "Hourly" },
+  { value: "day", label: "Daily" },
+];
+
+function formatDateWindow(dateFrom: string, dateTo: string): string {
+  const format = (value: string) =>
+    new Date(value).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  return `${format(dateFrom)} – ${format(dateTo)}`;
+}
+
+function formatMeasureValue(value: number, measure: OverviewMeasure): string {
+  if (measure === "cost") {
+    return value < 1 ? `$${value.toFixed(2)}` : `$${value.toFixed(1)}`;
+  }
+  if (measure === "latency") {
+    return value >= 1000
+      ? `${(value / 1000).toFixed(1)}s`
+      : `${Math.round(value)}ms`;
+  }
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return Math.round(value).toLocaleString();
+}
+
+function OverviewTooltip({
+  active,
+  label,
+  payload,
+  measure,
+  granularity,
+}: {
+  active?: boolean;
+  label?: string;
+  payload?: Array<{
+    color?: string;
+    name?: string;
+    value?: number | string | null;
+  }>;
+  measure: OverviewMeasure;
+  granularity: OverviewGranularity;
+}) {
+  if (!active || !payload?.length || !label) return null;
+
+  return (
+    <div className="rounded-xl border border-line-strong bg-surface-4 px-3 py-2 shadow-xl">
+      <div className="mb-1.5 text-[11.5px] text-dim">
+        {formatOverviewPeriodLabel(label, granularity, "tooltip")}
+      </div>
+      <div className="flex flex-col gap-1">
+        {payload.map((entry) => (
+          <div
+            key={entry.name}
+            className="flex items-center gap-2 text-xs tabular-nums text-fg"
+          >
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ background: entry.color }}
+            />
+            {entry.value == null
+              ? "—"
+              : formatMeasureValue(Number(entry.value), measure)}
+            <span className="text-dim">{entry.name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SeriesChart({
+  series,
+  measure,
+  granularity,
+}: {
+  series: OverviewSeries[];
+  measure: OverviewMeasure;
+  granularity: OverviewGranularity;
+}) {
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
-  const visibleSeries = series.filter((item) => !hiddenSeries.has(item.id));
-  const pointCount = Math.max(
-    1,
-    ...visibleSeries.map((item) => item.points.length),
+  const normalized = useMemo(
+    () => normalizeOverviewSeries(series, measure === "latency" ? null : 0),
+    [measure, series],
   );
-  const maxValue = Math.max(
-    1,
-    ...visibleSeries.flatMap((item) => item.points.map((point) => point.value)),
+  const visibleSeries = normalized.series.filter(
+    (item) => !hiddenSeries.has(item.id),
   );
-  const chart = useMemo(() => {
-    const left = 64;
-    const right = 982;
-    const top = 18;
-    const bottom = 252;
-    const width = right - left;
-    const height = bottom - top;
-    const x = (index: number) =>
-      left + (pointCount === 1 ? width / 2 : (index / (pointCount - 1)) * width);
-    const y = (value: number) => bottom - (value / maxValue) * height;
-
-    return { left, right, top, bottom, width, height, x, y };
-  }, [maxValue, pointCount]);
-  const tickIndices = Array.from(
-    { length: Math.min(7, pointCount) },
-    (_, index) =>
-      pointCount === 1
-        ? 0
-        : Math.round((index / Math.max(1, Math.min(7, pointCount) - 1)) * (pointCount - 1)),
-  ).filter((index, position, all) => all.indexOf(index) === position);
-
-  const periodLabel = (period: string | undefined) => {
-    if (!period) return "";
-    const date = new Date(period);
-    if (Number.isNaN(date.getTime())) return period;
-    return pointCount > 24
-      ? date.toLocaleTimeString([], { hour: "numeric" })
-      : date.toLocaleDateString([], { month: "short", day: "numeric" });
-  };
+  const chartData = useMemo(
+    () =>
+      normalized.periods.map((period, periodIndex) => {
+        const row: Record<string, string | number | null> = { period };
+        normalized.series.forEach((item) => {
+          row[item.id] = item.points[periodIndex]?.value ?? null;
+        });
+        return row;
+      }),
+    [normalized],
+  );
 
   if (series.length === 0 || series.every((s) => s.points.length === 0)) {
     return (
@@ -99,7 +184,10 @@ function SeriesChart({ series }: { series: OverviewSeries[] }) {
     <div>
       <div className="mb-4 flex min-h-8 flex-wrap items-center gap-2">
         {series.map((item) => {
-          const total = item.points.reduce((sum, point) => sum + point.value, 0);
+          const total = item.points.reduce(
+            (sum, point) => sum + point.value,
+            0,
+          );
           const hidden = hiddenSeries.has(item.id);
           return (
             <button
@@ -116,14 +204,21 @@ function SeriesChart({ series }: { series: OverviewSeries[] }) {
               className="flex cursor-pointer items-center gap-2 rounded-full border px-2.5 py-1 text-xs transition-colors"
               style={{
                 background: hidden ? "transparent" : "var(--fill)",
-                borderColor: hidden ? "var(--border-soft)" : "var(--border-strong)",
+                borderColor: hidden
+                  ? "var(--border-soft)"
+                  : "var(--border-strong)",
                 color: hidden ? "var(--faint)" : "var(--text-3)",
                 opacity: hidden ? 0.65 : 1,
               }}
             >
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: item.color }} />
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ background: item.color }}
+              />
               <span>{item.name}</span>
-              <span className="tabular-nums" style={{ color: "var(--dim)" }}>{total.toLocaleString()}</span>
+              <span className="tabular-nums" style={{ color: "var(--dim)" }}>
+                {formatMeasureValue(total, measure)}
+              </span>
             </button>
           );
         })}
@@ -136,74 +231,150 @@ function SeriesChart({ series }: { series: OverviewSeries[] }) {
             Show all
           </button>
         ) : null}
-        <span className="ml-auto text-xs text-faint">Click a series to compare</span>
+        <span className="ml-auto text-xs text-faint">
+          Click a series to compare
+        </span>
       </div>
 
-      <div className="relative" onMouseLeave={() => setHoverIndex(null)}>
-        <svg
-          viewBox="0 0 1000 300"
-          className="block h-[300px] w-full overflow-visible"
-          preserveAspectRatio="none"
-          onMouseMove={(event) => {
-            const bounds = event.currentTarget.getBoundingClientRect();
-            const ratio = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
-            setHoverIndex(Math.round(ratio * (pointCount - 1)));
-          }}
-        >
-          {Array.from({ length: 5 }, (_, index) => {
-            const value = maxValue * (1 - index / 4);
-            const lineY = chart.y(value);
-            return (
-              <g key={value}>
-                <line x1={chart.left} x2={chart.right} y1={lineY} y2={lineY} stroke="var(--grid)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-                <text x={chart.left - 10} y={lineY + 4} textAnchor="end" fill="var(--dim)" fontSize="11.5">{Math.round(value).toLocaleString()}</text>
-              </g>
-            );
-          })}
-
-          {visibleSeries.map((item) => {
-            const points = item.points.map((point, index) => `${chart.x(index)},${chart.y(point.value)}`);
-            const linePath = points.length > 1 ? `M ${points.join(" L ")}` : "";
-            const areaPath = points.length > 1 ? `${linePath} L ${chart.x(points.length - 1)},${chart.bottom} L ${chart.x(0)},${chart.bottom} Z` : "";
-            return (
-              <g key={item.id}>
-                {areaPath ? <path d={areaPath} fill={item.color} opacity="0.08" /> : null}
-                {linePath ? <path d={linePath} fill="none" stroke={item.color} strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" /> : null}
-              </g>
-            );
-          })}
-
-          {tickIndices.map((index) => (
-            <text
-              key={index}
-              x={chart.x(index)}
-              y={278}
-              textAnchor="middle"
-              fill="var(--dim)"
-              fontSize="11.5"
-            >
-              {periodLabel(visibleSeries[0]?.points[index]?.period)}
-            </text>
-          ))}
-
-          {hoverIndex !== null && (
-            <line x1={chart.x(hoverIndex)} x2={chart.x(hoverIndex)} y1={chart.top} y2={chart.bottom} stroke="var(--crosshair)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-          )}
-        </svg>
-
-        {hoverIndex !== null && (
-          <div className="pointer-events-none absolute top-2 rounded-xl border px-3 py-2 shadow-xl" style={{ left: `${(chart.x(hoverIndex) / 10)}%`, transform: "translateX(-50%)", background: "var(--surface-4)", borderColor: "var(--border-strong)" }}>
-            <div className="mb-1.5 text-[11.5px] text-dim">{visibleSeries[0]?.points[hoverIndex]?.period || "Selected period"}</div>
-            <div className="flex flex-col gap-1">
-              {visibleSeries.map((item) => {
-                const point = item.points[hoverIndex];
-                return point ? <div key={item.id} className="flex items-center gap-2 text-xs tabular-nums text-fg"><span className="h-2 w-2 rounded-full" style={{ background: item.color }} />{point.value.toLocaleString()}<span className="text-dim">{item.name}</span></div> : null;
-              })}
-            </div>
-          </div>
-        )}
+      <div className="h-[300px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={chartData}
+            margin={{ top: 20, right: 18, bottom: 10, left: 4 }}
+          >
+            <defs>
+              {visibleSeries.map((item, index) => (
+                <linearGradient
+                  key={item.id}
+                  id={`overview-gradient-${index}`}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="5%"
+                    stopColor={item.color}
+                    stopOpacity={visibleSeries.length === 1 ? 0.34 : 0.22}
+                  />
+                  <stop
+                    offset="45%"
+                    stopColor={item.color}
+                    stopOpacity={visibleSeries.length === 1 ? 0.12 : 0.07}
+                  />
+                  <stop offset="95%" stopColor={item.color} stopOpacity={0} />
+                </linearGradient>
+              ))}
+              {visibleSeries.map((item, index) => (
+                <filter
+                  key={item.id}
+                  id={`overview-shadow-${index}`}
+                  x="-20%"
+                  y="-35%"
+                  width="140%"
+                  height="180%"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy="6"
+                    stdDeviation="5"
+                    floodColor="#020617"
+                    floodOpacity="0.72"
+                  />
+                  <feDropShadow
+                    dx="0"
+                    dy="2"
+                    stdDeviation="3"
+                    floodColor={item.color}
+                    floodOpacity="0.62"
+                  />
+                </filter>
+              ))}
+            </defs>
+            <CartesianGrid
+              vertical={false}
+              stroke="var(--grid)"
+              strokeDasharray="0"
+            />
+            <XAxis
+              dataKey="period"
+              axisLine={false}
+              tickLine={false}
+              minTickGap={48}
+              tickMargin={10}
+              height={38}
+              tick={{ fill: "var(--dim)", fontSize: 11.5 }}
+              tickFormatter={(period: string) =>
+                formatOverviewPeriodLabel(period, granularity)
+              }
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              width={58}
+              tick={{ fill: "var(--dim)", fontSize: 11.5 }}
+              tickFormatter={(value: number) =>
+                formatMeasureValue(value, measure)
+              }
+            />
+            <Tooltip
+              content={
+                <OverviewTooltip measure={measure} granularity={granularity} />
+              }
+              cursor={{ stroke: "var(--crosshair)", strokeWidth: 1 }}
+            />
+            {visibleSeries.map((item, index) => (
+              <Line
+                key={`${item.id}-shadow`}
+                type="natural"
+                dataKey={item.id}
+                stroke={item.color}
+                strokeWidth={3}
+                strokeOpacity={0.48}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                dot={false}
+                activeDot={false}
+                connectNulls={false}
+                isAnimationActive
+                animationDuration={500}
+                animationEasing="ease-out"
+                filter={`url(#overview-shadow-${index})`}
+                legendType="none"
+                tooltipType="none"
+              />
+            ))}
+            {visibleSeries.map((item, index) => (
+              <Area
+                key={item.id}
+                type="natural"
+                dataKey={item.id}
+                name={item.name}
+                stroke={item.color}
+                strokeWidth={visibleSeries.length === 1 ? 2.6 : 2.2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill={`url(#overview-gradient-${index})`}
+                dot={false}
+                activeDot={{
+                  r: 4,
+                  fill: item.color,
+                  stroke: "var(--surface)",
+                  strokeWidth: 2,
+                }}
+                connectNulls={false}
+                isAnimationActive
+                animationDuration={500}
+                animationEasing="ease-out"
+              />
+            ))}
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
-      <div className="mt-2 text-xs text-faint">Hover the chart for per-period figures</div>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-faint">
+        <span>Times shown in local time</span>
+        <span>Hover the chart for exact dates and values</span>
+      </div>
     </div>
   );
 }
@@ -212,24 +383,37 @@ export function OverviewHero({
   rangeLabel,
   measure,
   splitBy,
+  granularity,
+  chartMeasure,
+  chartGranularity,
+  dateRange,
+  dateFrom,
+  dateTo,
   onMeasureChange,
   onSplitChange,
+  onGranularityChange,
+  onDateRangeChange,
   headline,
   deltaLabel,
   successRateLabel,
   failedLabel,
   topFailing,
-  onInvestigate,
   series,
   extendedAvailable,
-  latencyP50,
-  latencyP95,
 }: OverviewHeroProps) {
+  const [draftGranularity, setDraftGranularity] = useState(granularity);
+
   return (
-    <section className="rounded-2xl border border-line bg-surface px-6 pb-[18px] pt-6">
+    <section className="rounded-[20px] border border-line bg-surface px-6 pb-[18px] pt-6">
       <div className="mb-[22px] flex flex-wrap items-start justify-between gap-6">
         <div>
-          <div className="mb-2 text-[13px] text-dim">{rangeLabel}</div>
+          <div className="mb-2 flex items-center gap-2 text-[13px] text-dim">
+            <span>{rangeLabel}</span>
+            <span className="text-faint">·</span>
+            <span className="text-faint">
+              {formatDateWindow(dateFrom, dateTo)}
+            </span>
+          </div>
           <div className="flex items-baseline gap-3">
             <span className="text-[44px] font-semibold leading-none tracking-[-0.035em] tabular-nums text-fg">
               {headline}
@@ -259,22 +443,36 @@ export function OverviewHero({
               {failedLabel}
             </div>
           </div>
-          <div className="flex flex-col justify-between border-l border-line pl-[22px]">
-            <div className="mb-1.5 text-[12.5px] text-dim">Most failures</div>
-            <div className="flex items-center gap-2.5">
-              <span className="rounded-lg bg-red-tint px-2 py-1 font-mono text-[12.5px] text-red">
+          <div className="flex min-w-[118px] flex-col items-center justify-between border-l border-line px-[22px] text-center">
+            <div className="mb-1.5 text-xs text-dim">Most failures</div>
+            <div className="flex items-center">
+              <span className="rounded-lg bg-red-tint px-[7px] py-[3px] font-mono text-[11.5px] text-red">
                 {topFailing || "—"}
               </span>
-              {onInvestigate ? (
-                <button
-                  type="button"
-                  onClick={onInvestigate}
-                  className="cursor-pointer rounded-lg border-0 bg-track px-3 py-1.5 text-xs text-fg"
-                >
-                  Investigate
-                </button>
-              ) : null}
             </div>
+          </div>
+          <div className="flex items-center border-l border-line pl-[22px]">
+            <DatePicker
+              value={dateRange}
+              onOpen={() => setDraftGranularity(granularity)}
+              onChange={(nextRange) => {
+                onDateRangeChange(nextRange);
+                onGranularityChange(draftGranularity);
+              }}
+              label="Date range and chart interval"
+              applyLabel="Apply"
+              align="end"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-faint">Chart interval</span>
+                <SegmentedControl
+                  ariaLabel="Chart interval"
+                  value={draftGranularity}
+                  onChange={setDraftGranularity}
+                  options={GRANULARITY_OPTIONS}
+                />
+              </div>
+            </DatePicker>
           </div>
         </div>
       </div>
@@ -298,13 +496,13 @@ export function OverviewHero({
             options={SPLIT_OPTIONS}
           />
         </div>
-        <div className="ml-auto flex items-center gap-3 text-[11.5px] text-faint">
-          <span>p50 {latencyP50 ?? "—"}</span>
-          <span>p95 {latencyP95 ?? "—"}</span>
-        </div>
       </div>
 
-      <SeriesChart series={series} />
+      <SeriesChart
+        series={series}
+        measure={chartMeasure}
+        granularity={chartGranularity}
+      />
     </section>
   );
 }

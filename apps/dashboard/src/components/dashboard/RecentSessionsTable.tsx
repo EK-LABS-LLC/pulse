@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { buildSessionDetailPath } from "../../lib/dashboardNavigation";
 
 interface SessionSummary {
   sessionId: string;
@@ -71,9 +72,15 @@ export function RecentSessionsTable({
   loading,
 }: RecentSessionsTableProps) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleRowClick = (sessionId: string) => {
-    navigate(`/dashboard/sessions/${sessionId}`);
+    navigate(
+      buildSessionDetailPath(
+        sessionId,
+        `${location.pathname}${location.search}`,
+      ),
+    );
   };
 
   return (

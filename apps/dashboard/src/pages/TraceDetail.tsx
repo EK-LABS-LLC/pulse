@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link, useLocation } from "react-router-dom";
+import {
+  useParams,
+  Link,
+  useLocation,
+  useSearchParams,
+} from "react-router-dom";
 import TraceSpanTree from "../components/traces/TraceSpanTree";
 import { SpanDetailPanel } from "../components/traces/SpanDetailPanel";
 import { JsonBlock } from "../components/traces/JsonBlock";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { StatusDot } from "../components/ui/StatusDot";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { Breadcrumbs } from "../components/ui/Breadcrumbs";
 import { useTraceDetailQuery } from "../api";
 import { useProject } from "../hooks/useProject";
 import { fmtCost, fmtLatency, fmtTokens } from "../lib/format";
 import { sourceName } from "../lib/sources";
+import { resolveTraceReturnTarget } from "../lib/dashboardNavigation";
 import {
   getTraceUiPrefs,
   setTraceUiPref,
@@ -95,21 +102,6 @@ function TokenMeter({
       </div>
     </div>
   );
-}
-
-function resolveBackTarget(returnTo: unknown): {
-  to: string;
-  label: string;
-} {
-  if (typeof returnTo === "string") {
-    if (returnTo.startsWith("/dashboard/sessions")) {
-      return { to: returnTo, label: "← Sessions" };
-    }
-    if (returnTo.startsWith("/dashboard/traces")) {
-      return { to: returnTo, label: "← Traces" };
-    }
-  }
-  return { to: "/dashboard/traces", label: "← Traces" };
 }
 
 function contentAsText(content: unknown): string | null {
@@ -213,17 +205,35 @@ export default function TraceDetail() {
   const { selectedProject } = useProject();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const locationState = location.state as { returnTo?: unknown } | null;
-  const back = resolveBackTarget(locationState?.returnTo);
-  const [activeSpanId, setActiveSpanId] = useState<string | null>(null);
+  const back = resolveTraceReturnTarget(
+    searchParams.get("from") ?? locationState?.returnTo,
+  );
+  const activeSpanId = searchParams.get("span");
   const [copied, setCopied] = useState(false);
-  const [ioFormat, setIoFormat] = useState<TraceIoFormat>(
+  const [preferredIoFormat, setPreferredIoFormat] = useState<TraceIoFormat>(
     () => getTraceUiPrefs().ioFormat,
   );
-  const [ioSide, setIoSide] = useState<IoSide>("request");
+  const requestedIoFormat = searchParams.get("view");
+  const ioFormat: TraceIoFormat =
+    requestedIoFormat === "chat" || requestedIoFormat === "json"
+      ? requestedIoFormat
+      : preferredIoFormat;
+  const ioSide: IoSide =
+    searchParams.get("side") === "response" ? "response" : "request";
+
+  const updateDetailParams = (updates: Record<string, string | null>) => {
+    const next = new URLSearchParams(searchParams);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
+    setSearchParams(next, { replace: true });
+  };
 
   useEffect(() => {
-    const sync = () => setIoFormat(getTraceUiPrefs().ioFormat);
+    const sync = () => setPreferredIoFormat(getTraceUiPrefs().ioFormat);
     window.addEventListener("storage", sync);
     window.addEventListener(TRACE_UI_PREFS_EVENT, sync);
     window.addEventListener("focus", sync);
@@ -324,19 +334,9 @@ export default function TraceDetail() {
     <div className="flex flex-1 flex-col overflow-hidden">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-line bg-topbar px-5">
         <div className="flex min-w-0 items-center gap-3">
-          <Link
-            to={back.to}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12.5px] text-fg-4 no-underline transition-colors hover:bg-hover hover:text-fg"
-          >
-            {back.label}
-          </Link>
-          <span className="h-4 w-px shrink-0 bg-line-strong" />
-          <span
-            title={trace.traceId}
-            className="truncate font-mono text-[12.5px] text-fg-3"
-          >
-            {shortId}
-          </span>
+          <Breadcrumbs
+            items={[{ label: back.label, to: back.to }, { label: shortId }]}
+          />
           <span
             className="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold capitalize"
             style={{
@@ -417,7 +417,11 @@ export default function TraceDetail() {
                   <SegmentedControl
                     ariaLabel="Request or response"
                     value={ioSide}
-                    onChange={setIoSide}
+                    onChange={(value) =>
+                      updateDetailParams({
+                        side: value === "request" ? null : value,
+                      })
+                    }
                     options={[
                       { value: "request", label: "Request" },
                       {
@@ -430,8 +434,9 @@ export default function TraceDetail() {
                     ariaLabel="Request and response format"
                     value={ioFormat}
                     onChange={(value) => {
-                      setIoFormat(value);
+                      setPreferredIoFormat(value);
                       setTraceUiPref("ioFormat", value);
+                      updateDetailParams({ view: value });
                     }}
                     options={[
                       { value: "chat", label: "Chat" },
@@ -513,7 +518,7 @@ export default function TraceDetail() {
             <TraceSpanTree
               spans={spans}
               activeSpanId={activeSpanId}
-              onSelect={setActiveSpanId}
+              onSelect={(spanId) => updateDetailParams({ span: spanId })}
             />
           </section>
 

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import type { Trace } from "../../lib/apiClient";
+import { buildTraceDetailPath } from "../../lib/dashboardNavigation";
 import { fmtCost, fmtLatency, fmtRel } from "../../lib/format";
 
 interface SessionTraceListProps {
@@ -32,9 +33,7 @@ export default function SessionTraceList({
   const navigate = useNavigate();
 
   const openTrace = (traceId: string) => {
-    navigate(`/dashboard/traces/${encodeURIComponent(traceId)}`, {
-      state: { returnTo },
-    });
+    navigate(buildTraceDetailPath(traceId, returnTo));
   };
 
   return (

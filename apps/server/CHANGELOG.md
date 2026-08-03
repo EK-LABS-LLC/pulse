@@ -42,6 +42,14 @@ Changed: The Traces filter panel now eases between its expanded and collapsed wi
 Changed: Trace rows now open the dedicated detail route instead of an in-page drawer; the detail view adds model and token context, request/response Chat and JSON views, metadata and selected-span inspection, and a full-width ruler-based span timeline whose duration labels remain inside the card without a separate error-origin banner.
 Fixed: Returning from a trace detail view restores the originating Traces URL so its query filters, service and source selections, pagination, and page size remain intact.
 Changed: Selecting a model or tool turn in the span timeline now opens its detail directly below the timeline.
+Changed: Overview, Traces, Sessions, Analytics, and trace-detail selections now use shareable URL parameters, including ranges, chart settings, searches, pagination, request/response views, and selected spans.
+Fixed: Trace and session detail breadcrumbs preserve the validated originating URL, so returning from a detail opened on Overview or a filtered list restores that exact page instead of redirecting to a generic list.
+Changed: Overview recent traces now matches the compact design with six rows and a focused status, summary, service, latency, and time layout.
+Changed: Traces removes the duplicate source selector from the top toolbar while retaining source filtering in the query builder and filter sidebar.
+Fixed: Traces source filters show live trace totals for every source under the rest of the active query instead of displaying placeholder zeroes.
+Changed: Sessions matches the compact reference table with denser rows, type, tags, columns, and padding; removes its extra toolbar and live indicator; keeps error emphasis inside the error badge; and only shows pagination when multiple pages exist.
+Changed: Sessions shows 15 rows per page by default while retaining 25, 50, and 100 row options.
+Changed: Analytics displays a focused under-development message while the redesigned experience is being built.
 
 ### Allow Test Changes To Rebaseline The Integrity Guard
 

@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import type {
   GetTracesParams,
@@ -58,54 +58,6 @@ const SearchIcon = () => (
   </svg>
 );
 
-const FilterIcon = () => (
-  <svg
-    className="h-4 w-4 text-dim"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={1.5}
-      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-    />
-  </svg>
-);
-
-const ChevronDownIcon = () => (
-  <svg
-    className="h-3.5 w-3.5 text-dim"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M19 9l-7 7-7-7"
-    />
-  </svg>
-);
-
-const CheckIcon = () => (
-  <svg
-    className="h-3.5 w-3.5"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M5 13l4 4L19 7"
-    />
-  </svg>
-);
-
 type SourceFilter =
   "" | "claude_code" | "codex" | "opencode" | "openclaw" | "sdk";
 
@@ -126,109 +78,6 @@ function validSourceFilter(value: string | null): SourceFilter {
     value === "sdk"
     ? value
     : "";
-}
-
-interface ToolbarMenuProps<T extends string> {
-  ariaLabel: string;
-  icon: ReactNode;
-  prefix?: string;
-  value: T;
-  options: Array<{ value: T; label: string }>;
-  onChange: (value: T) => void;
-}
-
-function ToolbarMenu<T extends string>({
-  ariaLabel,
-  icon,
-  prefix,
-  value,
-  options,
-  onChange,
-}: ToolbarMenuProps<T>) {
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const selected =
-    options.find((option) => option.value === value) ?? options[0];
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
-
-  return (
-    <div ref={menuRef} className="relative">
-      <button
-        type="button"
-        aria-label={ariaLabel}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-        className="group inline-flex h-8 items-center gap-2 rounded-lg border border-line bg-surface-2 px-3 text-xs text-fg-3 transition-colors hover:border-line-strong hover:bg-hover focus:outline-none focus:ring-1 focus:ring-blue/50"
-      >
-        {icon}
-        {prefix ? <span className="text-dim">{prefix}</span> : null}
-        <span className="whitespace-nowrap text-fg-3">{selected?.label}</span>
-        <span
-          className={`text-dim transition-transform group-hover:text-fg-4 ${
-            open ? "rotate-180" : ""
-          }`}
-        >
-          <ChevronDownIcon />
-        </span>
-      </button>
-
-      {open ? (
-        <div
-          role="listbox"
-          aria-label={ariaLabel}
-          className="absolute right-0 top-full z-50 mt-1.5 min-w-full overflow-hidden rounded-lg border border-line bg-surface p-1 shadow-xl shadow-black/30"
-        >
-          {options.map((option) => {
-            const active = option.value === value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="option"
-                aria-selected={active}
-                onClick={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                className={`flex w-full items-center justify-between gap-4 rounded-sm px-2.5 py-1.5 text-left text-sm transition-colors ${
-                  active
-                    ? "bg-fill text-fg"
-                    : "text-fg-4 hover:bg-hover hover:text-fg-2"
-                }`}
-              >
-                <span className="whitespace-nowrap">{option.label}</span>
-                <span className={active ? "text-accent" : "text-transparent"}>
-                  <CheckIcon />
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
-  );
 }
 
 export interface TracesFilters {
@@ -296,35 +145,32 @@ function trendDelta(
 export default function Traces() {
   const { selectedProject } = useProject();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [page, setPage] = useState(() => {
-    const pageParam = searchParams.get("page");
-    return pageParam ? Math.max(1, parseInt(pageParam, 10)) : 1;
-  });
-
-  const [pageSize, setPageSize] = useState(() => {
-    const parsed = Number.parseInt(searchParams.get("pageSize") ?? "", 10);
-    return parsed === 25 || parsed === 50 || parsed === 100
-      ? parsed
+  const pageParam = Number.parseInt(searchParams.get("page") ?? "", 10);
+  const page = Number.isFinite(pageParam) ? Math.max(1, pageParam) : 1;
+  const parsedPageSize = Number.parseInt(
+    searchParams.get("pageSize") ?? "",
+    10,
+  );
+  const pageSize =
+    parsedPageSize === 25 || parsedPageSize === 50 || parsedPageSize === 100
+      ? parsedPageSize
       : DEFAULT_PAGE_SIZE;
-  });
 
-  const [filters, setFilters] = useState<TracesFilters>(() => ({
-    provider: searchParams.get("provider") || "",
-    model: searchParams.get("model") || "",
-    summary: searchParams.get("summary") || "",
-    status: searchParams.get("status") || "",
-    date_from: searchParams.get("date_from") || "",
-    date_to: searchParams.get("date_to") || "",
-    session_id: searchParams.get("session_id") || "",
-  }));
-
-  const [source, setSource] = useState<SourceFilter>(() =>
-    validSourceFilter(searchParams.get("source")),
+  const filters = useMemo<TracesFilters>(
+    () => ({
+      provider: searchParams.get("provider") || "",
+      model: searchParams.get("model") || "",
+      summary: searchParams.get("summary") || "",
+      status: searchParams.get("status") || "",
+      date_from: searchParams.get("date_from") || "",
+      date_to: searchParams.get("date_to") || "",
+      session_id: searchParams.get("session_id") || "",
+    }),
+    [searchParams],
   );
 
-  const [serviceFilter, setServiceFilter] = useState<string | null>(() =>
-    searchParams.get("service"),
-  );
+  const source = validSourceFilter(searchParams.get("source"));
+  const serviceFilter = searchParams.get("service");
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [traceUiPrefs, setTraceUiPrefsState] = useState(getTraceUiPrefs);
   const statsMode = traceUiPrefs.statsMode;
@@ -369,8 +215,18 @@ export default function Traces() {
     queryParams,
   );
 
-  // Status chip counts need trace-level totals, which the list query only
-  // reports for the active filter; these ask for the totals alone.
+  // Status chips are trace facets, so replace the active status while keeping
+  // the rest of the query intact.
+  const allStatusCountQuery = useTracesQuery(
+    "traces-count-status-all",
+    selectedProject?.id,
+    {
+      ...queryParams,
+      status: undefined,
+      limit: 1,
+      offset: 0,
+    },
+  );
   const successCountQuery = useTracesQuery(
     "traces-count-success",
     selectedProject?.id,
@@ -390,6 +246,45 @@ export default function Traces() {
       limit: 1,
       offset: 0,
     },
+  );
+
+  // Source chips are trace facets, so count each source with the active source
+  // removed while preserving every other query constraint.
+  const sourceCountParams = {
+    ...queryParams,
+    source: undefined,
+    limit: 1,
+    offset: 0,
+  } satisfies GetTracesParams;
+  const allSourceCountQuery = useTracesQuery(
+    "traces-count-source-all",
+    selectedProject?.id,
+    sourceCountParams,
+  );
+  const claudeCodeSourceCountQuery = useTracesQuery(
+    "traces-count-source-claude-code",
+    selectedProject?.id,
+    { ...sourceCountParams, source: "claude_code" },
+  );
+  const codexSourceCountQuery = useTracesQuery(
+    "traces-count-source-codex",
+    selectedProject?.id,
+    { ...sourceCountParams, source: "codex" },
+  );
+  const openCodeSourceCountQuery = useTracesQuery(
+    "traces-count-source-opencode",
+    selectedProject?.id,
+    { ...sourceCountParams, source: "opencode" },
+  );
+  const openClawSourceCountQuery = useTracesQuery(
+    "traces-count-source-openclaw",
+    selectedProject?.id,
+    { ...sourceCountParams, source: "openclaw" },
+  );
+  const sdkSourceCountQuery = useTracesQuery(
+    "traces-count-source-sdk",
+    selectedProject?.id,
+    { ...sourceCountParams, source: "sdk" },
   );
 
   const analyticsRange = useMemo(() => {
@@ -461,33 +356,22 @@ export default function Traces() {
   };
 
   const applyFilters = (newFilters: TracesFilters) => {
-    setFilters(newFilters);
-    setPage(1);
     updateUrlParams(newFilters, 1, pageSize, source, serviceFilter);
   };
 
   const clearFilters = () => {
-    setFilters(defaultFilters);
-    setSource("");
-    setServiceFilter(null);
-    setPage(1);
     updateUrlParams(defaultFilters, 1, pageSize, "", null);
   };
 
   const handlePageChange = (newPage: number) => {
-    setPage(newPage);
     updateUrlParams(filters, newPage, pageSize, source, serviceFilter);
   };
 
   const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
-    setPage(1);
     updateUrlParams(filters, 1, newPageSize, source, serviceFilter);
   };
 
   const handleSourceChange = (newSource: SourceFilter) => {
-    setSource(newSource);
-    setPage(1);
     updateUrlParams(filters, 1, pageSize, newSource, serviceFilter);
   };
 
@@ -546,16 +430,21 @@ export default function Traces() {
 
   const chipCounts = {
     status: {
-      all: total,
+      all: allStatusCountQuery.data?.total ?? 0,
       success: successCountQuery.data?.total ?? 0,
       error: errorCountQuery.data?.total ?? 0,
     },
-    source: {} as Record<string, number>,
+    source: {
+      all: allSourceCountQuery.data?.total ?? 0,
+      claude_code: claudeCodeSourceCountQuery.data?.total ?? 0,
+      codex: codexSourceCountQuery.data?.total ?? 0,
+      opencode: openCodeSourceCountQuery.data?.total ?? 0,
+      openclaw: openClawSourceCountQuery.data?.total ?? 0,
+      sdk: sdkSourceCountQuery.data?.total ?? 0,
+    },
   };
 
   const handleServiceSelect = (service: string | null) => {
-    setServiceFilter(service);
-    setPage(1);
     updateUrlParams(filters, 1, pageSize, source, service);
   };
 
@@ -650,19 +539,6 @@ export default function Traces() {
               className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[12px] text-fg outline-none placeholder:text-faint"
             />
           </label>
-          <ToolbarMenu
-            ariaLabel="Source"
-            icon={<FilterIcon />}
-            prefix="Source:"
-            value={source}
-            options={(Object.keys(SOURCE_FILTER_LABELS) as SourceFilter[]).map(
-              (value) => ({
-                value,
-                label: SOURCE_FILTER_LABELS[value],
-              }),
-            )}
-            onChange={handleSourceChange}
-          />
           <button
             type="button"
             aria-label="Refresh traces"

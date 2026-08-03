@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation, useSearchParams } from "react-router-dom";
 import {
   OverviewHero,
   type OverviewGranularity,
@@ -29,6 +30,43 @@ import {
 } from "../lib/date";
 import { fmtCost, fmtDuration, fmtLatency } from "../lib/format";
 import { calculateOverviewTrend } from "../lib/overviewChart";
+
+const OVERVIEW_MEASURES: OverviewMeasure[] = [
+  "requests",
+  "cost",
+  "latency",
+  "tokens",
+];
+const OVERVIEW_SPLITS: OverviewSplit[] = [
+  "none",
+  "provider",
+  "source",
+  "service",
+  "model",
+];
+const OVERVIEW_GRANULARITIES: OverviewGranularity[] = ["15m", "hour", "day"];
+
+function validDateKey(value: string | null): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : value;
+}
+
+function validOverviewRange(value: string | null): TimeRangeSelection {
+  return value === "24h" || value === "7d" || value === "30d"
+    ? value
+    : value === "custom"
+      ? "custom"
+      : "7d";
+}
+
+function validOption<T extends string>(
+  value: string | null,
+  options: T[],
+  fallback: T,
+): T {
+  return value && options.includes(value as T) ? (value as T) : fallback;
+}
 
 const RefreshIcon = () => (
   <svg
@@ -131,18 +169,50 @@ function buildProvisionalSeries(
 
 export default function Dashboard() {
   const { selectedProject } = useProject();
-  const [timeRange, setTimeRange] = useState<TimeRangeSelection>("7d");
-  const [endingDate, setEndingDate] = useState(() =>
-    formatLocalDateKey(new Date()),
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedRange = validOverviewRange(searchParams.get("range"));
+  const customFrom = validDateKey(searchParams.get("from"));
+  const selectedTo =
+    validDateKey(searchParams.get("to")) ?? formatLocalDateKey(new Date());
+  const timeRange: TimeRangeSelection =
+    requestedRange === "custom" && !customFrom ? "7d" : requestedRange;
+  const endingDate = selectedTo;
+  const customDateRange = useMemo(
+    () =>
+      timeRange === "custom" && customFrom
+        ? { from: customFrom, to: selectedTo }
+        : null,
+    [customFrom, selectedTo, timeRange],
   );
-  const [customDateRange, setCustomDateRange] = useState<{
-    from: string;
-    to: string;
-  } | null>(null);
+  const measure = validOption(
+    searchParams.get("measure"),
+    OVERVIEW_MEASURES,
+    "requests",
+  );
+  const splitBy = validOption(
+    searchParams.get("split"),
+    OVERVIEW_SPLITS,
+    "none",
+  );
+  const defaultGranularity = recommendedGranularity(
+    timeRange === "custom" ? "7d" : timeRange,
+  );
+  const granularity = validOption(
+    searchParams.get("interval"),
+    OVERVIEW_GRANULARITIES,
+    defaultGranularity,
+  );
   const [dateRangeAnchor, setDateRangeAnchor] = useState(() => new Date());
-  const [measure, setMeasure] = useState<OverviewMeasure>("requests");
-  const [splitBy, setSplitBy] = useState<OverviewSplit>("none");
-  const [granularity, setGranularity] = useState<OverviewGranularity>("hour");
+
+  const updateOverviewParams = (updates: Record<string, string | null>) => {
+    const next = new URLSearchParams(searchParams);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
+    setSearchParams(next, { replace: true });
+  };
 
   const { date_from, date_to } = useMemo(
     () =>
@@ -206,7 +276,7 @@ export default function Dashboard() {
   const recentTracesQuery = useTracesQuery(
     "dashboard-recent-traces",
     selectedProject?.id,
-    { limit: 10 },
+    { limit: 6 },
   );
 
   const analytics = analyticsQuery.data;
@@ -331,9 +401,16 @@ export default function Dashboard() {
           <TimeRangeTabs
             value={timeRange}
             onChange={(nextRange) => {
-              setTimeRange(nextRange);
-              setCustomDateRange(null);
-              setGranularity(recommendedGranularity(nextRange));
+              updateOverviewParams({
+                range: nextRange === "7d" ? null : nextRange,
+                from: null,
+                to: null,
+                interval:
+                  recommendedGranularity(nextRange) === "hour"
+                    ? null
+                    : recommendedGranularity(nextRange),
+              });
+              setDateRangeAnchor(new Date());
             }}
           />
           <button
@@ -383,13 +460,30 @@ export default function Dashboard() {
             dateRange={calendarDateRange}
             dateFrom={date_from}
             dateTo={date_to}
-            onMeasureChange={setMeasure}
-            onSplitChange={setSplitBy}
-            onGranularityChange={setGranularity}
+            onMeasureChange={(nextMeasure) =>
+              updateOverviewParams({
+                measure: nextMeasure === "requests" ? null : nextMeasure,
+              })
+            }
+            onSplitChange={(nextSplit) =>
+              updateOverviewParams({
+                split: nextSplit === "none" ? null : nextSplit,
+              })
+            }
+            onGranularityChange={(nextGranularity) =>
+              updateOverviewParams({
+                interval:
+                  nextGranularity === defaultGranularity
+                    ? null
+                    : nextGranularity,
+              })
+            }
             onDateRangeChange={(nextRange) => {
-              setCustomDateRange(nextRange);
-              setEndingDate(nextRange.to);
-              setTimeRange("custom");
+              updateOverviewParams({
+                range: "custom",
+                from: nextRange.from,
+                to: nextRange.to,
+              });
               setDateRangeAnchor(new Date());
             }}
             headline={headline}
@@ -442,7 +536,11 @@ export default function Dashboard() {
             />
           </div>
 
-          <RecentTracesTable traces={recentTraces} loading={tracesLoading} />
+          <RecentTracesTable
+            traces={recentTraces}
+            loading={tracesLoading}
+            returnTo={`${location.pathname}${location.search}`}
+          />
         </div>
       </div>
     </div>

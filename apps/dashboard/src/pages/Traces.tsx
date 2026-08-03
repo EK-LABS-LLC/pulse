@@ -1,7 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import type {
-  Trace,
   GetTracesParams,
   OverviewExtendedResponse,
 } from "../lib/apiClient";
@@ -21,7 +20,6 @@ import {
 } from "../components/ui/QueryBuilder";
 import { fmtCost, fmtLatency } from "../lib/format";
 import TracesTable from "../components/traces/TracesTable";
-import TraceDetailPanel from "../components/traces/TraceDetailPanel";
 import { TableSkeleton } from "../components/ui/TableSkeleton";
 import { useProject } from "../hooks/useProject";
 import {
@@ -324,7 +322,6 @@ export default function Traces() {
     validSourceFilter(searchParams.get("source")),
   );
 
-  const [selectedTrace, setSelectedTrace] = useState<Trace | null>(null);
   const [serviceFilter, setServiceFilter] = useState<string | null>(() =>
     searchParams.get("service"),
   );
@@ -467,7 +464,6 @@ export default function Traces() {
     setFilters(newFilters);
     setPage(1);
     updateUrlParams(newFilters, 1, pageSize, source, serviceFilter);
-    setSelectedTrace(null);
   };
 
   const clearFilters = () => {
@@ -476,53 +472,24 @@ export default function Traces() {
     setServiceFilter(null);
     setPage(1);
     updateUrlParams(defaultFilters, 1, pageSize, "", null);
-    setSelectedTrace(null);
   };
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
     updateUrlParams(filters, newPage, pageSize, source, serviceFilter);
-    setSelectedTrace(null);
   };
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setPage(1);
     updateUrlParams(filters, 1, newPageSize, source, serviceFilter);
-    setSelectedTrace(null);
   };
 
   const handleSourceChange = (newSource: SourceFilter) => {
     setSource(newSource);
     setPage(1);
     updateUrlParams(filters, 1, pageSize, newSource, serviceFilter);
-    setSelectedTrace(null);
   };
-
-  const handleRowClick = (trace: Trace) => {
-    setSelectedTrace(trace);
-  };
-
-  const handleClosePanel = () => {
-    setSelectedTrace(null);
-  };
-
-  const handleNavigateTrace = (direction: "prev" | "next") => {
-    if (!selectedTrace) return;
-    const currentIndex = traces.findIndex(
-      (t) => t.traceId === selectedTrace.traceId,
-    );
-    if (currentIndex === -1) return;
-
-    const newIndex = direction === "prev" ? currentIndex - 1 : currentIndex + 1;
-    if (newIndex >= 0 && newIndex < traces.length) {
-      setSelectedTrace(traces[newIndex] ?? null);
-    }
-  };
-
-  const selectedTraceIndex = selectedTrace
-    ? traces.findIndex((t) => t.traceId === selectedTrace.traceId)
-    : -1;
 
   const analytics = analyticsQuery.data;
   const spansAnalytics = spansQuery.data;
@@ -590,7 +557,6 @@ export default function Traces() {
     setServiceFilter(service);
     setPage(1);
     updateUrlParams(filters, 1, pageSize, source, service);
-    setSelectedTrace(null);
   };
 
   const handleStatsModeChange = (mode: TraceStatsMode) => {
@@ -723,7 +689,7 @@ export default function Traces() {
       </header>
 
       <div className="relative flex-1 overflow-auto">
-        <div className={selectedTrace ? "pr-[460px]" : ""}>
+        <div>
           <section className="px-5 pt-5">
             <div className="mb-3 flex items-center justify-between">
               <span
@@ -866,7 +832,6 @@ export default function Traces() {
                     onRowDensityChange={(density) =>
                       setTraceUiPref("rowDensity", density)
                     }
-                    onRowClick={handleRowClick}
                     pagination={{
                       page,
                       pageSize,
@@ -880,16 +845,6 @@ export default function Traces() {
             </div>
           </section>
         </div>
-
-        {selectedTrace && (
-          <TraceDetailPanel
-            trace={selectedTrace}
-            onClose={handleClosePanel}
-            onNavigate={handleNavigateTrace}
-            hasPrev={selectedTraceIndex > 0}
-            hasNext={selectedTraceIndex < traces.length - 1}
-          />
-        )}
       </div>
     </div>
   );

@@ -39,6 +39,9 @@ Changed: Failed trace rows keep the standard table background and use red only f
 Fixed: Traces keeps the current rows and totals visible while service or query filters load, and Overview keeps its existing analytics and chart mounted while ranges, measures, splits, or intervals refresh, eliminating full-surface flashes between selections.
 Changed: The reusable query builder reserves its full top row for the query expression and keeps filter chips, filter controls, and the result count together on a separate row below it.
 Changed: The Traces filter panel now eases between its expanded and collapsed widths without unmounting, and denser trace rows align the duration and usage meters on one shared baseline.
+Changed: Trace rows now open the dedicated detail route instead of an in-page drawer; the detail view adds model and token context, request/response Chat and JSON views, metadata and selected-span inspection, and a full-width ruler-based span timeline whose duration labels remain inside the card without a separate error-origin banner.
+Fixed: Returning from a trace detail view restores the originating Traces URL so its query filters, service and source selections, pagination, and page size remain intact.
+Changed: Selecting a model or tool turn in the span timeline now opens its detail directly below the timeline.
 
 ### Allow Test Changes To Rebaseline The Integrity Guard
 

@@ -13,8 +13,8 @@ export function RecentTracesTable({ traces, loading }: RecentTracesTableProps) {
   const navigate = useNavigate();
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-line bg-surface">
-      <header className="flex items-center justify-between border-b border-line px-5 py-4">
+    <section className="overflow-hidden rounded-[18px] border border-line bg-surface">
+      <header className="flex items-center justify-between border-b border-line px-4 py-3">
         <h2 className="text-sm font-semibold tracking-[-0.015em] text-fg">
           Recent traces
         </h2>
@@ -23,7 +23,7 @@ export function RecentTracesTable({ traces, loading }: RecentTracesTableProps) {
           onClick={() => navigate("/dashboard/traces")}
           className="cursor-pointer border-0 bg-transparent text-xs text-fg-4 transition-colors hover:text-fg"
         >
-          View all →
+          View all traces →
         </button>
       </header>
 
@@ -62,7 +62,7 @@ export function RecentTracesTable({ traces, loading }: RecentTracesTableProps) {
                 type="button"
                 key={trace.traceId}
                 onClick={() => navigate(`/dashboard/traces/${trace.traceId}`)}
-                className="grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-0 border-b border-line-soft px-5 py-3 text-left transition-[filter,background-color] last:border-b-0 hover:brightness-110 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-blue sm:grid-cols-[auto_minmax(0,1fr)_minmax(120px,0.45fr)_74px_74px_70px]"
+                className="grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 border-0 border-b border-line-soft px-4 py-2.5 text-left transition-[filter,background-color] last:border-b-0 hover:brightness-110 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-blue sm:grid-cols-[auto_minmax(0,1fr)_minmax(120px,0.45fr)_74px_74px_70px]"
                 style={{
                   background: isError ? "var(--red-tint)" : "transparent",
                   boxShadow: isError ? "inset 2px 0 0 var(--red)" : undefined,
@@ -78,10 +78,10 @@ export function RecentTracesTable({ traces, loading }: RecentTracesTableProps) {
                   </span>
                 </span>
                 <span className="hidden min-w-0 sm:block">
-                  <span className="block truncate text-[12px] text-fg-3">
+                  <span className="inline-block max-w-full truncate rounded-md bg-fill px-1.5 py-0.5 font-mono text-[10.5px] text-fg-4">
                     {service}
                   </span>
-                  <span className="block truncate font-mono text-[10.5px] text-faint">
+                  <span className="mt-0.5 block truncate font-mono text-[10.5px] text-faint">
                     {model}
                   </span>
                 </span>

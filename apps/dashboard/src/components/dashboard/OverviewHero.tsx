@@ -27,6 +27,8 @@ interface OverviewHeroProps {
   measure: OverviewMeasure;
   splitBy: OverviewSplit;
   granularity: OverviewGranularity;
+  chartMeasure: OverviewMeasure;
+  chartGranularity: OverviewGranularity;
   dateRange: CalendarDateRange;
   dateFrom: string;
   dateTo: string;
@@ -237,7 +239,6 @@ function SeriesChart({
       <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
-            key={granularity}
             data={chartData}
             margin={{ top: 20, right: 18, bottom: 10, left: 4 }}
           >
@@ -383,6 +384,8 @@ export function OverviewHero({
   measure,
   splitBy,
   granularity,
+  chartMeasure,
+  chartGranularity,
   dateRange,
   dateFrom,
   dateTo,
@@ -401,7 +404,7 @@ export function OverviewHero({
   const [draftGranularity, setDraftGranularity] = useState(granularity);
 
   return (
-    <section className="rounded-2xl border border-line bg-surface px-6 pb-[18px] pt-6">
+    <section className="rounded-[20px] border border-line bg-surface px-6 pb-[18px] pt-6">
       <div className="mb-[22px] flex flex-wrap items-start justify-between gap-6">
         <div>
           <div className="mb-2 flex items-center gap-2 text-[13px] text-dim">
@@ -497,8 +500,8 @@ export function OverviewHero({
 
       <SeriesChart
         series={series}
-        measure={measure}
-        granularity={granularity}
+        measure={chartMeasure}
+        granularity={chartGranularity}
       />
     </section>
   );

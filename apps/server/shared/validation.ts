@@ -32,6 +32,7 @@ export const traceQuerySchema = z.object({
   service: z.string().optional(),
   provider: z.string().optional(),
   model: z.string().optional(),
+  summary: z.string().trim().min(1).max(200).optional(),
   status: statusSchema.optional(),
   date_from: z.union([z.string(), z.coerce.number()]).optional(),
   date_to: z.union([z.string(), z.coerce.number()]).optional(),
@@ -63,6 +64,7 @@ export const spanAnalyticsQuerySchema = z.object({
 
 export const overviewMeasureSchema = z.enum([
   "requests",
+  "errors",
   "cost",
   "latency",
   "tokens",

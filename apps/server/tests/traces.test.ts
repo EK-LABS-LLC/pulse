@@ -287,6 +287,55 @@ describe("Traces Endpoints", () => {
       expect(data.traces[0]?.errorService).toBe("payments-worker");
     });
 
+    test("summary filter searches recorded trace summaries", async () => {
+      const summaryProject = await createTestProject(
+        "Summary Filter Traces Test Project",
+      );
+      await ingestSpans(summaryProject.apiKey, [
+        {
+          span_id: "summary-target",
+          trace_id: "trace-summary-target",
+          session_id: "summary-session",
+          timestamp: new Date().toISOString(),
+          source: "claude_code",
+          service: "agent-runtime",
+          kind: "agent_run",
+          event_type: "subagent_stop",
+          status: "success",
+          metadata: {
+            "pulse.metadata.summary":
+              "Fix failing auth test and refactor session helper",
+          },
+        },
+        {
+          span_id: "summary-other",
+          trace_id: "trace-summary-other",
+          session_id: "summary-session",
+          timestamp: new Date(Date.now() - 1000).toISOString(),
+          source: "claude_code",
+          service: "agent-runtime",
+          kind: "agent_run",
+          event_type: "subagent_stop",
+          status: "success",
+          metadata: {
+            "pulse.metadata.summary": "Implement rate limiter middleware",
+          },
+        },
+      ]);
+
+      const response = await authFetch(
+        "/v1/traces?summary=FAILING%20AUTH",
+        summaryProject.apiKey,
+      );
+      const data = (await response.json()) as TracesResponse;
+
+      expect(response.status).toBe(200);
+      expect(data.total).toBe(1);
+      expect(data.traces.map((trace) => trace.traceId)).toEqual([
+        "trace-summary-target",
+      ]);
+    });
+
     test("paginates derived traces without overlap", async () => {
       const paginationProject = await createTestProject(
         "Paginated Traces Test Project",

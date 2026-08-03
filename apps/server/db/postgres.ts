@@ -329,9 +329,17 @@ export class PostgresStorage implements StorageAdapter {
     const provider = sql<string>`COALESCE(MAX(CASE WHEN ${spans.kind} = 'llm_call' THEN ${spans.provider} END), MAX(${spans.source}))`;
     const model = sql<string>`COALESCE(MAX(CASE WHEN ${spans.kind} = 'llm_call' THEN ${spans.model} END), 'unknown')`;
     const errors = sql<number>`SUM(CASE WHEN ${spans.status} = 'error' THEN 1 ELSE 0 END)`;
+    const recordedSummary = sql<string>`COALESCE(${spans.metadata}->>'pulse.metadata.summary', ${spans.metadata}->>'pulse.summary', ${spans.metadata}->>'summary')`;
+    const summaryPattern = filters.summary
+      ? `%${filters.summary.toLowerCase()}%`
+      : null;
+    const summaryMatches = summaryPattern
+      ? sql`(SUM(CASE WHEN LOWER(COALESCE(${recordedSummary}, '')) LIKE ${summaryPattern} THEN 1 ELSE 0 END) > 0 OR (SUM(CASE WHEN NULLIF(TRIM(${recordedSummary}), '') IS NOT NULL THEN 1 ELSE 0 END) = 0 AND LOWER(${model}) LIKE ${summaryPattern}))`
+      : undefined;
     const having = and(
       filters.provider ? sql`${provider} = ${filters.provider}` : undefined,
       filters.model ? sql`${model} = ${filters.model}` : undefined,
+      summaryMatches,
       filters.status === "error" ? sql`${errors} > 0` : undefined,
       filters.status === "success" ? sql`${errors} = 0` : undefined,
     );

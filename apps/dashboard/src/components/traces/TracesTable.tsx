@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Trace } from "../../lib/apiClient";
-import { StatusDot } from "../ui/StatusDot";
-import { sourceLabel, sourceName } from "../../lib/sources";
-import { fmtCost, fmtLatency, fmtTokens } from "../../lib/format";
+import { fmtCost, fmtLatency, fmtRel, fmtTokens } from "../../lib/format";
 import type { TraceRowDensity } from "../../lib/traceUiPrefs";
 
 function latencyColor(ms: number, isError: boolean): string {
@@ -13,63 +11,11 @@ function latencyColor(ms: number, isError: boolean): string {
   return "var(--orange)";
 }
 
-function MeterCell({
-  label,
-  pct,
-  color,
-}: {
-  label: string;
-  pct: number;
-  color: string;
-}) {
-  return (
-    <div className="flex min-w-[92px] flex-col gap-1">
-      <span className="text-sm tabular-nums" style={{ color: "var(--text-3)" }}>
-        {label}
-      </span>
-      <span
-        className="block h-[3px] w-full overflow-hidden rounded-full"
-        style={{ background: "var(--track)" }}
-      >
-        <span
-          className="block h-full rounded-full"
-          style={{ width: `${pct.toFixed(0)}%`, background: color }}
-        />
-      </span>
-    </div>
-  );
-}
-
-function ServiceCell({ trace }: { trace: Trace }) {
+function serviceLabel(trace: Trace) {
   const services = trace.services ?? [];
-  const label =
-    services.length === 0
-      ? "—"
-      : services.length === 1
-        ? services[0]
-        : `${services.length} services`;
-  const failed = trace.errorService;
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span
-        className="max-w-[140px] truncate text-sm"
-        style={{ color: services.length ? "var(--text-3)" : "var(--faint)" }}
-        title={services.join(", ")}
-      >
-        {label}
-      </span>
-      {failed && (
-        <span
-          className="max-w-[140px] truncate text-[11px]"
-          style={{ color: "var(--red-text)" }}
-          title={`First failure in ${failed}`}
-        >
-          {failed}
-        </span>
-      )}
-    </div>
-  );
+  if (services.length === 0) return "No service";
+  const first = services[0] ?? "No service";
+  return services.length > 1 ? `${first} +${services.length - 1}` : first;
 }
 
 interface PaginationProps {
@@ -83,80 +29,10 @@ interface PaginationProps {
 interface TracesTableProps {
   traces: Trace[];
   rowDensity?: TraceRowDensity;
+  onRowDensityChange?: (density: TraceRowDensity) => void;
   onRowClick?: (trace: Trace) => void;
   pagination?: PaginationProps;
 }
-
-type SortField =
-  "timestamp" | "latencyMs" | "inputTokens" | "outputTokens" | "costCents";
-type SortDirection = "asc" | "desc";
-
-const SortIcon = ({
-  active,
-  direction,
-}: {
-  active: boolean;
-  direction: SortDirection;
-}) => (
-  <svg
-    className={`w-3 h-3 ${active ? "text-accent" : ""}`}
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    {active && direction === "desc" ? (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M19 9l-7 7-7-7"
-      />
-    ) : active && direction === "asc" ? (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M5 15l7-7 7 7"
-      />
-    ) : (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-      />
-    )}
-  </svg>
-);
-
-const formatTimestamp = (timestamp: string) => {
-  const date = new Date(timestamp);
-  return {
-    display: date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }),
-    relative: getRelativeTime(date),
-  };
-};
-
-const getRelativeTime = (date: Date) => {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60)
-    return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
-  if (diffHours < 24)
-    return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
-  return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
-};
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 
@@ -239,19 +115,19 @@ function Pagination({
   const isLastPage = page >= totalPages;
 
   return (
-    <div className="bg-neutral-900 border-t border-neutral-800 px-4 py-3 flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <span className="text-sm text-neutral-500">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface px-4 py-2.5">
+      <div className="flex items-center gap-3">
+        <span className="text-[11.5px] text-dim">
           {total > 0
             ? `${startItem}-${endItem} of ${total.toLocaleString()}`
             : "0 results"}
         </span>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-neutral-500">Rows:</span>
+          <span className="text-[11.5px] text-dim">Rows:</span>
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm text-neutral-300 focus:outline-none focus:border-neutral-700"
+            className="rounded-lg border border-line bg-surface-2 px-2 py-1 text-[11.5px] text-fg-3 focus:border-line-strong focus:outline-none"
           >
             {PAGE_SIZE_OPTIONS.map((size) => (
               <option key={size} value={size}>
@@ -265,7 +141,7 @@ function Pagination({
         <button
           onClick={() => onPageChange(1)}
           disabled={isFirstPage}
-          className="p-1.5 text-neutral-500 hover:text-white rounded hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-neutral-500"
+          className="rounded-lg p-1.5 text-dim hover:bg-hover hover:text-fg disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-dim"
           title="First page"
         >
           <ChevronDoubleLeftIcon />
@@ -273,18 +149,18 @@ function Pagination({
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={isFirstPage}
-          className="p-1.5 text-neutral-500 hover:text-white rounded hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-neutral-500"
+          className="rounded-lg p-1.5 text-dim hover:bg-hover hover:text-fg disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-dim"
           title="Previous page"
         >
           <ChevronLeftIcon />
         </button>
-        <span className="px-3 text-sm text-neutral-400">
+        <span className="px-2 text-[11.5px] text-fg-4">
           Page {page} of {totalPages > 0 ? totalPages.toLocaleString() : 1}
         </span>
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={isLastPage}
-          className="p-1.5 text-neutral-500 hover:text-white rounded hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-neutral-500"
+          className="rounded-lg p-1.5 text-dim hover:bg-hover hover:text-fg disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-dim"
           title="Next page"
         >
           <ChevronRightIcon />
@@ -292,7 +168,7 @@ function Pagination({
         <button
           onClick={() => onPageChange(totalPages)}
           disabled={isLastPage}
-          className="p-1.5 text-neutral-500 hover:text-white rounded hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-neutral-500"
+          className="rounded-lg p-1.5 text-dim hover:bg-hover hover:text-fg disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-dim"
           title="Last page"
         >
           <ChevronDoubleRightIcon />
@@ -302,86 +178,18 @@ function Pagination({
   );
 }
 
-interface SortableHeaderProps {
-  field: SortField;
-  children: React.ReactNode;
-  onSort: (field: SortField) => void;
-  sortField: SortField;
-  sortDirection: SortDirection;
-}
-
-function SortableHeader({
-  field,
-  children,
-  onSort,
-  sortField,
-  sortDirection,
-}: SortableHeaderProps) {
-  return (
-    <button
-      onClick={() => onSort(field)}
-      className="flex items-center gap-1 hover:text-neutral-300"
-    >
-      {children}
-      <SortIcon active={sortField === field} direction={sortDirection} />
-    </button>
-  );
-}
-
 export default function TracesTable({
   traces,
   rowDensity = "rich",
+  onRowDensityChange,
   onRowClick,
   pagination,
 }: TracesTableProps) {
   const navigate = useNavigate();
-  const [sortField, setSortField] = useState<SortField>("timestamp");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("desc");
-    }
-  };
-
-  const sortedTraces = [...traces].sort((a, b) => {
-    let aVal: number | string = 0;
-    let bVal: number | string = 0;
-
-    switch (sortField) {
-      case "timestamp":
-        aVal = new Date(a.timestamp).getTime();
-        bVal = new Date(b.timestamp).getTime();
-        break;
-      case "latencyMs":
-        aVal = a.latencyMs ?? 0;
-        bVal = b.latencyMs ?? 0;
-        break;
-      case "inputTokens":
-        aVal = a.inputTokens ?? 0;
-        bVal = b.inputTokens ?? 0;
-        break;
-      case "outputTokens":
-        aVal = a.outputTokens ?? 0;
-        bVal = b.outputTokens ?? 0;
-        break;
-      case "costCents":
-        aVal = a.costCents ?? 0;
-        bVal = b.costCents ?? 0;
-        break;
-    }
-
-    if (sortDirection === "asc") {
-      return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-    }
-    return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
-  });
-
   const maxLatency = Math.max(0, ...traces.map((t) => t.latencyMs ?? 0));
+  const gridColumns = "12px 64px minmax(190px,1fr) 96px 112px 52px 14px";
   const rowPadding = rowDensity === "minimal" ? "py-1.5" : "py-2.5";
 
   const handleRowClick = (trace: Trace) => {
@@ -394,198 +202,194 @@ export default function TracesTable({
   };
 
   return (
-    <div className="flex flex-col">
-      <table className="w-full">
-        <thead className="bg-neutral-900">
-          <tr className="border-b border-neutral-800">
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              Source
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              Trace ID
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              <SortableHeader
-                field="timestamp"
-                onSort={handleSort}
-                sortField={sortField}
-                sortDirection={sortDirection}
-              >
-                Timestamp
-              </SortableHeader>
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              Summary
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              Service
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              Model
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              Spans
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              <SortableHeader
-                field="inputTokens"
-                onSort={handleSort}
-                sortField={sortField}
-                sortDirection={sortDirection}
-              >
-                Tokens
-              </SortableHeader>
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              <SortableHeader
-                field="latencyMs"
-                onSort={handleSort}
-                sortField={sortField}
-                sortDirection={sortDirection}
-              >
-                Latency
-              </SortableHeader>
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              <SortableHeader
-                field="costCents"
-                onSort={handleSort}
-                sortField={sortField}
-                sortDirection={sortDirection}
-              >
-                Cost
-              </SortableHeader>
-            </th>
-            <th className="text-left py-2.5 px-4 text-xs font-medium text-neutral-500">
-              Session
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedTraces.map((trace) => {
-            const { display, relative } = formatTimestamp(trace.timestamp);
-            const isError = trace.status === "error";
-            const isSelected = selectedId === trace.traceId;
-            const totalTokens =
-              (trace.inputTokens ?? 0) + (trace.outputTokens ?? 0);
-            const model = trace.modelUsed ?? trace.modelRequested;
+    <div className="flex min-w-0 flex-col">
+      <div className="overflow-x-auto">
+        <div
+          className="grid min-w-[680px] items-center gap-2 border-b border-line px-3.5 py-2 text-[10.5px] font-semibold text-dim"
+          style={{ gridTemplateColumns: gridColumns }}
+        >
+          <span />
+          <span>Trace</span>
+          <span>Summary</span>
+          <span>Duration</span>
+          <div className="flex items-center justify-between gap-2">
+            <span>Usage</span>
+            {onRowDensityChange ? (
+              <span className="flex gap-0.5">
+                {(["minimal", "rich"] as const).map((density) => (
+                  <button
+                    key={density}
+                    type="button"
+                    onClick={() => onRowDensityChange(density)}
+                    className="cursor-pointer rounded-md border-0 px-1.5 py-0.5 text-[10px] font-medium"
+                    style={{
+                      background:
+                        rowDensity === density
+                          ? "var(--fill-2)"
+                          : "transparent",
+                      color:
+                        rowDensity === density ? "var(--text)" : "var(--dim)",
+                    }}
+                  >
+                    {density === "minimal" ? "min" : "rich"}
+                  </button>
+                ))}
+              </span>
+            ) : null}
+          </div>
+          <span>Time</span>
+          <span />
+        </div>
 
-            return (
-              <tr
-                key={trace.traceId}
-                onClick={() => handleRowClick(trace)}
-                className="cursor-pointer border-b transition-colors"
+        {traces.map((trace) => {
+          const isError = trace.status === "error";
+          const isSelected = selectedId === trace.traceId;
+          const totalTokens =
+            (trace.inputTokens ?? 0) + (trace.outputTokens ?? 0);
+          const model = trace.modelUsed ?? trace.modelRequested;
+          const service =
+            isError && trace.errorService
+              ? trace.errorService
+              : serviceLabel(trace);
+          const latencyPct =
+            maxLatency > 0
+              ? Math.min((trace.latencyMs / maxLatency) * 100, 100)
+              : 0;
+
+          return (
+            <div
+              key={trace.traceId}
+              role="button"
+              tabIndex={0}
+              onClick={() => handleRowClick(trace)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleRowClick(trace);
+                }
+              }}
+              className={`grid min-w-[680px] cursor-pointer items-center gap-2 border-b border-line-soft px-3.5 ${rowPadding} transition-colors hover:bg-hover`}
+              style={{
+                gridTemplateColumns: gridColumns,
+                background: isSelected ? "var(--fill)" : undefined,
+              }}
+            >
+              <span
+                className="h-[5px] w-[5px] justify-self-center rounded-full"
                 style={{
-                  borderColor: "var(--border-soft)",
-                  background: isSelected
-                    ? "var(--blue-tint)"
-                    : isError
-                      ? "var(--red-tint)"
-                      : "var(--surface)",
+                  background: isError ? "var(--red)" : "var(--green)",
                 }}
+                title={trace.status}
+              />
+
+              <span
+                className="truncate font-mono text-[11px] text-fg-4"
+                title={trace.traceId}
               >
-                <td className={`px-4 ${rowPadding}`}>
-                  <div className="flex items-center gap-2">
-                    <StatusDot status={trace.status} />
+                {trace.traceId.slice(0, 8)}
+              </span>
+
+              <div className="min-w-0">
+                <div
+                  className="truncate text-[12.5px] text-fg"
+                  title={trace.summary}
+                >
+                  {trace.summary || `Trace ${trace.traceId.slice(0, 8)}`}
+                </div>
+                <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                  <span
+                    className={`max-w-[118px] shrink-0 truncate rounded-md px-1.5 py-0.5 font-mono text-[10px] ${
+                      isError ? "bg-red-tint-2 text-red" : "bg-fill text-fg-4"
+                    }`}
+                    title={(trace.services ?? []).join(", ")}
+                  >
+                    {service}
+                  </span>
+                  {model ? (
                     <span
-                      className="rounded px-1.5 py-0.5 text-[11px] font-medium"
-                      style={{
-                        background: "var(--fill)",
-                        color: "var(--text-4)",
-                      }}
-                      title={sourceName(trace.source)}
+                      className="min-w-0 truncate font-mono text-[10.5px] text-faint"
+                      title={model}
                     >
-                      {sourceLabel(trace.source)}
+                      {model}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="grid grid-rows-[4px_auto] gap-1 self-center">
+                <div className="h-[4px] overflow-hidden rounded-full bg-track">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${latencyPct.toFixed(0)}%`,
+                      background: latencyColor(trace.latencyMs, isError),
+                    }}
+                  />
+                </div>
+                <span
+                  className={`text-[10.5px] tabular-nums ${
+                    isError ? "text-red" : "text-dim"
+                  }`}
+                >
+                  {fmtLatency(trace.latencyMs)}
+                </span>
+              </div>
+
+              {rowDensity === "rich" ? (
+                <div className="grid grid-rows-[4px_auto] gap-1 self-center">
+                  <div className="h-[4px] overflow-hidden rounded-full bg-track">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-blue to-purple"
+                      style={{
+                        width: `${Math.min((totalTokens / 7000) * 100, 100).toFixed(0)}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-[10.5px] tabular-nums text-dim">
+                      {fmtTokens(totalTokens)}
+                    </span>
+                    <span className="text-[10.5px] tabular-nums text-fg-3">
+                      {fmtCost(trace.costCents)}
                     </span>
                   </div>
-                </td>
-                <td className={`px-4 ${rowPadding}`}>
-                  <span
-                    className="inline-block max-w-[100px] truncate font-mono text-sm"
-                    style={{ color: "var(--blue)" }}
-                  >
-                    {trace.traceId.slice(0, 12)}
-                  </span>
-                </td>
-                <td className={`px-4 ${rowPadding}`}>
-                  <div className="text-sm whitespace-nowrap">{display}</div>
-                  {rowDensity === "rich" && (
-                    <div className="text-xs" style={{ color: "var(--dim)" }}>
-                      {relative}
-                    </div>
-                  )}
-                </td>
-                <td className={`px-4 ${rowPadding}`}>
-                  <span
-                    className="inline-block max-w-[280px] truncate text-sm"
-                    style={{ color: "var(--text-3)" }}
-                    title={trace.summary}
-                  >
-                    {trace.summary}
-                  </span>
-                </td>
-                <td className={`px-4 ${rowPadding}`}>
-                  <ServiceCell trace={trace} />
-                </td>
-                <td className={`px-4 ${rowPadding}`}>
-                  <span
-                    className="inline-block max-w-[120px] truncate text-sm"
-                    title={model ?? undefined}
-                    style={{ color: "var(--text-4)" }}
-                  >
-                    {model ?? "—"}
-                  </span>
-                </td>
-                <td className={`px-4 ${rowPadding}`}>
-                  <span className="text-sm" style={{ color: "var(--text-4)" }}>
-                    {trace.spanCount}
-                  </span>
-                </td>
-                <td className={`px-4 ${rowPadding}`}>
-                  <MeterCell
-                    label={fmtTokens(totalTokens)}
-                    pct={Math.min((totalTokens / 7000) * 100, 100)}
-                    color="var(--teal)"
-                  />
-                </td>
-                <td className={`px-4 ${rowPadding}`}>
-                  <MeterCell
-                    label={fmtLatency(trace.latencyMs)}
-                    pct={
-                      maxLatency > 0
-                        ? Math.min((trace.latencyMs / maxLatency) * 100, 100)
-                        : 0
-                    }
-                    color={latencyColor(trace.latencyMs, isError)}
-                  />
-                </td>
-                <td className={`px-4 ${rowPadding}`}>
-                  <span
-                    className="text-sm tabular-nums"
-                    style={{ color: "var(--text-4)" }}
-                  >
+                </div>
+              ) : (
+                <div>
+                  <div className="text-[10.5px] tabular-nums text-fg-3">
                     {fmtCost(trace.costCents)}
-                  </span>
-                </td>
-                <td className={`px-4 ${rowPadding}`}>
-                  {trace.sessionId ? (
-                    <span
-                      className="inline-block max-w-[80px] truncate font-mono text-xs"
-                      style={{ color: "var(--dim)" }}
-                    >
-                      {trace.sessionId.slice(0, 10)}
-                    </span>
-                  ) : (
-                    <span className="text-xs" style={{ color: "var(--faint)" }}>
-                      —
-                    </span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  </div>
+                  <div className="text-[10px] tabular-nums text-faint">
+                    {fmtTokens(totalTokens)} tok
+                  </div>
+                </div>
+              )}
+
+              <span
+                className="text-[10.5px] text-faint"
+                title={new Date(trace.timestamp).toLocaleString()}
+              >
+                {fmtRel(trace.timestamp)}
+              </span>
+
+              <svg
+                className="h-3.5 w-3.5 text-faint"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          );
+        })}
+      </div>
       {pagination && (
         <Pagination
           page={pagination.page}

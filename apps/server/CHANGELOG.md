@@ -30,6 +30,15 @@ Changed: Overview shows a live period trend beside the primary metric, uses the 
 Changed: Light mode uses slightly darker borders to improve separation between overview surfaces and controls.
 Added: Overview has a reusable From/To calendar picker at the far right of the chart summary, with chart interval selection in the same anchored panel and 24-hour, 7-day, or 30-day shortcuts.
 Changed: Overview centers the most-failing service and its label as a compact status group without a redundant Investigate action.
+Changed: Overview uses rounder, tighter cards for its chart, metric strip, health, tool, and recent-trace sections, and recent traces show services as compact tags with an explicit View all traces action.
+Fixed: Recent traces use a recorded trace or agent-run summary as their title instead of replacing it with the model name.
+Changed: Traces uses rounded, tighter metric, service, filter, and list surfaces; every metric shows a real 24-hour trend and comparison; active filters use a compact charcoal state with a darker edge and white text; and trace rows combine summary, service, and model beside compact duration, usage, and relative-time fields without overflowing the table.
+Changed: Traces trend tags use green for positive percentages and red for negative percentages.
+Added: Traces has a reusable query builder that reflects service, sidebar, search, model, session, and date filters above the results table; summary searches are URL-backed and filter trace results on the server.
+Changed: Failed trace rows keep the standard table background and use red only for the status dot, service tag, and duration.
+Fixed: Traces keeps the current rows and totals visible while service or query filters load, and Overview keeps its existing analytics and chart mounted while ranges, measures, splits, or intervals refresh, eliminating full-surface flashes between selections.
+Changed: The reusable query builder reserves its full top row for the query expression and keeps filter chips, filter controls, and the result count together on a separate row below it.
+Changed: The Traces filter panel now eases between its expanded and collapsed widths without unmounting, and denser trace rows align the duration and usage meters on one shared baseline.
 
 ### Allow Test Changes To Rebaseline The Integrity Guard
 

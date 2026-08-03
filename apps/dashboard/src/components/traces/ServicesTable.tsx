@@ -27,23 +27,25 @@ export function ServicesTable({
 
   return (
     <div
-      className="mb-5 overflow-hidden rounded-2xl"
+      className="mb-4 overflow-hidden rounded-[20px]"
       style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",
       }}
     >
       <div
-        className="flex items-end justify-between px-4 py-3.5"
+        className="flex items-end justify-between px-3.5 py-3"
         style={{ borderBottom: "1px solid var(--border)" }}
       >
         <div>
-          <div className="text-sm font-semibold tracking-tight">Services</div>
-          <div className="mt-0.5 text-xs" style={{ color: "var(--dim)" }}>
+          <div className="text-[13px] font-semibold tracking-tight">
+            Services
+          </div>
+          <div className="mt-0.5 text-[11.5px]" style={{ color: "var(--dim)" }}>
             Errors are attributed to the service that threw them
           </div>
         </div>
-        <span className="text-xs" style={{ color: "var(--faint)" }}>
+        <span className="text-[11.5px]" style={{ color: "var(--faint)" }}>
           {selected
             ? "Selected — click again to clear"
             : "Select a service to scope the query"}
@@ -51,7 +53,7 @@ export function ServicesTable({
       </div>
 
       <div
-        className="grid gap-2.5 px-4 py-2"
+        className="grid gap-2.5 px-3.5 py-2"
         style={{
           gridTemplateColumns: COLUMNS,
           borderBottom: "1px solid var(--border)",
@@ -60,7 +62,7 @@ export function ServicesTable({
         {["Service", "Volume", "Requests", "Errors", "Avg"].map((head) => (
           <span
             key={head}
-            className="text-[11.5px]"
+            className="text-[10.5px] font-medium"
             style={{ color: "var(--dim)" }}
           >
             {head}
@@ -82,7 +84,7 @@ export function ServicesTable({
                 onSelect(active ? null : row.service);
               }
             }}
-            className="grid cursor-pointer items-center gap-2.5 px-4 py-2.5"
+            className="grid cursor-pointer items-center gap-2.5 px-3.5 py-2 transition-colors hover:bg-hover"
             style={{
               gridTemplateColumns: COLUMNS,
               borderBottom: "1px solid var(--border-soft)",
@@ -90,7 +92,7 @@ export function ServicesTable({
             }}
           >
             <span
-              className="truncate font-mono text-[12.5px]"
+              className="truncate font-mono text-[12px]"
               style={{ color: "var(--text)" }}
             >
               {row.service}
@@ -108,14 +110,14 @@ export function ServicesTable({
               />
             </span>
             <span
-              className="text-[12.5px] tabular-nums"
+              className="text-[12px] tabular-nums"
               style={{ color: "var(--text-3)" }}
             >
               {row.requests}
             </span>
             <span>
               <span
-                className="rounded-md px-1.5 py-0.5 text-[12.5px] font-semibold tabular-nums"
+                className="rounded-md px-1.5 py-0.5 text-[12px] font-semibold tabular-nums"
                 style={{
                   color: row.errors ? "var(--red)" : "var(--faint)",
                   background: row.errors ? "var(--red-tint-2)" : "transparent",
@@ -125,7 +127,7 @@ export function ServicesTable({
               </span>
             </span>
             <span
-              className="text-[12.5px] tabular-nums"
+              className="text-[12px] tabular-nums"
               style={{ color: "var(--dim)" }}
             >
               {fmtLatency(row.avgDurationMs)}

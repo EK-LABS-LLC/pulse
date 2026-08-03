@@ -126,6 +126,7 @@ const OVERVIEW_COLORS = [
 
 const MEASURE_LABELS: Record<OverviewMeasure, string> = {
   requests: "Requests",
+  errors: "Errors",
   cost: "Cost",
   latency: "Latency",
   tokens: "Tokens",

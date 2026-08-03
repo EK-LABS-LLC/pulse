@@ -54,11 +54,13 @@ function editedFilePath(span: Span): string | undefined {
 }
 
 function buildSummary(
+  recordedSummary: string | undefined,
   isLlm: boolean,
   model: string,
   toolCallCount: number,
   filesEdited: number,
 ): string {
+  if (recordedSummary) return recordedSummary;
   if (isLlm) return model;
   const base = `${toolCallCount} tool calls`;
   return filesEdited > 0 ? `${base} · ${filesEdited} files edited` : base;
@@ -70,6 +72,24 @@ function spanMetadata(span: Span): Record<string, unknown> {
     !Array.isArray(span.metadata)
     ? (span.metadata as Record<string, unknown>)
     : {};
+}
+
+function recordedTraceSummary(spans: Span[]): string | undefined {
+  const agentSpans = spans.filter((span) => span.kind === "agent_run");
+  const candidates = [...agentSpans, ...spans];
+
+  for (const span of candidates) {
+    const metadata = spanMetadata(span);
+    const summary =
+      metadata["pulse.metadata.summary"] ??
+      metadata["pulse.summary"] ??
+      metadata.summary;
+    if (typeof summary === "string" && summary.trim().length > 0) {
+      return summary.trim();
+    }
+  }
+
+  return undefined;
 }
 
 function spanLabel(span: Span): string {
@@ -124,6 +144,7 @@ export function deriveTraceSummary(
       .filter((path): path is string => path !== undefined),
   ).size;
   const model = providerSpan.model ?? "unknown";
+  const recordedSummary = recordedTraceSummary(sorted);
   const services = [
     ...new Set(
       sorted
@@ -153,7 +174,13 @@ export function deriveTraceSummary(
     source: providerSpan.source,
     services,
     spanCount: sorted.length,
-    summary: buildSummary(isLlm, model, toolCallCount, filesEdited),
+    summary: buildSummary(
+      recordedSummary,
+      isLlm,
+      model,
+      toolCallCount,
+      filesEdited,
+    ),
     toolCallCount,
     filesEdited,
     providerRequestId: providerSpan.providerRequestId ?? undefined,

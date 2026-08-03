@@ -8,7 +8,7 @@ import { StatusDot } from "../components/ui/StatusDot";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { useTraceDetailQuery } from "../api";
 import { useProject } from "../hooks/useProject";
-import { fmtCost, fmtLatency, fmtRel, fmtTokens } from "../lib/format";
+import { fmtCost, fmtLatency, fmtTokens } from "../lib/format";
 import { sourceName } from "../lib/sources";
 import {
   getTraceUiPrefs,
@@ -59,15 +59,55 @@ function SummaryMetric({
   );
 }
 
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 text-[12.5px]">
+      <span className="shrink-0 text-faint">{label}</span>
+      <span className="min-w-0 truncate text-right text-fg-3" title={value}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function TokenMeter({
+  label,
+  value,
+  percent,
+  color,
+}: {
+  label: string;
+  value: string;
+  percent: number;
+  color: string;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center justify-between text-[11.5px]">
+        <span className="text-faint">{label}</span>
+        <span className="tabular-nums text-fg-3">{value}</span>
+      </div>
+      <div className="h-[5px] overflow-hidden rounded-full bg-track">
+        <div
+          className="h-full rounded-full"
+          style={{ width: `${percent}%`, background: color }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function resolveBackTarget(returnTo: unknown): {
   to: string;
   label: string;
 } {
-  if (
-    typeof returnTo === "string" &&
-    returnTo.startsWith("/dashboard/sessions")
-  ) {
-    return { to: returnTo, label: "← Sessions" };
+  if (typeof returnTo === "string") {
+    if (returnTo.startsWith("/dashboard/sessions")) {
+      return { to: returnTo, label: "← Sessions" };
+    }
+    if (returnTo.startsWith("/dashboard/traces")) {
+      return { to: returnTo, label: "← Traces" };
+    }
   }
   return { to: "/dashboard/traces", label: "← Traces" };
 }
@@ -90,14 +130,17 @@ function contentAsText(content: unknown): string | null {
   return null;
 }
 
+type IoSide = "request" | "response";
+
 function extractChatBubbles(
   requestBody: unknown,
   responseBody: unknown,
   outputText?: string,
+  side: IoSide = "request",
 ): Array<{ role: string; text: string }> {
   const bubbles: Array<{ role: string; text: string }> = [];
 
-  if (requestBody && typeof requestBody === "object") {
+  if (side === "request" && requestBody && typeof requestBody === "object") {
     const messages = (requestBody as { messages?: unknown }).messages;
     if (Array.isArray(messages)) {
       for (const message of messages) {
@@ -111,6 +154,8 @@ function extractChatBubbles(
       }
     }
   }
+
+  if (side === "request") return bubbles;
 
   if (outputText?.trim()) {
     bubbles.push({ role: "assistant", text: outputText });
@@ -175,6 +220,7 @@ export default function TraceDetail() {
   const [ioFormat, setIoFormat] = useState<TraceIoFormat>(
     () => getTraceUiPrefs().ioFormat,
   );
+  const [ioSide, setIoSide] = useState<IoSide>("request");
 
   useEffect(() => {
     const sync = () => setIoFormat(getTraceUiPrefs().ioFormat);
@@ -234,6 +280,10 @@ export default function TraceDetail() {
   }
 
   const totalTokens = (trace.inputTokens ?? 0) + (trace.outputTokens ?? 0);
+  const inputPercent =
+    totalTokens > 0 ? ((trace.inputTokens ?? 0) / totalTokens) * 100 : 0;
+  const outputPercent =
+    totalTokens > 0 ? ((trace.outputTokens ?? 0) / totalTokens) * 100 : 0;
   const shortId =
     trace.traceId.length > 18
       ? `${trace.traceId.slice(0, 10)}…${trace.traceId.slice(-6)}`
@@ -249,15 +299,26 @@ export default function TraceDetail() {
   };
 
   const payload =
-    trace.status === "error" && trace.error != null
-      ? trace.error
-      : trace.responseBody;
+    ioSide === "request"
+      ? trace.requestBody
+      : trace.status === "error" && trace.error != null
+        ? trace.error
+        : trace.responseBody;
   const chatBubbles = extractChatBubbles(
     trace.requestBody,
     trace.responseBody,
     trace.outputText,
+    ioSide,
   );
   const showChat = ioFormat === "chat" && chatBubbles.length > 0;
+  const isLlmTrace =
+    trace.provider != null ||
+    trace.modelUsed != null ||
+    trace.modelRequested != null;
+  const services = trace.services?.length
+    ? trace.services.join(", ")
+    : trace.errorService || "—";
+  const model = trace.modelUsed ?? trace.modelRequested ?? "—";
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -318,11 +379,9 @@ export default function TraceDetail() {
               <span className="rounded-md bg-fill px-1.5 py-0.5 font-semibold text-fg-4">
                 {sourceName(trace.source)}
               </span>
-              <span className="font-mono">
-                {trace.modelUsed ?? trace.modelRequested ?? "No model"}
-              </span>
+              <span className="font-mono">{model}</span>
               <span>·</span>
-              <span>{fmtRel(trace.timestamp)}</span>
+              <span>{new Date(trace.timestamp).toLocaleString()}</span>
               {trace.errorService ? (
                 <>
                   <span>·</span>
@@ -348,67 +407,117 @@ export default function TraceDetail() {
             </div>
           </section>
 
-          <div className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+          <div className="mb-4 grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+            <section className="min-w-0 rounded-2xl border border-line bg-surface p-5">
+              <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-[12.5px] font-semibold text-fg-3">
+                  Request / Response
+                </h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <SegmentedControl
+                    ariaLabel="Request or response"
+                    value={ioSide}
+                    onChange={setIoSide}
+                    options={[
+                      { value: "request", label: "Request" },
+                      {
+                        value: "response",
+                        label: trace.status === "error" ? "Error" : "Response",
+                      },
+                    ]}
+                  />
+                  <SegmentedControl
+                    ariaLabel="Request and response format"
+                    value={ioFormat}
+                    onChange={(value) => {
+                      setIoFormat(value);
+                      setTraceUiPref("ioFormat", value);
+                    }}
+                    options={[
+                      { value: "chat", label: "Chat" },
+                      { value: "json", label: "JSON" },
+                    ]}
+                  />
+                </div>
+              </div>
+              {showChat ? (
+                <ChatBubbles bubbles={chatBubbles} />
+              ) : payload != null ? (
+                <JsonBlock value={payload} maxHeight="340px" />
+              ) : (
+                <div className="flex min-h-[180px] items-center justify-center rounded-xl border border-dashed border-line-soft bg-surface-3 text-sm text-dim">
+                  No {ioSide} payload was recorded.
+                </div>
+              )}
+            </section>
+
             <div className="flex min-w-0 flex-col gap-4">
-              <section
-                className="rounded-2xl p-5"
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                <h3 className="mb-3.5 text-[12.5px] font-semibold text-fg-3">
-                  Span timeline
-                </h3>
-                <TraceSpanTree
-                  spans={spans}
-                  activeSpanId={activeSpanId}
-                  onSelect={setActiveSpanId}
-                />
+              <section className="rounded-2xl border border-line bg-surface p-5">
+                <h2 className="mb-3.5 text-[12.5px] font-semibold text-fg-3">
+                  Model
+                </h2>
+                {isLlmTrace ? (
+                  <>
+                    <div className="flex flex-col gap-2">
+                      <InfoRow label="Provider" value={trace.provider ?? "—"} />
+                      <InfoRow label="Model" value={model} />
+                    </div>
+                    <div className="mt-4 flex flex-col gap-3">
+                      <TokenMeter
+                        label="Input tokens"
+                        value={fmtTokens(trace.inputTokens)}
+                        percent={inputPercent}
+                        color="var(--blue)"
+                      />
+                      <TokenMeter
+                        label="Output tokens"
+                        value={fmtTokens(trace.outputTokens)}
+                        percent={outputPercent}
+                        color="var(--purple)"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[12.5px] text-dim">
+                    No model call was recorded on this trace.
+                  </p>
+                )}
               </section>
 
-              {(trace.requestBody != null ||
-                trace.responseBody != null ||
-                trace.error != null) && (
-                <section
-                  className="rounded-2xl p-5"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
-                    <h3 className="text-[12.5px] font-semibold text-fg-3">
-                      {trace.status === "error" && trace.error != null
-                        ? "Error"
-                        : "Request / response"}
-                    </h3>
-                    <SegmentedControl
-                      ariaLabel="Request and response format"
-                      value={ioFormat}
-                      onChange={(value) => {
-                        setIoFormat(value);
-                        setTraceUiPref("ioFormat", value);
-                      }}
-                      options={[
-                        { value: "chat", label: "Chat" },
-                        { value: "json", label: "JSON" },
-                      ]}
-                    />
-                  </div>
-                  {showChat ? (
-                    <ChatBubbles bubbles={chatBubbles} />
-                  ) : (
-                    <JsonBlock value={payload} maxHeight="280px" />
-                  )}
-                </section>
-              )}
-            </div>
-
-            <div className="min-h-0 lg:sticky lg:top-0 lg:self-start">
-              <SpanDetailPanel span={activeSpan} />
+              <section className="rounded-2xl border border-line bg-surface p-5">
+                <h2 className="mb-3.5 text-[12.5px] font-semibold text-fg-3">
+                  Metadata
+                </h2>
+                <div className="flex flex-col gap-2">
+                  <InfoRow label="Service" value={services} />
+                  <InfoRow label="Source" value={sourceName(trace.source)} />
+                  <InfoRow label="Session" value={trace.sessionId ?? "—"} />
+                  <InfoRow
+                    label="Finish reason"
+                    value={trace.finishReason ?? "—"}
+                  />
+                </div>
+              </section>
             </div>
           </div>
+
+          <section className="mb-4 min-h-[340px] rounded-2xl border border-line bg-surface p-5">
+            <div className="mb-3.5 flex items-center justify-between gap-4">
+              <h2 className="text-[12.5px] font-semibold text-fg-3">
+                Span timeline
+              </h2>
+              <span className="text-[11.5px] text-faint">
+                {spans.length.toLocaleString()} spans · click one to inspect
+              </span>
+            </div>
+            <TraceSpanTree
+              spans={spans}
+              activeSpanId={activeSpanId}
+              onSelect={setActiveSpanId}
+            />
+          </section>
+
+          {activeSpan ? <SpanDetailPanel span={activeSpan} /> : null}
         </div>
       </div>
     </div>

@@ -49,15 +49,15 @@ export function SpanDetailPanel({ span }: { span: Span | null }) {
 
   return (
     <div
-      className="flex h-full flex-col overflow-hidden rounded-xl"
+      className="overflow-hidden rounded-2xl"
       style={{
         background: "var(--surface)",
-        border: "1px solid var(--border-soft)",
+        border: "1px solid var(--border)",
         animation: "panelIn .18s ease-out",
       }}
     >
       <div
-        className="flex flex-col gap-3 px-4 py-3"
+        className="flex items-center justify-between gap-3 px-5 py-4"
         style={{ borderBottom: "1px solid var(--border-soft)" }}
       >
         <div className="flex items-center gap-2">
@@ -69,45 +69,56 @@ export function SpanDetailPanel({ span }: { span: Span | null }) {
             {spanLabel(span)}
           </span>
         </div>
+        <span
+          className="rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase"
+          style={{
+            background: isError ? "var(--red-tint-2)" : "var(--green-tint)",
+            color: isError ? "var(--red)" : "var(--green)",
+          }}
+        >
+          {isError ? "Error" : "OK"}
+        </span>
+      </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Kind" value={span.kind} />
-          <Field label="Duration" value={fmtLatency(span.durationMs)} />
-          <Field label="Service" value={span.service ?? "—"} />
-          <Field label="Started" value={fmtAbs(span.timestamp)} />
+      <div className="grid grid-cols-2 gap-4 px-5 py-4 sm:grid-cols-4">
+        <Field label="Kind" value={span.kind.replaceAll("_", " ")} />
+        <Field label="Duration" value={fmtLatency(span.durationMs)} />
+        <Field label="Service" value={span.service ?? "—"} />
+        <Field label="Started" value={fmtAbs(span.timestamp)} />
+      </div>
+
+      {isError && span.error != null ? (
+        <div
+          className="mx-5 mb-4 rounded-xl px-3 py-2.5 font-mono text-xs"
+          style={{
+            background: "var(--red-tint)",
+            border: "1px solid var(--red-border)",
+            color: "var(--red-text)",
+          }}
+        >
+          {typeof span.error === "string"
+            ? span.error
+            : ((span.error as { message?: string })?.message ??
+              "This span failed.")}
         </div>
+      ) : null}
 
-        {isError && span.error != null && (
-          <div
-            className="rounded-lg px-3 py-2 text-xs"
-            style={{
-              background: "var(--red-tint)",
-              border: "1px solid var(--red-border)",
-              color: "var(--red-text)",
-            }}
-          >
-            {typeof span.error === "string"
-              ? span.error
-              : ((span.error as { message?: string })?.message ??
-                "This span failed.")}
-          </div>
-        )}
-      </div>
-
-      <div className="px-4 py-3">
-        <SegmentedControl
-          ariaLabel="Span payload"
-          value={side}
-          onChange={setSide}
-          options={[
-            { value: "input", label: "Input" },
-            { value: "output", label: isError ? "Error" : "Output" },
-          ]}
-        />
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-auto px-4 pb-4">
-        <JsonBlock value={payload} />
+      <div className="border-t border-line-soft px-5 py-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <span className="text-[11.5px] font-semibold text-fg-3">
+            Span payload
+          </span>
+          <SegmentedControl
+            ariaLabel="Span payload"
+            value={side}
+            onChange={setSide}
+            options={[
+              { value: "input", label: "Input" },
+              { value: "output", label: isError ? "Error" : "Output" },
+            ]}
+          />
+        </div>
+        <JsonBlock value={payload} maxHeight="260px" />
       </div>
     </div>
   );

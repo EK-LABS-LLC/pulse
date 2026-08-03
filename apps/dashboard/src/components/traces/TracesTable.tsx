@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { Trace } from "../../lib/apiClient";
 import { fmtCost, fmtLatency, fmtRel, fmtTokens } from "../../lib/format";
 import type { TraceRowDensity } from "../../lib/traceUiPrefs";
@@ -186,6 +186,7 @@ export default function TracesTable({
   pagination,
 }: TracesTableProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const maxLatency = Math.max(0, ...traces.map((t) => t.latencyMs ?? 0));
@@ -197,7 +198,9 @@ export default function TracesTable({
     if (onRowClick) {
       onRowClick(trace);
     } else {
-      navigate(`/dashboard/traces/${trace.traceId}`);
+      navigate(`/dashboard/traces/${trace.traceId}`, {
+        state: { returnTo: `${location.pathname}${location.search}` },
+      });
     }
   };
 

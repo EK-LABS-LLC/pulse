@@ -1,10 +1,17 @@
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { useSessionTraceSummariesQuery, useSpansQuery } from "../api";
 import SessionTraceList from "../components/sessions/SessionTraceList";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { Breadcrumbs } from "../components/ui/Breadcrumbs";
 import { useProject } from "../hooks/useProject";
 import type { Span, Trace } from "../lib/apiClient";
 import { fmtCost, fmtDuration, fmtTokens } from "../lib/format";
+import { resolveSessionReturnTarget } from "../lib/dashboardNavigation";
 
 interface SessionStats {
   traceCount: number;
@@ -123,22 +130,6 @@ function calculateSessionStats(traces: Trace[]): SessionStats {
   };
 }
 
-function BackChevron() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-    >
-      <path d="m15 19-7-7 7-7" />
-    </svg>
-  );
-}
-
 interface SummaryTileProps {
   label: string;
   value: string;
@@ -162,14 +153,12 @@ function SummaryTile({ label, value, error }: SummaryTileProps) {
 export default function SessionDetail() {
   const { selectedProject } = useProject();
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const locationState = location.state as SessionLocationState | null;
-  const returnTo =
-    typeof locationState?.returnTo === "string" &&
-    locationState.returnTo.startsWith("/dashboard/sessions")
-      ? locationState.returnTo
-      : "/dashboard/sessions";
+  const back = resolveSessionReturnTarget(
+    searchParams.get("from") ?? locationState?.returnTo,
+  );
 
   const sessionQuery = useSessionTraceSummariesQuery(selectedProject?.id, id);
   const spansQuery = useSpansQuery(
@@ -214,7 +203,7 @@ export default function SessionDetail() {
           <p className="mb-6 text-sm text-dim">
             The session you're looking for doesn't exist.
           </p>
-          <Link to={returnTo} className="text-sm text-blue hover:underline">
+          <Link to={back.to} className="text-sm text-blue hover:underline">
             Back to Sessions
           </Link>
         </div>
@@ -239,21 +228,9 @@ export default function SessionDetail() {
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg">
       <header className="flex h-14 shrink-0 items-center border-b border-line bg-topbar px-5">
         <div className="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(returnTo, { replace: true })}
-            className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12.5px] text-fg-4 transition-colors hover:bg-hover hover:text-fg"
-          >
-            <BackChevron />
-            Sessions
-          </button>
-          <span className="h-4 w-px shrink-0 bg-line-strong" />
-          <span
-            className="truncate font-mono text-[12.5px] text-fg-3"
-            title={sessionId}
-          >
-            {idShort}
-          </span>
+          <Breadcrumbs
+            items={[{ label: back.label, to: back.to }, { label: idShort }]}
+          />
           {stats.errorCount > 0 ? (
             <span className="shrink-0 rounded-full bg-red-tint-2 px-2 py-[3px] text-[11px] font-semibold text-red">
               {stats.errorCount} {stats.errorCount === 1 ? "error" : "errors"}
@@ -301,7 +278,10 @@ export default function SessionDetail() {
             </div>
           </section>
 
-          <SessionTraceList traces={traces} returnTo={location.pathname} />
+          <SessionTraceList
+            traces={traces}
+            returnTo={`${location.pathname}${location.search}`}
+          />
         </div>
       </main>
     </div>

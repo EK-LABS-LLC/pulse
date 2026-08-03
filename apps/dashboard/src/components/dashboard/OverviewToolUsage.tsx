@@ -18,11 +18,11 @@ export function OverviewToolUsage({
   const maxCount = Math.max(...rows.map((row) => row.count), 1);
 
   return (
-    <section className="rounded-2xl border border-line bg-surface p-5">
+    <section className="rounded-[18px] border border-line bg-surface p-4">
       <h3 className="text-sm font-semibold tracking-[-0.015em] text-fg">
         Tool usage
       </h3>
-      <p className="mb-4 mt-0.5 text-xs text-dim">
+      <p className="mb-3 mt-0.5 text-xs text-dim">
         Calls by tool · {rangeLabel}
       </p>
 
@@ -31,10 +31,10 @@ export function OverviewToolUsage({
           No tool usage data
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5">
           {rows.map((tool) => (
             <div key={tool.name}>
-              <div className="mb-1.5 flex items-center justify-between gap-3">
+              <div className="mb-1 flex items-center justify-between gap-3">
                 <span className="truncate font-mono text-[12.5px] text-fg-2">
                   {tool.name}
                 </span>

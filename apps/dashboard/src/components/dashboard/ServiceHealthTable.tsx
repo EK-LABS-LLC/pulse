@@ -20,11 +20,11 @@ export function ServiceHealthTable({
   const navigate = useNavigate();
 
   return (
-    <section className="rounded-2xl border border-line bg-surface p-5">
+    <section className="rounded-[18px] border border-line bg-surface p-4">
       <h3 className="text-sm font-semibold tracking-[-0.015em] text-fg">
         Service health
       </h3>
-      <p className="mb-4 mt-0.5 text-xs text-dim">
+      <p className="mb-3 mt-0.5 text-xs text-dim">
         Errors attributed to the service that threw · {rangeLabel}
       </p>
 
@@ -57,7 +57,7 @@ export function ServiceHealthTable({
                   `/dashboard/traces?service=${encodeURIComponent(row.name)}`,
                 )
               }
-              className="grid cursor-pointer grid-cols-[1fr_76px_60px_62px] items-center gap-2.5 border-0 border-b border-line-soft bg-transparent py-2.5 text-left last:border-b-0 hover:bg-hover"
+              className="grid cursor-pointer grid-cols-[1fr_76px_60px_62px] items-center gap-2.5 border-0 border-b border-line-soft bg-transparent py-2 text-left last:border-b-0 hover:bg-hover"
             >
               <span className="truncate font-mono text-[12.5px] text-fg-2">
                 {row.name}

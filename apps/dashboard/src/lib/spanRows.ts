@@ -13,6 +13,8 @@ export interface SpanRow {
   leftPct: string;
   widthPct: string;
   labelLeftPct: string;
+  labelRightPct: string;
+  durationPlacement: "after" | "before" | "inside";
   durationLabel: string;
   isError: boolean;
   depth: number;
@@ -120,8 +122,13 @@ export function buildSpanRows(
       const durationMs = span.durationMs ?? 0;
       const color = colorFor(span);
       const isStep = depth > 1;
-      const leftPct = `${((offsetMs / totalMs) * 100).toFixed(1)}%`;
-      const widthPct = `${Math.max((durationMs / totalMs) * 100, 1.2).toFixed(1)}%`;
+      const leftPercent = (offsetMs / totalMs) * 100;
+      const widthPercent = Math.max((durationMs / totalMs) * 100, 1.2);
+      const endPercent = leftPercent + widthPercent;
+      const leftPct = `${leftPercent.toFixed(1)}%`;
+      const widthPct = `${widthPercent.toFixed(1)}%`;
+      const durationPlacement: SpanRow["durationPlacement"] =
+        endPercent <= 86 ? "after" : leftPercent >= 18 ? "before" : "inside";
 
       return {
         id: span.spanId,
@@ -135,6 +142,8 @@ export function buildSpanRows(
         leftPct,
         widthPct,
         labelLeftPct: `calc(${leftPct} + ${widthPct} + 6px)`,
+        labelRightPct: `calc(${(100 - leftPercent).toFixed(1)}% + 6px)`,
+        durationPlacement,
         durationLabel: fmtLatency(durationMs),
         isError: span.status === "error",
         depth,

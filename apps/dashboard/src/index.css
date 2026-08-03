@@ -45,6 +45,8 @@
   --neutral: rgba(255, 255, 255, 0.42);
   --neutral-soft: rgba(255, 255, 255, 0.2);
   --seg-active: #3a3a3c;
+  --filter-active: #3a3a3c;
+  --filter-active-border: #2c2c2e;
   --blue-border: rgba(10, 132, 255, 0.35);
   --green-border: rgba(48, 209, 88, 0.35);
   --json-key: #7fb2ff;
@@ -94,6 +96,8 @@
   --neutral: rgba(0, 0, 0, 0.45);
   --neutral-soft: rgba(0, 0, 0, 0.26);
   --seg-active: #ffffff;
+  --filter-active: #636366;
+  --filter-active-border: #48484a;
   --blue-border: rgba(10, 108, 232, 0.32);
   --green-border: rgba(30, 158, 74, 0.35);
   --json-key: #0057b7;

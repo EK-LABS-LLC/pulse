@@ -1,15 +1,24 @@
 import { type ReactNode, useEffect, useRef, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { Trace, GetTracesParams } from "../lib/apiClient";
+import type {
+  Trace,
+  GetTracesParams,
+  OverviewExtendedResponse,
+} from "../lib/apiClient";
 import {
   useTracesQuery,
   useAnalyticsQuery,
   useSpansAnalyticsQuery,
+  useOverviewExtendedQuery,
 } from "../api";
 import FilterSidebar from "../components/traces/FilterSidebar";
 import { ServicesTable } from "../components/traces/ServicesTable";
 import { StatCard } from "../components/ui/StatCard";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
+import {
+  QueryBuilder,
+  type QueryBuilderTerm,
+} from "../components/ui/QueryBuilder";
 import { fmtCost, fmtLatency } from "../lib/format";
 import TracesTable from "../components/traces/TracesTable";
 import TraceDetailPanel from "../components/traces/TraceDetailPanel";
@@ -35,6 +44,19 @@ const RefreshIcon = () => (
       strokeWidth={1.5}
       d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
     />
+  </svg>
+);
+
+const SearchIcon = () => (
+  <svg
+    className="h-3.5 w-3.5 shrink-0 text-dim"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+  >
+    <circle cx="11" cy="11" r="7" strokeWidth={1.8} />
+    <path d="M21 21l-4.3-4.3" strokeWidth={1.8} />
   </svg>
 );
 
@@ -214,6 +236,7 @@ function ToolbarMenu<T extends string>({
 export interface TracesFilters {
   provider: string;
   model: string;
+  summary: string;
   status: string;
   date_from: string;
   date_to: string;
@@ -223,6 +246,7 @@ export interface TracesFilters {
 const defaultFilters: TracesFilters = {
   provider: "",
   model: "",
+  summary: "",
   status: "",
   date_from: "",
   date_to: "",
@@ -240,6 +264,36 @@ const toIsoDateRangeParam = (
   if (boundary === "start") return `${value}T00:00:00.000Z`;
   return `${value}T23:59:59.999Z`;
 };
+
+function overviewPoints(data: OverviewExtendedResponse | undefined) {
+  return data?.series[0]?.points ?? [];
+}
+
+function trendDelta(
+  values: number[],
+  aggregate: "sum" | "average" = "average",
+) {
+  if (values.length < 2) return null;
+
+  const midpoint = Math.floor(values.length / 2);
+  const calculate = (part: number[]) => {
+    const total = part.reduce((sum, value) => sum + value, 0);
+    return aggregate === "sum" ? total : total / Math.max(part.length, 1);
+  };
+  const previous = calculate(values.slice(0, midpoint));
+  const current = calculate(values.slice(midpoint));
+  const change =
+    previous === 0
+      ? current === 0
+        ? 0
+        : 100
+      : ((current - previous) / previous) * 100;
+
+  return {
+    label: `${change > 0 ? "+" : ""}${change.toFixed(1)}%`,
+    good: change >= 0,
+  };
+}
 
 export default function Traces() {
   const { selectedProject } = useProject();
@@ -259,6 +313,7 @@ export default function Traces() {
   const [filters, setFilters] = useState<TracesFilters>(() => ({
     provider: searchParams.get("provider") || "",
     model: searchParams.get("model") || "",
+    summary: searchParams.get("summary") || "",
     status: searchParams.get("status") || "",
     date_from: searchParams.get("date_from") || "",
     date_to: searchParams.get("date_to") || "",
@@ -298,6 +353,7 @@ export default function Traces() {
 
     if (filters.provider) params.provider = filters.provider;
     if (filters.model) params.model = filters.model;
+    if (filters.summary) params.summary = filters.summary;
     if (filters.status) params.status = filters.status;
     if (filters.date_from)
       params.date_from = toIsoDateRangeParam(filters.date_from, "start");
@@ -339,10 +395,9 @@ export default function Traces() {
     },
   );
 
-  const STATS_WINDOW_DAYS = 7;
   const analyticsRange = useMemo(() => {
     const to = new Date();
-    const from = new Date(to.getTime() - STATS_WINDOW_DAYS * 86400000);
+    const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
     return { date_from: from.toISOString(), date_to: to.toISOString() };
   }, []);
 
@@ -351,7 +406,7 @@ export default function Traces() {
     selectedProject?.id,
     {
       ...analyticsRange,
-      group_by: "day",
+      group_by: "hour",
     },
   );
   const spansQuery = useSpansAnalyticsQuery(
@@ -359,8 +414,28 @@ export default function Traces() {
     selectedProject?.id,
     {
       ...analyticsRange,
-      group_by: "day",
+      group_by: "hour",
     },
+  );
+  const requestsTrendQuery = useOverviewExtendedQuery(
+    "traces-requests-trend",
+    selectedProject?.id,
+    { ...analyticsRange, group_by: "hour", measure: "requests" },
+  );
+  const errorsTrendQuery = useOverviewExtendedQuery(
+    "traces-errors-trend",
+    selectedProject?.id,
+    { ...analyticsRange, group_by: "hour", measure: "errors" },
+  );
+  const latencyTrendQuery = useOverviewExtendedQuery(
+    "traces-latency-trend",
+    selectedProject?.id,
+    { ...analyticsRange, group_by: "hour", measure: "latency" },
+  );
+  const costTrendQuery = useOverviewExtendedQuery(
+    "traces-cost-trend",
+    selectedProject?.id,
+    { ...analyticsRange, group_by: "hour", measure: "cost" },
   );
 
   const traces = tracesQuery.data?.traces ?? [];
@@ -374,12 +449,14 @@ export default function Traces() {
     newPage: number,
     newPageSize: number,
     newSource: SourceFilter,
+    newService: string | null,
   ) => {
     const params = new URLSearchParams();
     Object.entries(newFilters).forEach(([key, value]) => {
       if (value) params.set(key, value);
     });
     if (newSource) params.set("source", newSource);
+    if (newService) params.set("service", newService);
     if (newPage > 1) params.set("page", String(newPage));
     if (newPageSize !== DEFAULT_PAGE_SIZE)
       params.set("pageSize", String(newPageSize));
@@ -389,31 +466,36 @@ export default function Traces() {
   const applyFilters = (newFilters: TracesFilters) => {
     setFilters(newFilters);
     setPage(1);
-    updateUrlParams(newFilters, 1, pageSize, source);
+    updateUrlParams(newFilters, 1, pageSize, source, serviceFilter);
     setSelectedTrace(null);
   };
 
   const clearFilters = () => {
-    applyFilters(defaultFilters);
+    setFilters(defaultFilters);
+    setSource("");
+    setServiceFilter(null);
+    setPage(1);
+    updateUrlParams(defaultFilters, 1, pageSize, "", null);
+    setSelectedTrace(null);
   };
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    updateUrlParams(filters, newPage, pageSize, source);
+    updateUrlParams(filters, newPage, pageSize, source, serviceFilter);
     setSelectedTrace(null);
   };
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setPage(1);
-    updateUrlParams(filters, 1, newPageSize, source);
+    updateUrlParams(filters, 1, newPageSize, source, serviceFilter);
     setSelectedTrace(null);
   };
 
   const handleSourceChange = (newSource: SourceFilter) => {
     setSource(newSource);
     setPage(1);
-    updateUrlParams(filters, 1, pageSize, newSource);
+    updateUrlParams(filters, 1, pageSize, newSource, serviceFilter);
     setSelectedTrace(null);
   };
 
@@ -445,31 +527,53 @@ export default function Traces() {
   const analytics = analyticsQuery.data;
   const spansAnalytics = spansQuery.data;
   const serviceStats = spansAnalytics?.serviceStats ?? [];
+  const requestPoints = overviewPoints(requestsTrendQuery.data);
+  const errorPoints = overviewPoints(errorsTrendQuery.data);
+  const spanPoints = spansAnalytics?.spansOverTime ?? [];
+  const errorByPeriod = new Map(
+    errorPoints.map((point) => [point.period, point.value]),
+  );
+  const requestSeries = requestPoints.map((point) => point.value);
+  const errorRateSeries = spanPoints.map((point) => {
+    const requests = point.count;
+    const errors = errorByPeriod.get(point.period) ?? 0;
+    return requests > 0 ? (errors / requests) * 100 : 0;
+  });
+  const latencySeries = overviewPoints(latencyTrendQuery.data).map(
+    (point) => point.value,
+  );
+  const costSeries = overviewPoints(costTrendQuery.data).map(
+    (point) => point.value,
+  );
 
   const statCards = [
     {
       label: "Requests",
       value: analytics ? analytics.totalRequests.toLocaleString() : "—",
       accent: "var(--blue)",
-      series: (spansAnalytics?.spansOverTime ?? []).map((p) => p.count),
+      series: requestSeries,
+      delta: trendDelta(requestSeries, "sum"),
     },
     {
       label: "Error rate",
       value: spansAnalytics ? `${spansAnalytics.errorRate.toFixed(1)}%` : "—",
       accent: "var(--red)",
-      series: [] as number[],
+      series: errorRateSeries,
+      delta: trendDelta(errorRateSeries),
     },
     {
       label: "Avg latency",
       value: analytics ? fmtLatency(analytics.avgLatency) : "—",
       accent: "var(--purple)",
-      series: [] as number[],
+      series: latencySeries,
+      delta: trendDelta(latencySeries),
     },
     {
       label: "Cost",
       value: analytics ? fmtCost(analytics.totalCost) : "—",
       accent: "var(--orange)",
-      series: [] as number[],
+      series: costSeries,
+      delta: trendDelta(costSeries, "sum"),
     },
   ];
 
@@ -485,12 +589,76 @@ export default function Traces() {
   const handleServiceSelect = (service: string | null) => {
     setServiceFilter(service);
     setPage(1);
+    updateUrlParams(filters, 1, pageSize, source, service);
     setSelectedTrace(null);
   };
 
   const handleStatsModeChange = (mode: TraceStatsMode) => {
     setTraceUiPref("statsMode", mode);
   };
+
+  const handleSummaryChange = (summary: string) => {
+    applyFilters({ ...filters, summary });
+  };
+
+  const queryTerms: QueryBuilderTerm[] = [];
+  if (serviceFilter) {
+    queryTerms.push({
+      id: "service",
+      field: "service",
+      value: serviceFilter,
+      label: `service = ${serviceFilter}`,
+      onRemove: () => handleServiceSelect(null),
+    });
+  }
+  if (filters.status) {
+    queryTerms.push({
+      id: "status",
+      field: "status",
+      value: filters.status,
+      label: `status = ${filters.status}`,
+      onRemove: () => applyFilters({ ...filters, status: "" }),
+    });
+  }
+  if (source) {
+    queryTerms.push({
+      id: "source",
+      field: "source",
+      value: source,
+      label: `source = ${SOURCE_FILTER_LABELS[source]}`,
+      onRemove: () => handleSourceChange(""),
+    });
+  }
+  if (filters.summary) {
+    queryTerms.push({
+      id: "summary",
+      field: "summary",
+      operator: "=~",
+      value: filters.summary,
+      label: `search = ${filters.summary}`,
+      onRemove: () => handleSummaryChange(""),
+    });
+  }
+  for (const field of ["provider", "model", "session_id"] as const) {
+    if (!filters[field]) continue;
+    queryTerms.push({
+      id: field,
+      field,
+      value: filters[field],
+      label: `${field} = ${filters[field]}`,
+      onRemove: () => applyFilters({ ...filters, [field]: "" }),
+    });
+  }
+  for (const field of ["date_from", "date_to"] as const) {
+    if (!filters[field]) continue;
+    queryTerms.push({
+      id: field,
+      field,
+      value: filters[field],
+      label: `${field} = ${filters[field]}`,
+      onRemove: () => applyFilters({ ...filters, [field]: "" }),
+    });
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -504,6 +672,18 @@ export default function Traces() {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <label className="flex w-[230px] items-center gap-2 rounded-[10px] border border-line-strong bg-surface-2 px-2.5 py-1.5">
+            <SearchIcon />
+            <input
+              type="search"
+              value={filters.summary}
+              onChange={(event) => handleSummaryChange(event.target.value)}
+              maxLength={200}
+              placeholder="Search summaries…"
+              aria-label="Search trace summaries"
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[12px] text-fg outline-none placeholder:text-faint"
+            />
+          </label>
           <ToolbarMenu
             ariaLabel="Source"
             icon={<FilterIcon />}
@@ -550,7 +730,7 @@ export default function Traces() {
                 className="text-[11px] font-semibold"
                 style={{ color: "var(--dim)" }}
               >
-                Overview · last 7d
+                Overview · last 24h
               </span>
               <SegmentedControl
                 ariaLabel="Stats display"
@@ -564,7 +744,7 @@ export default function Traces() {
             </div>
 
             {statsMode === "trend" ? (
-              <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 {statCards.map((card) => (
                   <StatCard
                     key={card.label}
@@ -572,12 +752,13 @@ export default function Traces() {
                     value={card.value}
                     accent={card.accent}
                     series={card.series}
+                    delta={card.delta}
                   />
                 ))}
               </div>
             ) : (
               <div
-                className="mb-5 flex flex-wrap overflow-hidden rounded-2xl"
+                className="mb-4 flex flex-wrap overflow-hidden rounded-[20px]"
                 style={{
                   background: "var(--surface)",
                   border: "1px solid var(--border)",
@@ -612,7 +793,7 @@ export default function Traces() {
             />
           </section>
 
-          <section className="flex items-start gap-4 px-5 pb-6">
+          <section className="flex items-start gap-3.5 px-5 pb-6">
             <FilterSidebar
               filters={filters}
               source={source}
@@ -650,45 +831,41 @@ export default function Traces() {
                 </div>
               )}
 
-              {loading ? (
-                <div
-                  className="overflow-hidden rounded-2xl"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  <TableSkeleton rows={pageSize} columns={11} />
+              <div
+                className="min-w-0 overflow-hidden rounded-[20px]"
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div className="overflow-x-auto">
+                  <QueryBuilder
+                    resource="traces"
+                    terms={queryTerms}
+                    total={total}
+                    resultNoun={total === 1 ? "trace" : "traces"}
+                    onAddFilter={() => setFiltersOpen(true)}
+                  />
                 </div>
-              ) : traces.length === 0 ? (
-                <div
-                  className="flex flex-col items-center justify-center rounded-2xl py-12 text-center"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  <h3
-                    className="mb-1 text-sm font-medium"
-                    style={{ color: "var(--text-4)" }}
-                  >
-                    No traces found
-                  </h3>
-                  <p className="text-xs" style={{ color: "var(--dim)" }}>
-                    Try adjusting your filters or check back later
-                  </p>
-                </div>
-              ) : (
-                <div
-                  className="overflow-hidden rounded-2xl"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
+
+                {loading ? (
+                  <TableSkeleton rows={pageSize} columns={7} />
+                ) : traces.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <h3 className="mb-1 text-sm font-medium text-fg-4">
+                      No traces found
+                    </h3>
+                    <p className="text-xs text-dim">
+                      Try adjusting your query or filters
+                    </p>
+                  </div>
+                ) : (
                   <TracesTable
                     traces={traces}
                     rowDensity={traceUiPrefs.rowDensity}
+                    onRowDensityChange={(density) =>
+                      setTraceUiPref("rowDensity", density)
+                    }
                     onRowClick={handleRowClick}
                     pagination={{
                       page,
@@ -698,8 +875,8 @@ export default function Traces() {
                       onPageSizeChange: handlePageSizeChange,
                     }}
                   />
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </section>
         </div>

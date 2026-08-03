@@ -20,7 +20,7 @@ export function StatCard({
 
   return (
     <div
-      className="flex flex-col gap-3 rounded-xl p-4"
+      className="flex flex-col gap-2.5 rounded-[18px] p-3.5"
       style={{
         background: "var(--surface)",
         border: "1px solid var(--border-soft)",
@@ -28,14 +28,14 @@ export function StatCard({
     >
       <div className="flex items-start justify-between gap-2">
         <span
-          className="text-xs font-medium tracking-wide"
+          className="text-[11px] font-medium tracking-wide"
           style={{ color: "var(--dim)" }}
         >
           {label}
         </span>
         {delta && (
           <span
-            className="rounded px-1.5 py-0.5 text-[11px] font-medium"
+            className="rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold"
             style={{ color: deltaColor, background: tint(deltaColor, 0.14) }}
           >
             {delta.label}
@@ -45,7 +45,7 @@ export function StatCard({
 
       <div className="flex items-end justify-between gap-3">
         <span
-          className="text-2xl leading-none font-semibold tabular-nums"
+          className="text-[27px] leading-none font-semibold tracking-[-0.025em] tabular-nums"
           style={{ color: "var(--text)" }}
         >
           {value}
@@ -63,7 +63,7 @@ export function StatCard({
               points={points}
               fill="none"
               stroke={accent}
-              strokeWidth="1.5"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
             />

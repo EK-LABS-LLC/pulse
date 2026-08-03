@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getTrace, getTraces, type GetTracesParams } from "../lib/apiClient";
 
 export function useTracesQuery(
@@ -10,6 +10,7 @@ export function useTracesQuery(
     queryKey: [scope, projectId, params],
     enabled: !!projectId,
     queryFn: () => getTraces(params),
+    placeholderData: keepPreviousData,
   });
 }
 

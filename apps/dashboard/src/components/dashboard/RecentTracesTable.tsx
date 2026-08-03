@@ -1,27 +1,32 @@
 import { useNavigate } from "react-router-dom";
 import type { Trace } from "../../lib/apiClient";
-import { fmtCost, fmtLatency, fmtRel } from "../../lib/format";
+import { buildTraceDetailPath } from "../../lib/dashboardNavigation";
+import { fmtLatency, fmtRel } from "../../lib/format";
 import { sourceName } from "../../lib/sources";
-import { StatusDot } from "../ui/StatusDot";
 
 interface RecentTracesTableProps {
   traces: Trace[];
   loading?: boolean;
+  returnTo: string;
 }
 
-export function RecentTracesTable({ traces, loading }: RecentTracesTableProps) {
+export function RecentTracesTable({
+  traces,
+  loading,
+  returnTo,
+}: RecentTracesTableProps) {
   const navigate = useNavigate();
 
   return (
-    <section className="overflow-hidden rounded-[18px] border border-line bg-surface">
-      <header className="flex items-center justify-between border-b border-line px-4 py-3">
+    <section className="overflow-hidden rounded-2xl border border-line bg-surface">
+      <header className="flex items-center justify-between border-b border-line px-5 py-4">
         <h2 className="text-sm font-semibold tracking-[-0.015em] text-fg">
           Recent traces
         </h2>
         <button
           type="button"
           onClick={() => navigate("/dashboard/traces")}
-          className="cursor-pointer border-0 bg-transparent text-xs text-fg-4 transition-colors hover:text-fg"
+          className="cursor-pointer border-0 bg-transparent text-[12.5px] text-blue transition-colors hover:text-fg"
         >
           View all traces →
         </button>
@@ -55,41 +60,41 @@ export function RecentTracesTable({ traces, loading }: RecentTracesTableProps) {
             const isError = trace.status === "error";
             const service =
               trace.services?.[0] ?? trace.provider ?? sourceName(trace.source);
-            const model = trace.modelUsed ?? trace.modelRequested ?? "—";
 
             return (
               <button
                 type="button"
                 key={trace.traceId}
-                onClick={() => navigate(`/dashboard/traces/${trace.traceId}`)}
-                className="grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 border-0 border-b border-line-soft px-4 py-2.5 text-left transition-[filter,background-color] last:border-b-0 hover:brightness-110 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-blue sm:grid-cols-[auto_minmax(0,1fr)_minmax(120px,0.45fr)_74px_74px_70px]"
+                onClick={() =>
+                  navigate(buildTraceDetailPath(trace.traceId, returnTo))
+                }
+                className="grid w-full cursor-pointer grid-cols-[14px_minmax(0,1fr)_66px] items-center gap-3 border-0 border-b border-line-soft px-5 py-3 text-left transition-[filter,background-color] last:border-b-0 hover:brightness-110 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-blue sm:grid-cols-[14px_minmax(200px,1fr)_130px_80px_66px]"
                 style={{
                   background: isError ? "var(--red-tint)" : "transparent",
                   boxShadow: isError ? "inset 2px 0 0 var(--red)" : undefined,
                 }}
               >
-                <StatusDot status={trace.status} />
-                <span className="min-w-0">
-                  <span className="block truncate text-[13px] font-medium text-fg">
-                    {trace.summary || `Trace ${trace.traceId.slice(0, 8)}`}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[11.5px] text-dim sm:hidden">
-                    {service} · {model}
-                  </span>
+                <span
+                  className="h-[7px] w-[7px] justify-self-center rounded-full"
+                  style={{
+                    background: isError ? "var(--red)" : "var(--green)",
+                  }}
+                />
+                <span className="min-w-0 truncate text-[13px] text-fg">
+                  {trace.summary || `Trace ${trace.traceId.slice(0, 8)}`}
                 </span>
-                <span className="hidden min-w-0 sm:block">
-                  <span className="inline-block max-w-full truncate rounded-md bg-fill px-1.5 py-0.5 font-mono text-[10.5px] text-fg-4">
+                <span className="hidden min-w-0 items-center gap-1.5 sm:flex">
+                  <span className="min-w-0 truncate rounded-md bg-fill px-1.5 py-[1.5px] font-mono text-[11px] text-fg-4">
                     {service}
                   </span>
-                  <span className="mt-0.5 block truncate font-mono text-[10.5px] text-faint">
-                    {model}
-                  </span>
+                  {isError && trace.errorService ? (
+                    <span className="min-w-0 truncate rounded-md bg-red-tint-2 px-1.5 py-[1.5px] font-mono text-[11px] text-red">
+                      ↯ {trace.errorService}
+                    </span>
+                  ) : null}
                 </span>
                 <span className="hidden text-right text-[12px] tabular-nums text-fg-3 sm:block">
                   {fmtLatency(trace.latencyMs)}
-                </span>
-                <span className="hidden text-right text-[12px] tabular-nums text-fg-3 sm:block">
-                  {fmtCost(trace.costCents)}
                 </span>
                 <span className="text-right text-[11.5px] tabular-nums text-faint">
                   {fmtRel(trace.timestamp)}

@@ -176,7 +176,7 @@ export default function FilterSidebar({
           active={source}
           onPick={onSourceChange}
           chips={[
-            { value: "", label: "All", count: counts.status.all },
+            { value: "", label: "All", count: counts.source.all },
             ...SOURCE_OPTIONS.map((option) => ({
               value: option.value,
               label: option.name,

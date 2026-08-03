@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import type { AgentSessionSummary } from "../../lib/agentSessions";
+import { buildSessionDetailPath } from "../../lib/dashboardNavigation";
 import { fmtCost, fmtRel, fmtTokens } from "../../lib/format";
 
 interface SessionsTableProps {
@@ -8,7 +9,7 @@ interface SessionsTableProps {
 }
 
 const GRID_COLUMNS =
-  "120px minmax(160px, 1.3fr) minmax(120px, 1fr) 70px 64px 76px 90px";
+  "110px minmax(150px, 1.3fr) minmax(110px, 1fr) 62px 58px 70px 84px";
 
 export default function SessionsTable({
   sessions,
@@ -17,13 +18,18 @@ export default function SessionsTable({
   const navigate = useNavigate();
 
   const handleRowClick = (session: AgentSessionSummary) => {
-    navigate(`/dashboard/sessions/${encodeURIComponent(session.sessionId)}`, {
-      state: {
-        returnTo: returnTo ?? "/dashboard/sessions",
-        agentName: session.agentName,
-        cwd: session.cwd,
+    navigate(
+      buildSessionDetailPath(
+        session.sessionId,
+        returnTo ?? "/dashboard/sessions",
+      ),
+      {
+        state: {
+          agentName: session.agentName,
+          cwd: session.cwd,
+        },
       },
-    });
+    );
   };
 
   if (sessions.length === 0) {
@@ -40,10 +46,10 @@ export default function SessionsTable({
       aria-label="Sessions"
       className="overflow-x-auto rounded-2xl border border-line bg-surface"
     >
-      <div className="min-w-[880px]">
+      <div className="min-w-[820px]">
         <div
           role="row"
-          className="grid gap-2.5 border-b border-line px-5 py-2.5"
+          className="grid gap-2 border-b border-line px-4 py-2"
           style={{ gridTemplateColumns: GRID_COLUMNS }}
         >
           {[
@@ -58,7 +64,7 @@ export default function SessionsTable({
             <span
               key={header}
               role="columnheader"
-              className={`text-[11.5px] font-semibold text-dim ${
+              className={`text-[11px] font-semibold text-dim ${
                 index >= 3 ? "text-right" : ""
               }`}
             >
@@ -85,16 +91,12 @@ export default function SessionsTable({
                     handleRowClick(session);
                   }
                 }}
-                className="grid cursor-pointer items-center gap-2.5 border-b border-line-soft px-5 py-[13px] transition-colors last:border-b-0 hover:bg-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-blue"
-                style={{
-                  gridTemplateColumns: GRID_COLUMNS,
-                  background: isError ? "var(--red-tint)" : undefined,
-                  boxShadow: isError ? "inset 2px 0 0 var(--red)" : undefined,
-                }}
+                className="grid cursor-pointer items-center gap-2 border-b border-line-soft px-4 py-2.5 transition-colors last:border-b-0 hover:bg-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-blue"
+                style={{ gridTemplateColumns: GRID_COLUMNS }}
               >
                 <span
                   role="cell"
-                  className="truncate font-mono text-xs text-fg-3"
+                  className="truncate font-mono text-[11.5px] text-fg-3"
                   title={session.sessionId}
                 >
                   {session.shortId}
@@ -102,13 +104,13 @@ export default function SessionsTable({
 
                 <div role="cell" className="min-w-0">
                   <div
-                    className="truncate text-[13px] text-fg"
+                    className="truncate text-xs text-fg"
                     title={session.agentName}
                   >
                     {session.agentName}
                   </div>
                   <div
-                    className="mt-0.5 truncate font-mono text-[11px] text-faint"
+                    className="mt-px truncate font-mono text-[10.5px] text-faint"
                     title={session.cwd}
                   >
                     {session.cwd || "—"}
@@ -117,11 +119,11 @@ export default function SessionsTable({
 
                 <div
                   role="cell"
-                  className="flex min-w-0 flex-wrap items-center gap-1.5"
+                  className="flex min-w-0 flex-wrap items-center gap-1"
                 >
                   {session.model ? (
                     <span
-                      className="max-w-full truncate rounded-md bg-fill px-1.5 py-0.5 font-mono text-[10.5px] text-fg-4"
+                      className="max-w-full truncate rounded-[5px] bg-fill px-1.5 py-px font-mono text-[10px] text-fg-4"
                       title={`${session.model} · ${fmtTokens(totalTokens)} tokens`}
                     >
                       {session.model}
@@ -133,17 +135,17 @@ export default function SessionsTable({
 
                 <span
                   role="cell"
-                  className="text-right text-[12.5px] tabular-nums text-fg"
+                  className="text-right text-xs tabular-nums text-fg"
                 >
                   {session.traceCount.toLocaleString()}
                 </span>
 
                 <span role="cell" className="text-right">
                   <span
-                    className="inline-flex min-w-7 justify-center rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums"
+                    className="inline-flex min-w-6 justify-center rounded-[5px] px-1.5 py-px text-[11.5px] font-semibold tabular-nums"
                     style={{
-                      background: isError ? "var(--red-tint-2)" : "var(--fill)",
-                      color: isError ? "var(--red-text)" : "var(--faint)",
+                      background: isError ? "var(--red-tint-2)" : "transparent",
+                      color: isError ? "var(--red)" : "var(--faint)",
                     }}
                   >
                     {session.errorCount.toLocaleString()}
@@ -152,14 +154,14 @@ export default function SessionsTable({
 
                 <span
                   role="cell"
-                  className="text-right text-[12.5px] tabular-nums text-fg-3"
+                  className="text-right text-xs tabular-nums text-fg-3"
                 >
                   {fmtCost(session.costCents)}
                 </span>
 
                 <span
                   role="cell"
-                  className="text-right text-xs text-faint"
+                  className="text-right text-[11.5px] text-faint"
                   title={new Date(session.timestamp).toLocaleString()}
                 >
                   {fmtRel(session.timestamp)}

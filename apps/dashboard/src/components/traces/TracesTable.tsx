@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { Trace } from "../../lib/apiClient";
+import { buildTraceDetailPath } from "../../lib/dashboardNavigation";
 import { fmtCost, fmtLatency, fmtRel, fmtTokens } from "../../lib/format";
 import type { TraceRowDensity } from "../../lib/traceUiPrefs";
 
@@ -198,9 +199,12 @@ export default function TracesTable({
     if (onRowClick) {
       onRowClick(trace);
     } else {
-      navigate(`/dashboard/traces/${trace.traceId}`, {
-        state: { returnTo: `${location.pathname}${location.search}` },
-      });
+      navigate(
+        buildTraceDetailPath(
+          trace.traceId,
+          `${location.pathname}${location.search}`,
+        ),
+      );
     }
   };
 

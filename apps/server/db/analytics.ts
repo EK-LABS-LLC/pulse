@@ -93,7 +93,8 @@ export interface CostOverTimeByProvider {
   costCents: number;
 }
 
-export type OverviewMeasure = "requests" | "cost" | "latency" | "tokens";
+export type OverviewMeasure =
+  "requests" | "errors" | "cost" | "latency" | "tokens";
 export type OverviewSplitBy =
   "none" | "model" | "provider" | "source" | "service";
 
@@ -528,11 +529,13 @@ export async function getOverviewSeries(
   const valueExpr =
     measure === "requests"
       ? count()
-      : measure === "cost"
-        ? sum(spans.costCents)
-        : measure === "tokens"
-          ? sql<number>`SUM(COALESCE(${spans.inputTokens}, 0) + COALESCE(${spans.outputTokens}, 0))`
-          : avg(spans.durationMs);
+      : measure === "errors"
+        ? sql<number>`SUM(CASE WHEN ${spans.status} = 'error' THEN 1 ELSE 0 END)`
+        : measure === "cost"
+          ? sum(spans.costCents)
+          : measure === "tokens"
+            ? sql<number>`SUM(COALESCE(${spans.inputTokens}, 0) + COALESCE(${spans.outputTokens}, 0))`
+            : avg(spans.durationMs);
 
   const rows = await db
     .select({
@@ -541,7 +544,11 @@ export async function getOverviewSeries(
       value: valueExpr.as("value"),
     })
     .from(spans)
-    .where(buildLlmSpanConditions(projectId, dateRange))
+    .where(
+      measure === "errors"
+        ? buildSpanDateConditions(projectId, dateRange)
+        : buildLlmSpanConditions(projectId, dateRange),
+    )
     .groupBy(periodExpr, dimensionExpr)
     .orderBy(periodExpr, dimensionExpr);
 

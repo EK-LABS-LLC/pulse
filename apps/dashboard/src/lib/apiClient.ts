@@ -40,6 +40,7 @@ export interface GetTracesParams {
   service?: string;
   provider?: string;
   model?: string;
+  summary?: string;
   status?: string;
   date_from?: string;
   date_to?: string;
@@ -169,12 +170,14 @@ export interface GetAnalyticsParams {
   date_from?: string;
   date_to?: string;
   group_by?: AnalyticsGroupBy;
-  measure?: "requests" | "cost" | "latency" | "tokens";
+  measure?: "requests" | "errors" | "cost" | "latency" | "tokens";
   split_by?: "none" | "model" | "provider" | "source" | "service";
 }
 
-export interface GetOverviewExtendedParams
-  extends Omit<GetAnalyticsParams, "group_by"> {
+export interface GetOverviewExtendedParams extends Omit<
+  GetAnalyticsParams,
+  "group_by"
+> {
   group_by?: "15m" | "hour" | "day";
 }
 

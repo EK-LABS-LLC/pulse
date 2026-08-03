@@ -151,6 +151,7 @@ export async function getTraces(c: Context): Promise<Response> {
     service: params.service,
     provider: params.provider,
     model: params.model,
+    summary: params.summary,
     status: params.status,
     dateFrom,
     dateTo,

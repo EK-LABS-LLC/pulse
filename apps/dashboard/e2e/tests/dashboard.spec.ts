@@ -15,9 +15,11 @@ function loadCreds(): E2ECredentials {
 /**
  * Log in through the API-key local-login flow and land on the given route.
  * The local-login endpoint sets a real session cookie, so the dashboard runs
- * as the signed-in admin for the seeded project.
+ * as the signed-in admin for the seeded project. The theme is applied before
+ * navigation so every view's screenshots render in the requested color scheme.
  */
-async function loginAndOpen(page, route: string, creds: E2ECredentials) {
+async function loginAndOpen(page, route: string, creds: E2ECredentials, theme: string) {
+  await page.emulateMedia({ colorScheme: theme });
   const loginUrl = await buildLoginUrl(creds, route);
   await page.goto(loginUrl);
   await page.waitForURL(`**${route}`);
@@ -29,8 +31,7 @@ test.describe("dashboard surfaces against seeded data", () => {
 
   for (const theme of ["dark", "light"] as const) {
     test(`overview renders seeded metrics (${theme})`, async ({ page }) => {
-      await loginAndOpen(page, "/dashboard", creds);
-      await page.emulateMedia({ colorScheme: theme });
+      await loginAndOpen(page, "/dashboard", creds, theme);
 
       // The sidebar's "Overview" label is a hover-only tooltip; assert on the
       // metric strip and section content that the page actually shows.
@@ -45,7 +46,7 @@ test.describe("dashboard surfaces against seeded data", () => {
     });
 
     test(`traces list shows CLI-emitted spans (${theme})`, async ({ page }) => {
-      await loginAndOpen(page, "/dashboard/traces", creds);
+      await loginAndOpen(page, "/dashboard/traces", creds, theme);
 
       await expect(page.locator("h1", { hasText: "Traces" })).toBeVisible();
       await expect(page.getByText(/total/).first()).toBeVisible();
@@ -63,7 +64,7 @@ test.describe("dashboard surfaces against seeded data", () => {
     });
 
     test(`sessions list shows seeded sessions (${theme})`, async ({ page }) => {
-      await loginAndOpen(page, "/dashboard/sessions", creds);
+      await loginAndOpen(page, "/dashboard/sessions", creds, theme);
 
       await expect(page.locator("h1", { hasText: "Sessions" })).toBeVisible();
 
@@ -71,7 +72,7 @@ test.describe("dashboard surfaces against seeded data", () => {
     });
 
     test(`settings renders profile and preferences (${theme})`, async ({ page }) => {
-      await loginAndOpen(page, "/dashboard/settings", creds);
+      await loginAndOpen(page, "/dashboard/settings", creds, theme);
 
       await expect(page.locator("h1", { hasText: "Settings" })).toBeVisible();
       await expect(page.getByText("Appearance").first()).toBeVisible();
@@ -82,7 +83,7 @@ test.describe("dashboard surfaces against seeded data", () => {
     test(`overview opens CLI trace detail with tool spans (${theme})`, async ({
       page,
     }) => {
-      await loginAndOpen(page, "/dashboard", creds);
+      await loginAndOpen(page, "/dashboard", creds, theme);
 
       // Recent traces render as buttons inside the "Recent traces" section.
       // Skip the "View all traces →" header button and click the first row.

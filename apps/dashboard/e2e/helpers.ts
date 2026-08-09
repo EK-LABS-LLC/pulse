@@ -164,8 +164,23 @@ async function emitViaCliIfEmpty(
   emit("stop", { session_id: sessionId });
   emit("session_end", { session_id: sessionId, reason: "finished" });
 
-  // The CLI posts asynchronously; give the WAL a moment to land.
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  // The CLI posts asynchronously; poll until the session's spans are
+  // queryable rather than sleeping a fixed amount, so a slow runner cannot
+  // proceed before WAL processing has landed them.
+  const deadline = Date.now() + 30_000;
+  for (;;) {
+    const check = await api.get(`/v1/spans?session_id=${sessionId}&limit=50`, {
+      headers: { authorization: `Bearer ${apiKey}` },
+    });
+    if (check.ok()) {
+      const body = (await check.json()) as { spans?: unknown[] };
+      if (body.spans && body.spans.length >= 9) break;
+    }
+    if (Date.now() > deadline) {
+      throw new Error("CLI-emitted spans did not become queryable in time");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
 }
 
 /**

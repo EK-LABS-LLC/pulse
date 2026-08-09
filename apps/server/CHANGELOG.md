@@ -49,6 +49,7 @@ Fixed: Settings reports renaming and deleting a project as unavailable instead o
 Fixed: The Sessions table exposes its header through a row group, so assistive technology announces the grid structure instead of unstructured text.
 Fixed: `recordSpan` in the TypeScript SDK gives agent, session, prompt and notification spans their own event types instead of reporting them as provider calls.
 Fixed: `shutdownPulse` stops the periodic flush even when the final flush fails, so a failed export cannot hold a short-lived process open.
+Fixed: A failed trace-detail request shows the error with a retry action instead of reporting the trace as missing.
 Removed: The dashboard redesign handoff document, which carried local development credentials and machine-specific paths.
 Changed: Overview, Traces, Sessions, Analytics, and trace-detail selections now use shareable URL parameters, including ranges, chart settings, searches, pagination, request/response views, and selected spans.
 Fixed: Trace and session detail breadcrumbs preserve the validated originating URL, so returning from a detail opened on Overview or a filtered list restores that exact page instead of redirecting to a generic list.

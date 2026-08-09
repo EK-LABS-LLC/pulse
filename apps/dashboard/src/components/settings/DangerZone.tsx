@@ -12,20 +12,25 @@ export default function DangerZone({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const canDelete = confirmText === projectName;
 
   const closeModal = () => {
     setShowDeleteModal(false);
     setConfirmText("");
+    setDeleteError(null);
   };
 
   const handleDelete = async () => {
     if (!canDelete) return;
     setIsDeleting(true);
+    setDeleteError(null);
     try {
       await onDeleteProject();
     } catch (error) {
-      console.error("Failed to delete project:", error);
+      setDeleteError(
+        error instanceof Error ? error.message : "Failed to delete project.",
+      );
       setIsDeleting(false);
     }
   };
@@ -85,6 +90,11 @@ export default function DangerZone({
                 className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-fg outline-none placeholder:text-faint focus:border-red"
               />
             </div>
+            {deleteError && (
+              <p role="alert" className="px-4 pb-3 text-xs text-red-text">
+                {deleteError}
+              </p>
+            )}
             <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
               <button
                 type="button"

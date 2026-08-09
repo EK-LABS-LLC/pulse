@@ -55,7 +55,14 @@ export interface Span {
   duration_ms?: number;
   source: SpanSource;
   kind: SpanKind;
-  event_type: "provider_call" | "tool_request" | "tool_result";
+  event_type:
+    | "provider_call"
+    | "tool_request"
+    | "tool_result"
+    | "agent_run"
+    | "session_start"
+    | "user_prompt_submit"
+    | "notification";
   status: TraceStatus;
   tool_use_id?: string;
   tool_name?: string;

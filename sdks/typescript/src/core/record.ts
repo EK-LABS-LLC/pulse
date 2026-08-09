@@ -28,8 +28,21 @@ export interface RecordSpanInput {
   metadata?: Record<string, unknown>;
 }
 
+// Every span kind carries its own event type. Defaulting the non-provider
+// kinds to "provider_call" would report agent, session and prompt spans as
+// model calls once the server maps event types back onto kinds.
+const EVENT_TYPE_BY_KIND: Record<SpanKind, Span["event_type"]> = {
+  llm_call: "provider_call",
+  llm_response: "provider_call",
+  tool_use: "tool_request",
+  agent_run: "agent_run",
+  session: "session_start",
+  user_prompt: "user_prompt_submit",
+  notification: "notification",
+};
+
 function eventTypeFor(kind: SpanKind): Span["event_type"] {
-  return kind === "tool_use" ? "tool_request" : "provider_call";
+  return EVENT_TYPE_BY_KIND[kind];
 }
 
 /**

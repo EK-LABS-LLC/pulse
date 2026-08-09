@@ -613,11 +613,18 @@ export async function getAvgSessionSpanDuration(
   projectId: string,
   dateRange: DateRange,
 ): Promise<number> {
+  // SQLite stores the span timestamp as integer milliseconds, but Postgres
+  // stores a timestamptz, which has no integer addition operator.
+  const startMs =
+    getDbDialect() === "postgres"
+      ? sql`(EXTRACT(EPOCH FROM ${spans.timestamp}) * 1000)`
+      : sql`${spans.timestamp}`;
+
   const sessionSpans = db
     .select({
       sessionId: spans.sessionId,
       durationMs:
-        sql<number>`MAX(${spans.timestamp} + COALESCE(${spans.durationMs}, 0)) - MIN(${spans.timestamp})`.as(
+        sql<number>`MAX(${startMs} + COALESCE(${spans.durationMs}, 0)) - MIN(${startMs})`.as(
           "session_duration_ms",
         ),
     })

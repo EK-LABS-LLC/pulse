@@ -17,6 +17,7 @@ Fixed: Average session duration is measured from a session's own spans instead o
 Fixed: Overview error rate and success rate are drawn from the same spans, so the two no longer contradict each other.
 Added: `GET /v1/analytics/spans` reports per-service request, error and average duration rollups.
 Changed: Traces opens on an overview strip and a Services table, and filters move to status and source chips carrying live counts; selecting a service scopes the query.
+Fixed: Average session duration is computed from span timestamps on Postgres as well as SQLite, so `GET /v1/analytics/spans` no longer returns an internal server error in scale deployments.
 
 ### Allow Test Changes To Rebaseline The Integrity Guard
 

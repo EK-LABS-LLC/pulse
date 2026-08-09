@@ -91,11 +91,7 @@ export interface CostOverTimeByProvider {
 
 export type OverviewMeasure = "requests" | "cost" | "latency" | "tokens";
 export type OverviewSplitBy =
-  | "none"
-  | "model"
-  | "provider"
-  | "source"
-  | "service";
+  "none" | "model" | "provider" | "source" | "service";
 
 export interface OverviewSeriesRow {
   period: string;
@@ -484,7 +480,9 @@ export async function getCostOverTimeByProvider(
   );
 }
 
-function overviewDimensionExpr(splitBy: OverviewSplitBy): ReturnType<typeof sql> {
+function overviewDimensionExpr(
+  splitBy: OverviewSplitBy,
+): ReturnType<typeof sql> {
   switch (splitBy) {
     case "model":
       return spanModelExpr;
@@ -526,6 +524,11 @@ export async function getOverviewSeries(
           ? sql<number>`SUM(COALESCE(${spans.inputTokens}, 0) + COALESCE(${spans.outputTokens}, 0))`
           : avg(spans.durationMs);
 
+  // An unsplit series has a literal dimension, and Postgres rejects a constant
+  // in GROUP BY, so it groups by the period alone.
+  const groupExprs =
+    splitBy === "none" ? [periodExpr] : [periodExpr, dimensionExpr];
+
   const rows = await db
     .select({
       period: periodExpr.as("period"),
@@ -534,14 +537,17 @@ export async function getOverviewSeries(
     })
     .from(spans)
     .where(buildLlmSpanConditions(projectId, dateRange))
-    .groupBy(periodExpr, dimensionExpr)
-    .orderBy(periodExpr, dimensionExpr);
+    .groupBy(...groupExprs)
+    .orderBy(...groupExprs);
 
   return (rows as any[]).map((row) => ({
     period: String(row.period),
     dimension: String(row.dimension ?? "unknown"),
     // Costs are stored in cents; overview chart values are displayed in dollars.
-    value: measure === "cost" ? Number(row.value ?? 0) / 100 : Number(row.value ?? 0),
+    value:
+      measure === "cost"
+        ? Number(row.value ?? 0) / 100
+        : Number(row.value ?? 0),
   }));
 }
 
@@ -561,7 +567,10 @@ export async function getOverviewLatencyPercentiles(
     .select({ durationMs: spans.durationMs })
     .from(spans)
     .where(
-      and(buildLlmSpanConditions(projectId, dateRange), isNotNull(spans.durationMs)),
+      and(
+        buildLlmSpanConditions(projectId, dateRange),
+        isNotNull(spans.durationMs),
+      ),
     );
   const values = (rows as Array<{ durationMs: number | null }>)
     .map((row) => Number(row.durationMs))
@@ -570,7 +579,11 @@ export async function getOverviewLatencyPercentiles(
 
   const percentile = (fraction: number) => {
     if (values.length === 0) return 0;
-    return values[Math.min(values.length - 1, Math.ceil(values.length * fraction) - 1)] ?? 0;
+    return (
+      values[
+        Math.min(values.length - 1, Math.ceil(values.length * fraction) - 1)
+      ] ?? 0
+    );
   };
 
   return { p50: percentile(0.5), p95: percentile(0.95), p99: percentile(0.99) };

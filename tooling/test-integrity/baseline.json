@@ -1,7 +1,7 @@
 {
   "version": 1,
   "artifact_count": 80,
-  "aggregate_sha256": "ed9a676911f39cac192de9ca5ba4bbbfc8918bab9353f024d427a5da39a4506e",
+  "aggregate_sha256": "aad95d23235aa59eb60b1ed3bd26b892b38a1b7a3f242b47600558bc7bfaa3e1",
   "artifacts": [
     {
       "kind": "cli-cargo-test",
@@ -98,8 +98,8 @@
       "kind": "python-pytest",
       "path": "sdks/python/tests/test_sdk.py",
       "mode": "100644",
-      "bytes": 4603,
-      "sha256": "97e61535aea5a231e3f8a4de111f6f2e8bfac68455744ebab2131e2e58737185"
+      "bytes": 4623,
+      "sha256": "b62f5f1149a52fd16ae4af256f2a41a782435b9d356787f5aef5af9f0305864a"
     },
     {
       "kind": "python-pytest",
@@ -434,8 +434,8 @@
       "kind": "server-bun-test",
       "path": "apps/server/tests/dashboard-static.test.ts",
       "mode": "100644",
-      "bytes": 2917,
-      "sha256": "23c700c7366626f961434dbc75d9279c279e60d57dec14e66e7f82159609f10e"
+      "bytes": 2959,
+      "sha256": "de0a23dbc7af5deb8596d22bdb85f0dc5df730a9c863ca185433de567767ebaa"
     },
     {
       "kind": "server-bun-test",
@@ -455,8 +455,8 @@
       "kind": "server-bun-test",
       "path": "apps/server/tests/local-login.test.ts",
       "mode": "100644",
-      "bytes": 3902,
-      "sha256": "978ff8b65cbcfd5403ce5124dabf84576bc2814721f34d04ed9aaff7e3c6b037"
+      "bytes": 4072,
+      "sha256": "537234e2a4b513f9aff6f829bd5909e7e6c64de1c5953489322afc52937c098d"
     },
     {
       "kind": "server-bun-test",
@@ -476,8 +476,8 @@
       "kind": "server-bun-test",
       "path": "apps/server/tests/spans-wal.test.ts",
       "mode": "100644",
-      "bytes": 5054,
-      "sha256": "6ca3b34d23c9b9dc2aa9db1bf6e1fc3a0b3b82994f3ff85122b0715ac488dd32"
+      "bytes": 5243,
+      "sha256": "e93aec160ed8ef250fc84088600c2374121d30a00d25b43e92e26c76c9110073"
     },
     {
       "kind": "server-bun-test",
@@ -525,8 +525,8 @@
       "kind": "typescript-bun-test",
       "path": "sdks/typescript/tests/e2e.test.ts",
       "mode": "100644",
-      "bytes": 8112,
-      "sha256": "41e84fde7dcbfea9a8e1ed2673ee528b3b03f76ea94c10ced5b540dbe6e48ad1"
+      "bytes": 8226,
+      "sha256": "62dd0781bd33fe66e15bd36b53a091d7f5908b68ab2a3810b2a274c9c50ea9c1"
     },
     {
       "kind": "typescript-bun-test",
@@ -546,22 +546,22 @@
       "kind": "typescript-bun-test",
       "path": "sdks/typescript/tests/sdk-spans.test.ts",
       "mode": "100644",
-      "bytes": 620,
-      "sha256": "6ef6b74818fb178ea98c2c16abe2f52fbf4c2a46431ef9337f5ac6a707cd813f"
+      "bytes": 633,
+      "sha256": "5cfaa2e2a6f81b9e4d1a2d9737317d777121179c66aceb13f25bf8298d5d401a"
     },
     {
       "kind": "typescript-bun-test",
       "path": "sdks/typescript/tests/transport.test.ts",
       "mode": "100644",
-      "bytes": 8259,
-      "sha256": "64d769183157513cbd4b75c02799f862c96153eaa477378280c98728de4ebe3f"
+      "bytes": 8395,
+      "sha256": "c23e6c15ea2d12d2b790d63f02fa02da4b992590f220b8a603b4ce1275c0a223"
     },
     {
       "kind": "typescript-test-support",
       "path": "sdks/typescript/tests/test-server.ts",
       "mode": "100644",
-      "bytes": 3088,
-      "sha256": "af50db0b0ff2e0de5f01db7b1eda7a06568e84588b992414941158b4e38f2ab3"
+      "bytes": 3159,
+      "sha256": "7783e83142af9a7a5476c853a04a98c0e5ed9849c9a60b453d46ce0a1af15146"
     }
   ]
 }

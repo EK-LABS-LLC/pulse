@@ -20,7 +20,9 @@ export function calculateOverviewTrend(
   if (values.length < 2) return null;
 
   const midpoint = Math.floor(values.length / 2);
-  const earlier = values.slice(0, midpoint).reduce((sum, value) => sum + value, 0);
+  const earlier = values
+    .slice(0, midpoint)
+    .reduce((sum, value) => sum + value, 0);
   const later = values.slice(midpoint).reduce((sum, value) => sum + value, 0);
   if (earlier === 0) return null;
 

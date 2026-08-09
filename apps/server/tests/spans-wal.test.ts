@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { resolveDataPaths } from "../lib/data-paths";
 
 function readSpanWalFiles(): string[] {
-  const walSpanDir = process.env.WAL_SPAN_DIR ?? resolveDataPaths(process.env).walSpanDir;
+  const walSpanDir =
+    process.env.WAL_SPAN_DIR ?? resolveDataPaths(process.env).walSpanDir;
   const segmentsDir = join(walSpanDir, "segments");
   if (!existsSync(segmentsDir)) return [];
 
@@ -28,7 +29,10 @@ async function waitForSpanWalContents(spanIds: string[]): Promise<string> {
   return readSpanWalFiles().join("\n");
 }
 
-async function waitForSpan(projectApiKey: string, spanId: string): Promise<Response> {
+async function waitForSpan(
+  projectApiKey: string,
+  spanId: string,
+): Promise<Response> {
   for (let i = 0; i < 20; i++) {
     const response = await authFetch(`/v1/spans/${spanId}`, projectApiKey);
     if (response.status === 200) return response;
@@ -53,22 +57,26 @@ describe("Span WAL service integration", () => {
     const spanId = crypto.randomUUID();
     const sessionId = crypto.randomUUID();
 
-    const enqueueResponse = await authFetch("/v1/spans/async", testProject.apiKey, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([
-        {
-          span_id: spanId,
-          session_id: sessionId,
-          timestamp: new Date().toISOString(),
-          source: "claude_code",
-          kind: "tool_use",
-          event_type: "post_tool_use",
-          status: "success",
-          tool_name: "Bash",
-        },
-      ]),
-    });
+    const enqueueResponse = await authFetch(
+      "/v1/spans/async",
+      testProject.apiKey,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify([
+          {
+            span_id: spanId,
+            session_id: sessionId,
+            timestamp: new Date().toISOString(),
+            source: "claude_code",
+            kind: "tool_use",
+            event_type: "post_tool_use",
+            status: "success",
+            tool_name: "Bash",
+          },
+        ]),
+      },
+    );
     expect(enqueueResponse.status).toBe(202);
 
     const walContents = await waitForSpanWalContents([spanId]);
@@ -79,22 +87,26 @@ describe("Span WAL service integration", () => {
   test("async span write is processed from WAL into database", async () => {
     const spanId = crypto.randomUUID();
 
-    const enqueueResponse = await authFetch("/v1/spans/async", testProject.apiKey, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([
-        {
-          span_id: spanId,
-          session_id: crypto.randomUUID(),
-          timestamp: new Date().toISOString(),
-          source: "claude_code",
-          kind: "agent_run",
-          event_type: "subagent_stop",
-          status: "success",
-          agent_name: "Plan",
-        },
-      ]),
-    });
+    const enqueueResponse = await authFetch(
+      "/v1/spans/async",
+      testProject.apiKey,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify([
+          {
+            span_id: spanId,
+            session_id: crypto.randomUUID(),
+            timestamp: new Date().toISOString(),
+            source: "claude_code",
+            kind: "agent_run",
+            event_type: "subagent_stop",
+            status: "success",
+            agent_name: "Plan",
+          },
+        ]),
+      },
+    );
     expect(enqueueResponse.status).toBe(202);
 
     const getResponse = await waitForSpan(testProject.apiKey, spanId);
@@ -109,33 +121,39 @@ describe("Span WAL service integration", () => {
     const sessionId = crypto.randomUUID();
     const spanIds = Array.from({ length: 6 }, () => crypto.randomUUID());
 
-    const enqueueResponse = await authFetch("/v1/spans/async", testProject.apiKey, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(
-        spanIds.map((spanId, i) => ({
-          span_id: spanId,
-          session_id: sessionId,
-          timestamp: new Date(Date.now() - i * 1000).toISOString(),
-          source: "claude_code",
-          kind: i % 2 === 0 ? "tool_use" : "agent_run",
-          event_type: i % 2 === 0 ? "post_tool_use" : "subagent_stop",
-          status: "success",
-          tool_name: i % 2 === 0 ? "Edit" : undefined,
-        }))
-      ),
-    });
+    const enqueueResponse = await authFetch(
+      "/v1/spans/async",
+      testProject.apiKey,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          spanIds.map((spanId, i) => ({
+            span_id: spanId,
+            session_id: sessionId,
+            timestamp: new Date(Date.now() - i * 1000).toISOString(),
+            source: "claude_code",
+            kind: i % 2 === 0 ? "tool_use" : "agent_run",
+            event_type: i % 2 === 0 ? "post_tool_use" : "subagent_stop",
+            status: "success",
+            tool_name: i % 2 === 0 ? "Edit" : undefined,
+          })),
+        ),
+      },
+    );
     expect(enqueueResponse.status).toBe(202);
 
     await new Promise((resolve) => setTimeout(resolve, 1200));
 
     const listResponse = await authFetch(
       `/v1/spans?session_id=${encodeURIComponent(sessionId)}&limit=100`,
-      testProject.apiKey
+      testProject.apiKey,
     );
     expect(listResponse.status).toBe(200);
 
-    const data = (await listResponse.json()) as { spans: Array<{ spanId: string }> };
+    const data = (await listResponse.json()) as {
+      spans: Array<{ spanId: string }>;
+    };
     const persistedIds = data.spans.map((s) => s.spanId);
     for (const spanId of spanIds) {
       expect(persistedIds).toContain(spanId);

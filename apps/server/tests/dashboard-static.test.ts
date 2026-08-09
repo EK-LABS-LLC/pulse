@@ -18,7 +18,8 @@ describe("Dashboard static serving", () => {
     if (originalPulseHome === undefined) delete process.env.PULSE_HOME;
     else process.env.PULSE_HOME = originalPulseHome;
 
-    if (originalDashboardDistDir === undefined) delete process.env.DASHBOARD_DIST_DIR;
+    if (originalDashboardDistDir === undefined)
+      delete process.env.DASHBOARD_DIST_DIR;
     else process.env.DASHBOARD_DIST_DIR = originalDashboardDistDir;
   });
 
@@ -45,7 +46,9 @@ describe("Dashboard static serving", () => {
     const body = await response.text();
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toContain("application/javascript");
+    expect(response.headers.get("content-type")).toContain(
+      "application/javascript",
+    );
     expect(body).toContain("window.__PULSE_CONFIG");
     expect(body).toContain("apiBaseUrl");
   });
@@ -59,17 +62,22 @@ describe("Dashboard static serving", () => {
 
 async function loadApp() {
   process.env.PULSE_HOME = mkdtempSync(join(tmpdir(), "pulse-dashboard-test-"));
-  process.env.DASHBOARD_DIST_DIR = mkdtempSync(join(tmpdir(), "pulse-dashboard-dist-"));
+  process.env.DASHBOARD_DIST_DIR = mkdtempSync(
+    join(tmpdir(), "pulse-dashboard-dist-"),
+  );
   writeFileSync(
     join(process.env.DASHBOARD_DIST_DIR, "index.html"),
     '<!doctype html><html><head><title>Pulse Dashboard</title></head><body><div id="root"></div></body></html>',
-    "utf8"
+    "utf8",
   );
 
   const [
     { initializeRuntimeServices, isRuntimeServicesInitialized },
     { createSingleRuntimeServices },
-  ] = await Promise.all([import("../runtime/services"), import("../runtime/modes/single")]);
+  ] = await Promise.all([
+    import("../runtime/services"),
+    import("../runtime/modes/single"),
+  ]);
 
   if (!isRuntimeServicesInitialized()) {
     const runtime = createSingleRuntimeServices();

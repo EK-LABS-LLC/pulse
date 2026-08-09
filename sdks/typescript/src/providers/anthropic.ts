@@ -20,7 +20,11 @@ import type {
   TextBlock,
   Usage,
 } from "@anthropic-ai/sdk/resources/messages";
-import { Provider, type ObserveOptions, type NormalizedResponse } from "../types";
+import {
+  Provider,
+  type ObserveOptions,
+  type NormalizedResponse,
+} from "../types";
 import { normalizeAnthropicResponse } from "../lib/normalize";
 import {
   getStartTime,
@@ -89,7 +93,10 @@ function createStreamAccumulator(): StreamAccumulator {
 /**
  * Processes a streaming event and updates the accumulator
  */
-function processStreamEvent(event: RawMessageStreamEvent, acc: StreamAccumulator): void {
+function processStreamEvent(
+  event: RawMessageStreamEvent,
+  acc: StreamAccumulator,
+): void {
   switch (event.type) {
     case "message_start": {
       const startEvent = event as RawMessageStartEvent;
@@ -114,7 +121,8 @@ function processStreamEvent(event: RawMessageStreamEvent, acc: StreamAccumulator
           (block as TextBlock).text += textDelta.text;
         }
       } else if (deltaEvent.delta.type === "input_json_delta") {
-        const partialJson = (deltaEvent.delta as { partial_json?: string }).partial_json ?? "";
+        const partialJson =
+          (deltaEvent.delta as { partial_json?: string }).partial_json ?? "";
         acc.toolInputJson.set(
           deltaEvent.index,
           (acc.toolInputJson.get(deltaEvent.index) ?? "") + partialJson,
@@ -125,7 +133,8 @@ function processStreamEvent(event: RawMessageStreamEvent, acc: StreamAccumulator
     case "content_block_stop": {
       const index = (event as { index?: number }).index;
       if (typeof index === "number") {
-        const block = acc.content[index] as (Record<string, unknown> & { type?: string }) | undefined;
+        const block = acc.content[index] as
+          (Record<string, unknown> & { type?: string }) | undefined;
         const partialJson = acc.toolInputJson.get(index);
         if (block?.type === "tool_use" && partialJson) {
           block.input = parseJsonish(partialJson);
@@ -141,9 +150,11 @@ function processStreamEvent(event: RawMessageStreamEvent, acc: StreamAccumulator
       if (messageDelta.usage) {
         acc.usage = {
           ...acc.usage,
-          input_tokens: messageDelta.usage.input_tokens ?? acc.usage?.input_tokens ?? 0,
+          input_tokens:
+            messageDelta.usage.input_tokens ?? acc.usage?.input_tokens ?? 0,
           output_tokens: messageDelta.usage.output_tokens,
-          cache_creation_input_tokens: messageDelta.usage.cache_creation_input_tokens,
+          cache_creation_input_tokens:
+            messageDelta.usage.cache_creation_input_tokens,
           cache_read_input_tokens: messageDelta.usage.cache_read_input_tokens,
           cache_creation: acc.usage?.cache_creation ?? null,
           server_tool_use: messageDelta.usage.server_tool_use,
@@ -159,7 +170,9 @@ function processStreamEvent(event: RawMessageStreamEvent, acc: StreamAccumulator
 /**
  * Converts accumulated stream data to a NormalizedResponse
  */
-function accumulatorToNormalizedResponse(acc: StreamAccumulator): NormalizedResponse {
+function accumulatorToNormalizedResponse(
+  acc: StreamAccumulator,
+): NormalizedResponse {
   // Map stop reason to normalized format
   const finishReason = acc.stopReason
     ? (ANTHROPIC_STOP_REASON_MAP[acc.stopReason] ?? acc.stopReason)
@@ -195,7 +208,11 @@ function createTracedStream(
   let traceRecorded = false;
 
   // Create an async generator that wraps iteration
-  async function* tracingIterator(): AsyncGenerator<RawMessageStreamEvent, void, unknown> {
+  async function* tracingIterator(): AsyncGenerator<
+    RawMessageStreamEvent,
+    void,
+    unknown
+  > {
     try {
       for await (const event of originalStream) {
         processStreamEvent(event, accumulator);
@@ -225,7 +242,9 @@ function createTracedStream(
           traceId,
           sessionId,
           parentSpanId: providerSpan.span_id,
-          toolCalls: extractAnthropicToolCalls({ content: accumulator.content }),
+          toolCalls: extractAnthropicToolCalls({
+            content: accumulator.content,
+          }),
         })) {
           addToBuffer(span);
         }
@@ -247,7 +266,11 @@ function createTracedStream(
             status: "error",
             error:
               error instanceof Error
-                ? { name: error.name, message: error.message, stack: error.stack }
+                ? {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                  }
                 : { message: String(error) },
             metadata: traceMetadata.metadata,
           }),
@@ -290,27 +313,30 @@ function createTracedStream(
 function wrapMessagesCreate(
   original: Anthropic.Messages["create"],
   clientId: string,
-  options?: ObserveOptions
+  options?: ObserveOptions,
 ): Anthropic.Messages["create"] {
   // Overload 1: Non-streaming
   async function wrappedCreate(
     body: MessageCreateParamsNonStreaming,
-    requestOptions?: Parameters<Anthropic.Messages["create"]>[1]
+    requestOptions?: Parameters<Anthropic.Messages["create"]>[1],
   ): Promise<Message>;
   // Overload 2: Streaming
   async function wrappedCreate(
     body: MessageCreateParamsStreaming,
-    requestOptions?: Parameters<Anthropic.Messages["create"]>[1]
+    requestOptions?: Parameters<Anthropic.Messages["create"]>[1],
   ): Promise<Stream<RawMessageStreamEvent>>;
   // Overload 3: Base (could be either)
   async function wrappedCreate(
     body: MessageCreateParamsBase,
-    requestOptions?: Parameters<Anthropic.Messages["create"]>[1]
+    requestOptions?: Parameters<Anthropic.Messages["create"]>[1],
   ): Promise<Stream<RawMessageStreamEvent> | Message>;
   // Implementation
   async function wrappedCreate(
-    body: MessageCreateParamsNonStreaming | MessageCreateParamsStreaming | MessageCreateParamsBase,
-    requestOptions?: Parameters<Anthropic.Messages["create"]>[1]
+    body:
+      | MessageCreateParamsNonStreaming
+      | MessageCreateParamsStreaming
+      | MessageCreateParamsBase,
+    requestOptions?: Parameters<Anthropic.Messages["create"]>[1],
   ): Promise<Message | Stream<RawMessageStreamEvent>> {
     // If SDK is disabled, just call the original method
     if (!isEnabled()) {
@@ -320,7 +346,7 @@ function wrapMessagesCreate(
     const startTime = getStartTime();
     const startedAt = new Date().toISOString();
     const { cleanBody, pulseSessionId, pulseMetadata } = extractPulseParams(
-      body as unknown as Record<string, unknown>
+      body as unknown as Record<string, unknown>,
     );
     const requestBody = cleanBody;
     const isStreaming = "stream" in body && body.stream === true;
@@ -328,7 +354,7 @@ function wrapMessagesCreate(
     const traceMetadata = resolveTraceMetadata(
       { sessionId: options?.sessionId, metadata: options?.metadata },
       pulseSessionId,
-      pulseMetadata
+      pulseMetadata,
     );
     const sessionId = resolveSessionId(traceMetadata.sessionId, clientId);
     const correlation = correlateToolResults(
@@ -340,7 +366,11 @@ function wrapMessagesCreate(
     const traceId = correlation.traceId ?? generateTraceId();
     // Tool results were produced before this request, so record them up front
     // rather than after the provider responds.
-    for (const span of buildToolResultSpans({ traceId, sessionId, matches: correlation.matches })) {
+    for (const span of buildToolResultSpans({
+      traceId,
+      sessionId,
+      matches: correlation.matches,
+    })) {
       addToBuffer(span);
     }
 
@@ -349,7 +379,7 @@ function wrapMessagesCreate(
       try {
         const stream = await original(
           cleanBody as unknown as MessageCreateParamsStreaming,
-          requestOptions
+          requestOptions,
         );
         // Return a traced stream that captures events and builds trace on completion
         return createTracedStream(
@@ -376,7 +406,10 @@ function wrapMessagesCreate(
             startedAt,
             latencyMs,
             status: "error",
-            error: error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) },
+            error:
+              error instanceof Error
+                ? { name: error.name, message: error.message }
+                : { message: String(error) },
             metadata: traceMetadata.metadata,
           }),
         );
@@ -389,7 +422,7 @@ function wrapMessagesCreate(
       try {
         const response = (await original(
           cleanBody as unknown as MessageCreateParamsNonStreaming,
-          requestOptions
+          requestOptions,
         )) as Message;
 
         // Calculate latency
@@ -437,7 +470,10 @@ function wrapMessagesCreate(
             startedAt,
             latencyMs,
             status: "error",
-            error: error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) },
+            error:
+              error instanceof Error
+                ? { name: error.name, message: error.message }
+                : { message: String(error) },
             metadata: traceMetadata.metadata,
           }),
         );
@@ -474,13 +510,20 @@ function wrapMessagesCreate(
  * });
  * ```
  */
-export function patchAnthropic<T extends Anthropic>(client: T, options?: ObserveOptions): T {
+export function patchAnthropic<T extends Anthropic>(
+  client: T,
+  options?: ObserveOptions,
+): T {
   const clientId = generateUUID();
   // Store original method
   const originalCreate = client.messages.create.bind(client.messages);
 
   // Wrap messages.create
-  client.messages.create = wrapMessagesCreate(originalCreate, clientId, options);
+  client.messages.create = wrapMessagesCreate(
+    originalCreate,
+    clientId,
+    options,
+  );
 
   return client;
 }

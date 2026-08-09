@@ -35,7 +35,9 @@ const ANTHROPIC_STOP_REASON_MAP: Record<string, string> = {
  * @param response - OpenAI ChatCompletion response object
  * @returns NormalizedResponse with extracted content, tokens, and finish reason
  */
-export function normalizeOpenAIResponse(response: ChatCompletion): NormalizedResponse {
+export function normalizeOpenAIResponse(
+  response: ChatCompletion,
+): NormalizedResponse {
   const choice = response.choices[0];
   const usage = response.usage;
 
@@ -81,7 +83,9 @@ export function normalizeOpenAIResponse(response: ChatCompletion): NormalizedRes
  * @param response - Anthropic Message response object
  * @returns NormalizedResponse with extracted content, tokens, and finish reason
  */
-export function normalizeAnthropicResponse(response: Message): NormalizedResponse {
+export function normalizeAnthropicResponse(
+  response: Message,
+): NormalizedResponse {
   // Extract and join text content from content blocks
   // Anthropic returns an array of content blocks, we join text blocks
   const textParts: string[] = [];
@@ -99,7 +103,9 @@ export function normalizeAnthropicResponse(response: Message): NormalizedRespons
 
   // Map Anthropic stop_reason to normalized finish_reason
   const stopReason = response.stop_reason;
-  const finishReason = stopReason ? (ANTHROPIC_STOP_REASON_MAP[stopReason] ?? stopReason) : null;
+  const finishReason = stopReason
+    ? (ANTHROPIC_STOP_REASON_MAP[stopReason] ?? stopReason)
+    : null;
 
   // Model name from response
   const model = response.model;

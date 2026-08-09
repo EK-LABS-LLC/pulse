@@ -79,13 +79,30 @@ def _to_otlp_span(span: Span) -> Dict[str, Any]:
     if span.get("provider_request_id"):
         attrs.append(_attr("gen_ai.response.id", span["provider_request_id"]))
     if span.get("finish_reason"):
-        attrs.append(_attr("gen_ai.response.finish_reasons", json.dumps([span["finish_reason"]])))
+        attrs.append(
+            _attr("gen_ai.response.finish_reasons", json.dumps([span["finish_reason"]]))
+        )
     if span.get("input_tokens") is not None:
-        attrs.append({"key": "gen_ai.usage.input_tokens", "value": {"intValue": str(span["input_tokens"])}})
+        attrs.append(
+            {
+                "key": "gen_ai.usage.input_tokens",
+                "value": {"intValue": str(span["input_tokens"])},
+            }
+        )
     if span.get("output_tokens") is not None:
-        attrs.append({"key": "gen_ai.usage.output_tokens", "value": {"intValue": str(span["output_tokens"])}})
+        attrs.append(
+            {
+                "key": "gen_ai.usage.output_tokens",
+                "value": {"intValue": str(span["output_tokens"])},
+            }
+        )
     if span.get("cost_cents") is not None:
-        attrs.append({"key": "pulse.cost_cents", "value": {"doubleValue": float(span["cost_cents"])}})
+        attrs.append(
+            {
+                "key": "pulse.cost_cents",
+                "value": {"doubleValue": float(span["cost_cents"])},
+            }
+        )
     if span.get("output_text") is not None:
         attrs.append(_attr("pulse.output_text", span["output_text"]))
     if span.get("tool_use_id"):
@@ -94,7 +111,9 @@ def _to_otlp_span(span: Span) -> Dict[str, Any]:
         attrs.append(_attr("pulse.tool.name", span["tool_name"]))
         attrs.append(_attr("gen_ai.tool.name", span["tool_name"]))
     if "tool_input" in span:
-        attrs.append(_attr("pulse.tool.input", json.dumps(span["tool_input"], default=str)))
+        attrs.append(
+            _attr("pulse.tool.input", json.dumps(span["tool_input"], default=str))
+        )
     if "tool_response" in span:
         attrs.append(
             _attr("pulse.tool.response", json.dumps(span["tool_response"], default=str))
@@ -102,11 +121,19 @@ def _to_otlp_span(span: Span) -> Dict[str, Any]:
     if "error" in span:
         attrs.append(_attr("pulse.error", json.dumps(span["error"], default=str)))
     for key, value in span.get("metadata", {}).items():
-        attrs.append(_attr(key, value if isinstance(value, str) else json.dumps(value, default=str)))
+        attrs.append(
+            _attr(
+                key, value if isinstance(value, str) else json.dumps(value, default=str)
+            )
+        )
 
     status: Dict[str, Any] = {"code": 2 if span["status"] == "error" else 1}
     error = span.get("error")
-    if span["status"] == "error" and isinstance(error, dict) and isinstance(error.get("message"), str):
+    if (
+        span["status"] == "error"
+        and isinstance(error, dict)
+        and isinstance(error.get("message"), str)
+    ):
         status["message"] = error["message"]
 
     result: Dict[str, Any] = {

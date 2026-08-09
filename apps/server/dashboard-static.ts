@@ -32,7 +32,10 @@ function resolveDashboardDistDir(): string | null {
 }
 
 function isReservedPath(path: string): boolean {
-  return RESERVED_PATHS.has(path) || API_PREFIXES.some((prefix) => path.startsWith(prefix));
+  return (
+    RESERVED_PATHS.has(path) ||
+    API_PREFIXES.some((prefix) => path.startsWith(prefix))
+  );
 }
 
 function isAssetLikePath(path: string): boolean {

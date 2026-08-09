@@ -65,12 +65,8 @@
           "name": "api_keys_project_id_projects_id_fk",
           "tableFrom": "api_keys",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -329,42 +325,27 @@
       "indexes": {
         "spans_project_timestamp_idx": {
           "name": "spans_project_timestamp_idx",
-          "columns": [
-            "project_id",
-            "timestamp"
-          ],
+          "columns": ["project_id", "timestamp"],
           "isUnique": false
         },
         "spans_project_trace_idx": {
           "name": "spans_project_trace_idx",
-          "columns": [
-            "project_id",
-            "trace_id"
-          ],
+          "columns": ["project_id", "trace_id"],
           "isUnique": false
         },
         "spans_project_session_idx": {
           "name": "spans_project_session_idx",
-          "columns": [
-            "project_id",
-            "session_id"
-          ],
+          "columns": ["project_id", "session_id"],
           "isUnique": false
         },
         "spans_project_kind_idx": {
           "name": "spans_project_kind_idx",
-          "columns": [
-            "project_id",
-            "kind"
-          ],
+          "columns": ["project_id", "kind"],
           "isUnique": false
         },
         "spans_project_service_idx": {
           "name": "spans_project_service_idx",
-          "columns": [
-            "project_id",
-            "service"
-          ],
+          "columns": ["project_id", "service"],
           "isUnique": false
         }
       },
@@ -373,22 +354,15 @@
           "name": "spans_project_id_projects_id_fk",
           "tableFrom": "spans",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "spans_project_id_span_id_pk": {
-          "columns": [
-            "project_id",
-            "span_id"
-          ],
+          "columns": ["project_id", "span_id"],
           "name": "spans_project_id_span_id_pk"
         }
       },
@@ -439,24 +413,17 @@
       "indexes": {
         "user_projects_user_idx": {
           "name": "user_projects_user_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         },
         "user_projects_project_idx": {
           "name": "user_projects_project_idx",
-          "columns": [
-            "project_id"
-          ],
+          "columns": ["project_id"],
           "isUnique": false
         },
         "user_projects_user_project_unique_idx": {
           "name": "user_projects_user_project_unique_idx",
-          "columns": [
-            "user_id",
-            "project_id"
-          ],
+          "columns": ["user_id", "project_id"],
           "isUnique": true
         }
       },
@@ -465,12 +432,8 @@
           "name": "user_projects_user_id_user_id_fk",
           "tableFrom": "user_projects",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -478,12 +441,8 @@
           "name": "user_projects_project_id_projects_id_fk",
           "tableFrom": "user_projects",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -595,12 +554,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -674,9 +629,7 @@
       "indexes": {
         "auth_session_token_unique": {
           "name": "auth_session_token_unique",
-          "columns": [
-            "token"
-          ],
+          "columns": ["token"],
           "isUnique": true
         }
       },
@@ -685,12 +638,8 @@
           "name": "auth_session_user_id_user_id_fk",
           "tableFrom": "auth_session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -758,9 +707,7 @@
       "indexes": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         }
       },

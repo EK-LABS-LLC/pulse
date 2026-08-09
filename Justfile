@@ -37,6 +37,33 @@ dashboard-check:
     bun run build
     bun run lint
 
+# Run the dashboard browser E2E suite against a running server (builds the CLI first)
+[group("dashboard")]
+[working-directory("apps/dashboard/e2e")]
+dashboard-e2e:
+    cargo build --package pulse
+    bun install
+    bunx playwright test
+
+# Install the dashboard browser E2E browsers
+[group("dashboard")]
+[working-directory("apps/dashboard/e2e")]
+dashboard-e2e-install:
+    bunx playwright install --with-deps chromium
+
+# Start the isolated browser E2E stack (postgres + server on :39000)
+[group("dashboard")]
+[working-directory("apps/dashboard/e2e")]
+dashboard-e2e-up:
+    docker build --tag pulse-verify:local --file ../Dockerfile ../..
+    docker compose -f e2e-compose.yml up -d --wait
+
+# Stop the isolated browser E2E stack
+[group("dashboard")]
+[working-directory("apps/dashboard/e2e")]
+dashboard-e2e-down:
+    docker compose -f e2e-compose.yml down -v
+
 # Format dashboard sources
 [group("dashboard")]
 [working-directory("apps/dashboard")]

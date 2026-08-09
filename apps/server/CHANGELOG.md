@@ -59,6 +59,7 @@ Fixed: Traces source filters show live trace totals for every source under the r
 Changed: Sessions matches the compact reference table with denser rows, type, tags, columns, and padding; removes its extra toolbar and live indicator; keeps error emphasis inside the error badge; and only shows pagination when multiple pages exist.
 Changed: Sessions shows 15 rows per page by default while retaining 25, 50, and 100 row options.
 Changed: Analytics displays a focused under-development message while the redesigned experience is being built.
+Added: A Playwright browser E2E suite boots the server in Docker, provisions a project, drives the real `pulse` CLI to emit a session through the OTLP ingest path, and asserts Overview, Traces, Sessions, Settings, and trace detail render that CLI-emitted data in both themes, uploading screenshots and a report as CI artifacts.
 
 ### Allow Test Changes To Rebaseline The Integrity Guard
 

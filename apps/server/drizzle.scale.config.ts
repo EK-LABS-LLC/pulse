@@ -5,6 +5,8 @@ export default defineConfig({
   out: "./drizzle-scale",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL || "postgresql://pulse:pulse@localhost:5432/pulse",
+    url:
+      process.env.DATABASE_URL ||
+      "postgresql://pulse:pulse@localhost:5432/pulse",
   },
 });

@@ -19,9 +19,6 @@ export default function Settings() {
   const { user } = useAuth();
   const { selectedProject } = useProject();
   const usersQuery = useProjectUsersQuery(selectedProject?.id);
-  const [projectNameOverrides, setProjectNameOverrides] = useState<
-    Record<string, string>
-  >({});
   const [saveStatus, setSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -35,7 +32,7 @@ export default function Settings() {
   const project = selectedProject
     ? {
         id: selectedProject.id,
-        name: projectNameOverrides[selectedProject.id] ?? selectedProject.name,
+        name: selectedProject.name,
         createdAt: selectedProject.createdAt,
       }
     : null;
@@ -48,29 +45,15 @@ export default function Settings() {
     ? `${projectUser.role[0]?.toUpperCase()}${projectUser.role.slice(1)}`
     : "Member";
 
-  const handleSaveProject = async (name: string) => {
-    setSaveStatus("saving");
-    try {
-      // Preserve the existing local-only behavior until a project update
-      // endpoint is available.
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      if (selectedProject) {
-        setProjectNameOverrides((current) => ({
-          ...current,
-          [selectedProject.id]: name,
-        }));
-      }
-      setSaveStatus("saved");
-      window.setTimeout(() => setSaveStatus("idle"), 2_000);
-    } catch (error) {
-      setSaveStatus("error");
-      console.error("Failed to save project:", error);
-    }
+  // Renaming and deleting a project both need a server endpoint that does not
+  // exist yet. Until it does, these report that the action is unavailable
+  // rather than reporting a success the server never performed.
+  const handleSaveProject = async () => {
+    setSaveStatus("error");
   };
 
   const handleDeleteProject = async () => {
-    // Preserve the existing placeholder behavior until deletion is supported.
-    window.location.href = "/login";
+    throw new Error("Deleting a project is not available yet.");
   };
 
   return (

@@ -11,7 +11,9 @@ describe("compactPayload", () => {
 
     expect(compacted.truncated).toBe(true);
     expect(compacted.originalBytes).toBe(80_000);
-    expect(new TextEncoder().encode(compacted.preview).byteLength).toBeLessThanOrEqual(64 * 1024);
+    expect(
+      new TextEncoder().encode(compacted.preview).byteLength,
+    ).toBeLessThanOrEqual(64 * 1024);
     expect(compacted.preview.endsWith("�")).toBe(false);
   });
 });

@@ -44,6 +44,13 @@ Changed: The Traces filter panel now eases between its expanded and collapsed wi
 Changed: Trace rows now open the dedicated detail route instead of an in-page drawer; the detail view adds model and token context, request/response Chat and JSON views, metadata and selected-span inspection, and a full-width ruler-based span timeline whose duration labels remain inside the card without a separate error-origin banner.
 Fixed: Returning from a trace detail view restores the originating Traces URL so its query filters, service and source selections, pagination, and page size remain intact.
 Changed: Selecting a model or tool turn in the span timeline now opens its detail directly below the timeline.
+Fixed: Service rollups count distinct traces rather than spans, so a service that emits several spans per turn no longer reports a request count far above the turns it handled.
+Fixed: Settings reports renaming and deleting a project as unavailable instead of showing a success the server never performed or signing the user out in place of a deletion.
+Fixed: The Sessions table exposes its header through a row group, so assistive technology announces the grid structure instead of unstructured text.
+Fixed: `recordSpan` in the TypeScript SDK gives agent, session, prompt and notification spans their own event types instead of reporting them as provider calls.
+Fixed: `shutdownPulse` stops the periodic flush even when the final flush fails, so a failed export cannot hold a short-lived process open.
+Fixed: A failed trace-detail request shows the error with a retry action instead of reporting the trace as missing.
+Removed: The dashboard redesign handoff document, which carried local development credentials and machine-specific paths.
 Changed: Overview, Traces, Sessions, Analytics, and trace-detail selections now use shareable URL parameters, including ranges, chart settings, searches, pagination, request/response views, and selected spans.
 Fixed: Trace and session detail breadcrumbs preserve the validated originating URL, so returning from a detail opened on Overview or a filtered list restores that exact page instead of redirecting to a generic list.
 Changed: Overview recent traces now matches the compact design with six rows and a focused status, summary, service, latency, and time layout.
@@ -52,6 +59,7 @@ Fixed: Traces source filters show live trace totals for every source under the r
 Changed: Sessions matches the compact reference table with denser rows, type, tags, columns, and padding; removes its extra toolbar and live indicator; keeps error emphasis inside the error badge; and only shows pagination when multiple pages exist.
 Changed: Sessions shows 15 rows per page by default while retaining 25, 50, and 100 row options.
 Changed: Analytics displays a focused under-development message while the redesigned experience is being built.
+Added: A Playwright browser E2E suite boots the server in Docker, provisions a project, drives the real `pulse` CLI to emit a session through the OTLP ingest path, and asserts Overview, Traces, Sessions, Settings, and trace detail render that CLI-emitted data in both themes, uploading screenshots and a report as CI artifacts.
 
 ### Allow Test Changes To Rebaseline The Integrity Guard
 

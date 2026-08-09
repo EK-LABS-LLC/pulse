@@ -22,7 +22,10 @@ const openai = process.env.OPENAI_API_KEY
   : null;
 
 const anthropic = process.env.ANTHROPIC_API_KEY
-  ? observe(new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }), Provider.Anthropic)
+  ? observe(
+      new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }),
+      Provider.Anthropic,
+    )
   : null;
 
 type RunOptions = {
@@ -38,7 +41,10 @@ async function runOpenAI(options: RunOptions = {}) {
     max_tokens: 32,
     ...options,
   });
-  return { model: response.model, content: response.choices[0]?.message?.content ?? null };
+  return {
+    model: response.model,
+    content: response.choices[0]?.message?.content ?? null,
+  };
 }
 
 async function runAnthropic(options: RunOptions = {}) {
@@ -49,8 +55,13 @@ async function runAnthropic(options: RunOptions = {}) {
     messages: [{ role: "user", content: "Say 'test' and nothing else" }],
     ...options,
   });
-  const text = response.content.find((c: { type: string }) => c.type === "text");
-  return { model: response.model, content: text && "text" in text ? text.text : null };
+  const text = response.content.find(
+    (c: { type: string }) => c.type === "text",
+  );
+  return {
+    model: response.model,
+    content: text && "text" in text ? text.text : null,
+  };
 }
 
 const server = Bun.serve({
@@ -75,8 +86,10 @@ const server = Bun.serve({
       };
 
       try {
-        if (provider === "openai") return Response.json(await runOpenAI(options));
-        if (provider === "anthropic") return Response.json(await runAnthropic(options));
+        if (provider === "openai")
+          return Response.json(await runOpenAI(options));
+        if (provider === "anthropic")
+          return Response.json(await runAnthropic(options));
         return Response.json({
           openai: await runOpenAI(options),
           anthropic: await runAnthropic(options),
@@ -84,7 +97,7 @@ const server = Bun.serve({
       } catch (error) {
         return Response.json(
           { error: error instanceof Error ? error.message : "Unknown error" },
-          { status: 500 }
+          { status: 500 },
         );
       }
     }

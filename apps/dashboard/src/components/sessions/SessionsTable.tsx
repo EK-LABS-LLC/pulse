@@ -46,31 +46,33 @@ export default function SessionsTable({
       aria-label="Sessions"
       className="overflow-x-auto rounded-2xl border border-line bg-surface"
     >
-      <div className="min-w-[820px]">
-        <div
-          role="row"
-          className="grid gap-2 border-b border-line px-4 py-2"
-          style={{ gridTemplateColumns: GRID_COLUMNS }}
-        >
-          {[
-            "Session",
-            "Agent · directory",
-            "Models",
-            "Traces",
-            "Errors",
-            "Cost",
-            "Last active",
-          ].map((header, index) => (
-            <span
-              key={header}
-              role="columnheader"
-              className={`text-[11px] font-semibold text-dim ${
-                index >= 3 ? "text-right" : ""
-              }`}
-            >
-              {header}
-            </span>
-          ))}
+      <div role="presentation" className="min-w-[820px]">
+        <div role="rowgroup">
+          <div
+            role="row"
+            className="grid gap-2 border-b border-line px-4 py-2"
+            style={{ gridTemplateColumns: GRID_COLUMNS }}
+          >
+            {[
+              "Session",
+              "Agent · directory",
+              "Models",
+              "Traces",
+              "Errors",
+              "Cost",
+              "Last active",
+            ].map((header, index) => (
+              <span
+                key={header}
+                role="columnheader"
+                className={`text-[11px] font-semibold text-dim ${
+                  index >= 3 ? "text-right" : ""
+                }`}
+              >
+                {header}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div role="rowgroup">

@@ -8,7 +8,7 @@ export async function sendSpans(
   apiUrl: string,
   apiKey: string,
   spans: Span[],
-  serviceName: string = defaults.serviceName
+  serviceName: string = defaults.serviceName,
 ): Promise<void> {
   if (spans.length === 0) {
     return;
@@ -29,7 +29,9 @@ export async function sendSpans(
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "Unknown error");
-      console.error(`Pulse SDK: failed to send spans (${response.status}): ${errorText}`);
+      console.error(
+        `Pulse SDK: failed to send spans (${response.status}): ${errorText}`,
+      );
     }
   } catch (error) {
     console.error("Pulse SDK: network error sending spans:", error);
@@ -38,13 +40,15 @@ export async function sendSpans(
 
 export function toOtlpPayload(
   spans: Span[],
-  serviceName: string = defaults.serviceName
+  serviceName: string = defaults.serviceName,
 ): OtlpTracesPayload {
   return {
     resourceSpans: [
       {
         resource: {
-          attributes: [{ key: "service.name", value: { stringValue: serviceName } }],
+          attributes: [
+            { key: "service.name", value: { stringValue: serviceName } },
+          ],
         },
         scopeSpans: [
           {
@@ -57,7 +61,9 @@ export function toOtlpPayload(
   };
 }
 
-function toOtlpSpan(span: Span): OtlpTracesPayload["resourceSpans"][number]["scopeSpans"][number]["spans"][number] {
+function toOtlpSpan(
+  span: Span,
+): OtlpTracesPayload["resourceSpans"][number]["scopeSpans"][number]["spans"][number] {
   const startNs = BigInt(new Date(span.timestamp).getTime()) * 1_000_000n;
   const durationNs = BigInt(Math.max(0, span.duration_ms ?? 0)) * 1_000_000n;
   const attributes: OtlpSpanAttribute[] = [
@@ -68,45 +74,75 @@ function toOtlpSpan(span: Span): OtlpTracesPayload["resourceSpans"][number]["sco
     stringAttr("pulse.trace_id", span.trace_id),
   ];
 
-  if (span.model) attributes.push(stringAttr("gen_ai.request.model", span.model));
-  if (span.provider) attributes.push(stringAttr("gen_ai.provider.name", span.provider));
-  if (span.model_used) attributes.push(stringAttr("gen_ai.response.model", span.model_used));
+  if (span.model)
+    attributes.push(stringAttr("gen_ai.request.model", span.model));
+  if (span.provider)
+    attributes.push(stringAttr("gen_ai.provider.name", span.provider));
+  if (span.model_used)
+    attributes.push(stringAttr("gen_ai.response.model", span.model_used));
   if (span.provider_request_id) {
     attributes.push(stringAttr("gen_ai.response.id", span.provider_request_id));
   }
   if (span.finish_reason) {
-    attributes.push(stringAttr("gen_ai.response.finish_reasons", JSON.stringify([span.finish_reason])));
+    attributes.push(
+      stringAttr(
+        "gen_ai.response.finish_reasons",
+        JSON.stringify([span.finish_reason]),
+      ),
+    );
   }
   if (span.input_tokens !== undefined) {
-    attributes.push({ key: "gen_ai.usage.input_tokens", value: { intValue: String(span.input_tokens) } });
+    attributes.push({
+      key: "gen_ai.usage.input_tokens",
+      value: { intValue: String(span.input_tokens) },
+    });
   }
   if (span.output_tokens !== undefined) {
-    attributes.push({ key: "gen_ai.usage.output_tokens", value: { intValue: String(span.output_tokens) } });
+    attributes.push({
+      key: "gen_ai.usage.output_tokens",
+      value: { intValue: String(span.output_tokens) },
+    });
   }
   if (span.cost_cents !== undefined) {
-    attributes.push({ key: "pulse.cost_cents", value: { doubleValue: span.cost_cents } });
+    attributes.push({
+      key: "pulse.cost_cents",
+      value: { doubleValue: span.cost_cents },
+    });
   }
   if (span.output_text !== undefined) {
     attributes.push(stringAttr("pulse.output_text", span.output_text));
   }
-  if (span.tool_use_id) attributes.push(stringAttr("pulse.tool.id", span.tool_use_id));
+  if (span.tool_use_id)
+    attributes.push(stringAttr("pulse.tool.id", span.tool_use_id));
   if (span.tool_name) {
     attributes.push(stringAttr("pulse.tool.name", span.tool_name));
     attributes.push(stringAttr("gen_ai.tool.name", span.tool_name));
   }
   if (span.tool_input !== undefined) {
-    attributes.push(stringAttr("pulse.tool.input", JSON.stringify(span.tool_input)));
-    attributes.push(stringAttr("gen_ai.tool.input", JSON.stringify(span.tool_input)));
+    attributes.push(
+      stringAttr("pulse.tool.input", JSON.stringify(span.tool_input)),
+    );
+    attributes.push(
+      stringAttr("gen_ai.tool.input", JSON.stringify(span.tool_input)),
+    );
   }
   if (span.tool_response !== undefined) {
-    attributes.push(stringAttr("pulse.tool.response", JSON.stringify(span.tool_response)));
-    attributes.push(stringAttr("gen_ai.tool.output", JSON.stringify(span.tool_response)));
+    attributes.push(
+      stringAttr("pulse.tool.response", JSON.stringify(span.tool_response)),
+    );
+    attributes.push(
+      stringAttr("gen_ai.tool.output", JSON.stringify(span.tool_response)),
+    );
   }
-  if (span.error !== undefined) attributes.push(stringAttr("pulse.error", JSON.stringify(span.error)));
+  if (span.error !== undefined)
+    attributes.push(stringAttr("pulse.error", JSON.stringify(span.error)));
   if (span.metadata) {
     for (const [key, value] of Object.entries(span.metadata)) {
       attributes.push(
-        stringAttr(`pulse.metadata.${key}`, typeof value === "string" ? value : JSON.stringify(value)),
+        stringAttr(
+          `pulse.metadata.${key}`,
+          typeof value === "string" ? value : JSON.stringify(value),
+        ),
       );
     }
   }
@@ -128,7 +164,8 @@ function spanStatus(span: Span): { code: number; message?: string } {
     return { code: 1 };
   }
   const error = span.error as Record<string, unknown> | undefined;
-  const message = error && typeof error.message === "string" ? error.message : undefined;
+  const message =
+    error && typeof error.message === "string" ? error.message : undefined;
   return message ? { code: 2, message } : { code: 2 };
 }
 

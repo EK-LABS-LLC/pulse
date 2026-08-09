@@ -49,7 +49,8 @@ interface RunResponse {
 }
 
 const TEST_SERVER_URL = process.env.TEST_SERVER_URL || "http://localhost:3001";
-const TRACE_SERVICE_URL = process.env.TRACE_SERVICE_URL || "http://localhost:3000";
+const TRACE_SERVICE_URL =
+  process.env.TRACE_SERVICE_URL || "http://localhost:3000";
 const PULSE_API_KEY = process.env.PULSE_API_KEY;
 
 if (!PULSE_API_KEY) {
@@ -67,7 +68,7 @@ async function waitForTraces(ms = 2000): Promise<void> {
  * Helper to fetch traces from trace-service
  */
 async function getTraces(
-  params: { limit?: number; provider?: string; sessionId?: string } = {}
+  params: { limit?: number; provider?: string; sessionId?: string } = {},
 ): Promise<TracesResponse> {
   const url = new URL(`${TRACE_SERVICE_URL}/v1/traces`);
   if (params.limit) url.searchParams.set("limit", String(params.limit));
@@ -98,7 +99,10 @@ async function getTestServerHealth(): Promise<HealthResponse> {
 
 async function triggerRun(
   provider: ProviderName,
-  options: { pulseSessionId?: string; pulseMetadata?: Record<string, unknown> } = {}
+  options: {
+    pulseSessionId?: string;
+    pulseMetadata?: Record<string, unknown>;
+  } = {},
 ): Promise<void> {
   const response = await fetch(`${TEST_SERVER_URL}/run`, {
     method: "POST",
@@ -121,7 +125,9 @@ describe("E2E Integration Tests", () => {
       availableProviders = await getTestServerHealth();
       console.log("Available providers:", availableProviders);
     } catch {
-      throw new Error(`Test server not reachable at ${TEST_SERVER_URL}. Make sure it's running.`);
+      throw new Error(
+        `Test server not reachable at ${TEST_SERVER_URL}. Make sure it's running.`,
+      );
     }
   });
 
@@ -156,7 +162,7 @@ describe("E2E Integration Tests", () => {
       const expectedCost = calculateCost(
         trace.modelRequested,
         trace.inputTokens ?? 0,
-        trace.outputTokens ?? 0
+        trace.outputTokens ?? 0,
       );
       if (expectedCost !== null && typeof trace.costCents === "number") {
         expect(trace.costCents).toBeCloseTo(expectedCost, 3);
@@ -177,7 +183,10 @@ describe("E2E Integration Tests", () => {
       await waitForTraces();
 
       // Verify trace was recorded in trace-service
-      const tracesResponse = await getTraces({ provider: "anthropic", limit: 1 });
+      const tracesResponse = await getTraces({
+        provider: "anthropic",
+        limit: 1,
+      });
       expect(tracesResponse.traces.length).toBeGreaterThan(0);
 
       const trace = tracesResponse.traces[0];
@@ -195,7 +204,7 @@ describe("E2E Integration Tests", () => {
       const expectedCost = calculateCost(
         trace.modelRequested,
         trace.inputTokens ?? 0,
-        trace.outputTokens ?? 0
+        trace.outputTokens ?? 0,
       );
       if (expectedCost !== null && typeof trace.costCents === "number") {
         expect(trace.costCents).toBeCloseTo(expectedCost, 3);
@@ -239,14 +248,21 @@ describe("E2E Integration Tests", () => {
       const sessionId = crypto.randomUUID();
       const metadata = { scenario: "session-correlation", turn: 1 };
 
-      await triggerRun("openai", { pulseSessionId: sessionId, pulseMetadata: metadata });
-      await triggerRun("anthropic", { pulseSessionId: sessionId, pulseMetadata: metadata });
+      await triggerRun("openai", {
+        pulseSessionId: sessionId,
+        pulseMetadata: metadata,
+      });
+      await triggerRun("anthropic", {
+        pulseSessionId: sessionId,
+        pulseMetadata: metadata,
+      });
 
       await waitForTraces();
 
       const tracesResponse = await getTraces({ sessionId, limit: 10 });
       const traces = tracesResponse.traces.filter(
-        (trace) => trace.provider === "openai" || trace.provider === "anthropic"
+        (trace) =>
+          trace.provider === "openai" || trace.provider === "anthropic",
       );
 
       expect(traces.length).toBeGreaterThanOrEqual(2);

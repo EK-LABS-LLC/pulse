@@ -135,6 +135,7 @@ async function emitViaCliIfEmpty(
       env: { ...process.env, HOME: home },
       stdio: ["pipe", "ignore", "pipe"],
       input,
+      timeout: 30_000,
     });
 
   // Point the CLI's isolated config at the running server.

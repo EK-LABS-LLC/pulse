@@ -8,7 +8,10 @@
 const HEX_CHARS = "0123456789abcdef";
 
 function randomHex(byteLength: number): string {
-  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.getRandomValues === "function"
+  ) {
     const bytes = new Uint8Array(byteLength);
     do {
       crypto.getRandomValues(bytes);

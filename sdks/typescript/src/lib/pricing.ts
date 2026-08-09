@@ -51,7 +51,10 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
   "gpt-4o": { inputCentsPer1M: 250, outputCentsPer1M: 1000 },
   "gpt-4o-2024-05-13": { inputCentsPer1M: 250, outputCentsPer1M: 1000 },
   "gpt-4o-mini": { inputCentsPer1M: 15, outputCentsPer1M: 60 },
-  "gpt-4o-mini-search-preview": { inputCentsPer1M: 500, outputCentsPer1M: 2000 },
+  "gpt-4o-mini-search-preview": {
+    inputCentsPer1M: 500,
+    outputCentsPer1M: 2000,
+  },
   "gpt-4o-search-preview": { inputCentsPer1M: 1000, outputCentsPer1M: 4000 },
 
   // Realtime + audio variants
@@ -88,12 +91,21 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
   "claude-opus-4-5-20251101": { inputCentsPer1M: 500, outputCentsPer1M: 2500 },
   "claude-opus-4-1-20250805": { inputCentsPer1M: 1500, outputCentsPer1M: 7500 },
   "claude-opus-4-20250514": { inputCentsPer1M: 1500, outputCentsPer1M: 7500 },
-  "claude-sonnet-4-5-20250929": { inputCentsPer1M: 300, outputCentsPer1M: 1500 },
+  "claude-sonnet-4-5-20250929": {
+    inputCentsPer1M: 300,
+    outputCentsPer1M: 1500,
+  },
   "claude-sonnet-4-20250514": { inputCentsPer1M: 300, outputCentsPer1M: 1500 },
-  "claude-3-7-sonnet-20250219": { inputCentsPer1M: 300, outputCentsPer1M: 1500 },
+  "claude-3-7-sonnet-20250219": {
+    inputCentsPer1M: 300,
+    outputCentsPer1M: 1500,
+  },
   "claude-3-sonnet-20240229": { inputCentsPer1M: 300, outputCentsPer1M: 1500 },
   "claude-3-sonnet-latest": { inputCentsPer1M: 300, outputCentsPer1M: 1500 },
-  "claude-3-5-sonnet-20241022": { inputCentsPer1M: 300, outputCentsPer1M: 1500 },
+  "claude-3-5-sonnet-20241022": {
+    inputCentsPer1M: 300,
+    outputCentsPer1M: 1500,
+  },
   "claude-3-5-sonnet-latest": { inputCentsPer1M: 300, outputCentsPer1M: 1500 },
   "claude-haiku-4-5-20251001": { inputCentsPer1M: 100, outputCentsPer1M: 500 },
   "claude-3-5-haiku-20241022": { inputCentsPer1M: 80, outputCentsPer1M: 400 },
@@ -190,7 +202,7 @@ function getModelPricing(model: string): ModelPricing | null {
 export function calculateCost(
   model: string,
   inputTokens: number,
-  outputTokens: number
+  outputTokens: number,
 ): number | null {
   const pricing = getModelPricing(model);
 

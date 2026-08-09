@@ -39,7 +39,12 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function pendingKey(provider: Provider, clientId: string, sessionId: string, toolCallId: string) {
+function pendingKey(
+  provider: Provider,
+  clientId: string,
+  sessionId: string,
+  toolCallId: string,
+) {
   return `${provider}:${clientId}:${sessionId}:${toolCallId}`;
 }
 
@@ -51,7 +56,10 @@ function expirePending(now = Date.now()): void {
   }
 }
 
-export function resolveSessionId(explicit: string | undefined, fallback: string): string {
+export function resolveSessionId(
+  explicit: string | undefined,
+  fallback: string,
+): string {
   return explicit ?? fallback;
 }
 
@@ -64,7 +72,9 @@ export function correlateToolResults(
   expirePending();
 
   const matches = results.map((result): CorrelationMatch => {
-    const pending = pendingTools.get(pendingKey(provider, clientId, sessionId, result.id));
+    const pending = pendingTools.get(
+      pendingKey(provider, clientId, sessionId, result.id),
+    );
     if (!pending) {
       return { result, status: "orphan" };
     }
@@ -77,9 +87,13 @@ export function correlateToolResults(
     };
   });
 
-  const matchedTraceIds = new Set(matches.map((match) => match.traceId).filter(Boolean));
+  const matchedTraceIds = new Set(
+    matches.map((match) => match.traceId).filter(Boolean),
+  );
   const traceId =
-    matches.length > 0 && matches.every((match) => match.status === "matched") && matchedTraceIds.size === 1
+    matches.length > 0 &&
+    matches.every((match) => match.status === "matched") &&
+    matchedTraceIds.size === 1
       ? [...matchedTraceIds][0]
       : undefined;
 
@@ -116,14 +130,23 @@ export function compactPayload(value: unknown): unknown {
 export function truncateString(value: string): string {
   const bytes = new TextEncoder().encode(value);
   if (bytes.byteLength <= MAX_PAYLOAD_BYTES) return value;
-  return new TextDecoder().decode(bytes.slice(0, MAX_PAYLOAD_BYTES)).replace(/�+$/, "");
+  return new TextDecoder()
+    .decode(bytes.slice(0, MAX_PAYLOAD_BYTES))
+    .replace(/�+$/, "");
 }
 
 function responseCostCents(response: NormalizedResponse): number | undefined {
   // Prefer provider-supplied cost (e.g. OpenRouter includes it directly).
   if (response.costCents !== undefined) return response.costCents;
-  if (response.inputTokens === null || response.outputTokens === null) return undefined;
-  return calculateCost(response.model, response.inputTokens, response.outputTokens) ?? undefined;
+  if (response.inputTokens === null || response.outputTokens === null)
+    return undefined;
+  return (
+    calculateCost(
+      response.model,
+      response.inputTokens,
+      response.outputTokens,
+    ) ?? undefined
+  );
 }
 
 export function buildProviderSpan(args: {
@@ -164,7 +187,8 @@ export function buildProviderSpan(args: {
     output_tokens: response?.outputTokens ?? undefined,
     cost_cents: response ? responseCostCents(response) : undefined,
     finish_reason: response?.finishReason ?? undefined,
-    output_text: response?.content != null ? truncateString(response.content) : undefined,
+    output_text:
+      response?.content != null ? truncateString(response.content) : undefined,
     provider_request_id: response?.id,
     error: args.error,
     metadata,
@@ -207,14 +231,17 @@ export function buildToolRequestSpans(args: {
 
   return args.toolCalls.map((toolCall) => {
     const spanId = generateSpanId();
-    pendingTools.set(pendingKey(args.provider, args.clientId, args.sessionId, toolCall.id), {
-      provider: args.provider,
-      clientId: args.clientId,
-      sessionId: args.sessionId,
-      traceId: args.traceId,
-      toolRequestSpanId: spanId,
-      createdAt: Date.now(),
-    });
+    pendingTools.set(
+      pendingKey(args.provider, args.clientId, args.sessionId, toolCall.id),
+      {
+        provider: args.provider,
+        clientId: args.clientId,
+        sessionId: args.sessionId,
+        traceId: args.traceId,
+        toolRequestSpanId: spanId,
+        createdAt: Date.now(),
+      },
+    );
 
     return {
       span_id: spanId,
@@ -237,9 +264,14 @@ export function extractOpenAIChatToolCalls(response: unknown): ToolCall[] {
   const choices = (response as { choices?: unknown[] }).choices ?? [];
   const calls: ToolCall[] = [];
   for (const choice of choices) {
-    const toolCalls = (choice as { message?: { tool_calls?: unknown[] } }).message?.tool_calls ?? [];
+    const toolCalls =
+      (choice as { message?: { tool_calls?: unknown[] } }).message
+        ?.tool_calls ?? [];
     for (const call of toolCalls) {
-      const raw = call as { id?: string; function?: { name?: string; arguments?: string } };
+      const raw = call as {
+        id?: string;
+        function?: { name?: string; arguments?: string };
+      };
       if (!raw.id) continue;
       calls.push({
         id: raw.id,
@@ -251,11 +283,16 @@ export function extractOpenAIChatToolCalls(response: unknown): ToolCall[] {
   return calls;
 }
 
-export function extractOpenAIChatToolResults(request: Record<string, unknown>): ToolResult[] {
+export function extractOpenAIChatToolResults(
+  request: Record<string, unknown>,
+): ToolResult[] {
   const messages = Array.isArray(request.messages) ? request.messages : [];
   return messages
     .filter((message): message is Record<string, unknown> => isRecord(message))
-    .filter((message) => message.role === "tool" && typeof message.tool_call_id === "string")
+    .filter(
+      (message) =>
+        message.role === "tool" && typeof message.tool_call_id === "string",
+    )
     .map((message) => ({
       id: message.tool_call_id as string,
       response: message.content,
@@ -264,7 +301,7 @@ export function extractOpenAIChatToolResults(request: Record<string, unknown>): 
 
 export function extractOpenAIResponseToolCalls(response: unknown): ToolCall[] {
   const output = Array.isArray((response as { output?: unknown[] }).output)
-    ? ((response as { output: unknown[] }).output)
+    ? (response as { output: unknown[] }).output
     : [];
   const calls: ToolCall[] = [];
   for (const item of output) {
@@ -273,9 +310,15 @@ export function extractOpenAIResponseToolCalls(response: unknown): ToolCall[] {
       calls.push({
         id: item.call_id,
         name: typeof item.name === "string" ? item.name : undefined,
-        input: parseJsonish(typeof item.arguments === "string" ? item.arguments : undefined),
+        input: parseJsonish(
+          typeof item.arguments === "string" ? item.arguments : undefined,
+        ),
       });
-    } else if (typeof item.id === "string" && typeof item.type === "string" && item.type.endsWith("_call")) {
+    } else if (
+      typeof item.id === "string" &&
+      typeof item.type === "string" &&
+      item.type.endsWith("_call")
+    ) {
       calls.push({
         id: item.id,
         name: item.type,
@@ -286,11 +329,17 @@ export function extractOpenAIResponseToolCalls(response: unknown): ToolCall[] {
   return calls;
 }
 
-export function extractOpenAIResponseToolResults(request: Record<string, unknown>): ToolResult[] {
+export function extractOpenAIResponseToolResults(
+  request: Record<string, unknown>,
+): ToolResult[] {
   const input = Array.isArray(request.input) ? request.input : [];
   return input
     .filter((item): item is Record<string, unknown> => isRecord(item))
-    .filter((item) => item.type === "function_call_output" && typeof item.call_id === "string")
+    .filter(
+      (item) =>
+        item.type === "function_call_output" &&
+        typeof item.call_id === "string",
+    )
     .map((item) => ({
       id: item.call_id as string,
       response: item.output,
@@ -299,11 +348,13 @@ export function extractOpenAIResponseToolResults(request: Record<string, unknown
 
 export function extractAnthropicToolCalls(response: unknown): ToolCall[] {
   const content = Array.isArray((response as { content?: unknown[] }).content)
-    ? ((response as { content: unknown[] }).content)
+    ? (response as { content: unknown[] }).content
     : [];
   return content
     .filter((block): block is Record<string, unknown> => isRecord(block))
-    .filter((block) => block.type === "tool_use" && typeof block.id === "string")
+    .filter(
+      (block) => block.type === "tool_use" && typeof block.id === "string",
+    )
     .map((block) => ({
       id: block.id as string,
       name: typeof block.name === "string" ? block.name : undefined,
@@ -311,7 +362,9 @@ export function extractAnthropicToolCalls(response: unknown): ToolCall[] {
     }));
 }
 
-export function extractAnthropicToolResults(request: Record<string, unknown>): ToolResult[] {
+export function extractAnthropicToolResults(
+  request: Record<string, unknown>,
+): ToolResult[] {
   const results: ToolResult[] = [];
   const messages = Array.isArray(request.messages) ? request.messages : [];
   for (const message of messages) {
@@ -319,7 +372,10 @@ export function extractAnthropicToolResults(request: Record<string, unknown>): T
     const content = Array.isArray(message.content) ? message.content : [];
     for (const block of content) {
       if (!isRecord(block)) continue;
-      if (block.type === "tool_result" && typeof block.tool_use_id === "string") {
+      if (
+        block.type === "tool_result" &&
+        typeof block.tool_use_id === "string"
+      ) {
         results.push({ id: block.tool_use_id, response: block.content });
       }
     }

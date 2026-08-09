@@ -11,7 +11,9 @@ import requests
 import pytest
 
 TEST_SERVER_URL = os.environ.get("TEST_SERVER_URL", "http://localhost:3001").rstrip("/")
-TRACE_SERVICE_URL = os.environ.get("TRACE_SERVICE_URL", "http://localhost:3000").rstrip("/")
+TRACE_SERVICE_URL = os.environ.get("TRACE_SERVICE_URL", "http://localhost:3000").rstrip(
+    "/"
+)
 PULSE_API_KEY = os.environ.get("PULSE_API_KEY")
 
 
@@ -112,7 +114,9 @@ def test_openai_completion_records_trace(available_providers: Dict[str, bool]) -
     assert str(_trace_field(trace, "provider")).lower() == "openai"
 
 
-def test_anthropic_completion_records_trace(available_providers: Dict[str, bool]) -> None:
+def test_anthropic_completion_records_trace(
+    available_providers: Dict[str, bool],
+) -> None:
     if not available_providers.get("anthropic"):
         pytest.skip("Anthropic not configured on test server")
 
@@ -125,7 +129,9 @@ def test_anthropic_completion_records_trace(available_providers: Dict[str, bool]
     assert str(_trace_field(trace, "provider")).lower() == "anthropic"
 
 
-def test_session_correlation_across_providers(available_providers: Dict[str, bool]) -> None:
+def test_session_correlation_across_providers(
+    available_providers: Dict[str, bool],
+) -> None:
     if not (available_providers.get("openai") and available_providers.get("anthropic")):
         pytest.skip("Both OpenAI and Anthropic must be configured for session test")
 

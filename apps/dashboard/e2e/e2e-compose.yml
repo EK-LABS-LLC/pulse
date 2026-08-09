@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pulse
+      POSTGRES_PASSWORD: pulse
+      POSTGRES_DB: pulse
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulse -d pulse"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  pulse:
+    image: pulse-verify:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    ports:
+      - "39000:3000"
+    environment:
+      PULSE_MODE: scale
+      DATABASE_URL: postgresql://pulse:pulse@postgres:5432/pulse
+      BETTER_AUTH_SECRET: verify-stack-secret-at-least-32-characters-long
+      ENCRYPTION_KEY: 8d2a52c8333cabd7d3e49fd6a60da5574f5722d64fc4a2b211390a1634553a03
+      BETTER_AUTH_URL: http://localhost:39000
+      FRONTEND_URL: http://localhost:39000
+      PORT: "3000"
+      WAL_SPAN_DIR: /tmp/wal-spans
+      SPAN_WAL_PARTITIONS: "1"
+      NODE_ENV: production
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3000/health >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 30

@@ -824,7 +824,9 @@ export async function getServiceStats(
   const result = await db
     .select({
       service: spans.service,
-      requests: count(),
+      // One turn emits several spans, so counting rows would report far more
+      // requests than the service handled. A trace is the unit a caller sees.
+      requests: sql<number>`COUNT(DISTINCT ${spans.traceId})`,
       errors: sql<number>`SUM(CASE WHEN ${spans.status} = 'error' THEN 1 ELSE 0 END)`,
       avgDurationMs: avg(spans.durationMs),
     })
@@ -836,7 +838,7 @@ export async function getServiceStats(
       ),
     )
     .groupBy(spans.service)
-    .orderBy(desc(count()))
+    .orderBy(sql`COUNT(DISTINCT ${spans.traceId}) DESC`)
     .limit(limit);
 
   return (result as any[]).map((row) => ({

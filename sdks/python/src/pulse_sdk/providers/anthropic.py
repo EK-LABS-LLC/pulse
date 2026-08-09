@@ -156,5 +156,7 @@ def _extract_tool_results(request: Dict[str, Any]) -> list[dict[str, Any]]:
                 and block.get("type") == "tool_result"
                 and block.get("tool_use_id")
             ):
-                results.append({"id": block["tool_use_id"], "response": block.get("content")})
+                results.append(
+                    {"id": block["tool_use_id"], "response": block.get("content")}
+                )
     return results

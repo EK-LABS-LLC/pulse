@@ -49,7 +49,10 @@ function createChatStreamAccumulator(): ChatStreamAccumulator {
   };
 }
 
-function processChatChunk(chunk: ChatCompletionChunk, acc: ChatStreamAccumulator): void {
+function processChatChunk(
+  chunk: ChatCompletionChunk,
+  acc: ChatStreamAccumulator,
+): void {
   acc.id = chunk.id ?? acc.id;
   acc.model = chunk.model ?? acc.model;
   acc.inputTokens = chunk.usage?.prompt_tokens ?? acc.inputTokens;
@@ -127,7 +130,11 @@ function createTracedChatStream(
   const accumulator = createChatStreamAccumulator();
   let recorded = false;
 
-  async function* tracingIterator(): AsyncGenerator<ChatCompletionChunk, void, unknown> {
+  async function* tracingIterator(): AsyncGenerator<
+    ChatCompletionChunk,
+    void,
+    unknown
+  > {
     try {
       for await (const chunk of originalStream) {
         processChatChunk(chunk, accumulator);
@@ -135,7 +142,11 @@ function createTracedChatStream(
       }
       if (!recorded) {
         recorded = true;
-        recordProviderAndTools(args, chatAccumulatorToResponse(accumulator), calculateElapsedTime(args.startTime));
+        recordProviderAndTools(
+          args,
+          chatAccumulatorToResponse(accumulator),
+          calculateElapsedTime(args.startTime),
+        );
       }
     } catch (error) {
       if (!recorded) {
@@ -236,36 +247,51 @@ function wrapChatCompletionCreate(
   original: OpenAI.Chat.Completions["create"],
   provider: Provider,
   clientId: string,
-  options?: ObserveOptions
+  options?: ObserveOptions,
 ): OpenAI.Chat.Completions["create"] {
   return async function wrappedCreate(
     this: OpenAI.Chat.Completions,
-    body: ChatCompletionCreateParamsNonStreaming | ChatCompletionCreateParamsStreaming,
-    requestOptions?: Parameters<OpenAI.Chat.Completions["create"]>[1]
+    body:
+      | ChatCompletionCreateParamsNonStreaming
+      | ChatCompletionCreateParamsStreaming,
+    requestOptions?: Parameters<OpenAI.Chat.Completions["create"]>[1],
   ): Promise<ChatCompletion | Stream<ChatCompletionChunk>> {
     if (!isEnabled()) {
-      return original.call(this, body, requestOptions) as Promise<ChatCompletion>;
+      return original.call(
+        this,
+        body,
+        requestOptions,
+      ) as Promise<ChatCompletion>;
     }
 
     const startTime = getStartTime();
     const startedAt = new Date().toISOString();
     const { cleanBody, pulseSessionId, pulseMetadata } = extractPulseParams(
-      body as unknown as Record<string, unknown>
+      body as unknown as Record<string, unknown>,
     );
     const requestBody = cleanBody;
 
     const traceMetadata = resolveTraceMetadata(
       { sessionId: options?.sessionId, metadata: options?.metadata },
       pulseSessionId,
-      pulseMetadata
+      pulseMetadata,
     );
     const sessionId = resolveSessionId(traceMetadata.sessionId, clientId);
     const results = extractOpenAIChatToolResults(requestBody);
-    const correlation = correlateToolResults(provider, clientId, sessionId, results);
+    const correlation = correlateToolResults(
+      provider,
+      clientId,
+      sessionId,
+      results,
+    );
     const traceId = correlation.traceId ?? generateTraceId();
     // Tool results were produced before this request, so record them up front
     // rather than after the provider responds.
-    for (const span of buildToolResultSpans({ traceId, sessionId, matches: correlation.matches })) {
+    for (const span of buildToolResultSpans({
+      traceId,
+      sessionId,
+      matches: correlation.matches,
+    })) {
       addToBuffer(span);
     }
     const callArgs = {
@@ -283,14 +309,21 @@ function wrapChatCompletionCreate(
       const response = (await original.call(
         this,
         cleanBody as unknown as typeof body,
-        requestOptions
+        requestOptions,
       )) as ChatCompletion | Stream<ChatCompletionChunk>;
 
       if ("stream" in body && body.stream === true) {
-        return createTracedChatStream(response as Stream<ChatCompletionChunk>, callArgs);
+        return createTracedChatStream(
+          response as Stream<ChatCompletionChunk>,
+          callArgs,
+        );
       }
 
-      recordProviderAndTools(callArgs, response as ChatCompletion, calculateElapsedTime(startTime));
+      recordProviderAndTools(
+        callArgs,
+        response as ChatCompletion,
+        calculateElapsedTime(startTime),
+      );
       return response;
     } catch (error) {
       recordProviderError(callArgs, error, calculateElapsedTime(startTime));
@@ -310,12 +343,17 @@ function wrapResponsesCreate(
   clientId: string,
   options?: ObserveOptions,
 ): ResponsesCreateFn {
-  return async function wrappedResponsesCreate(this: unknown, body: Record<string, unknown>, requestOptions?: unknown) {
+  return async function wrappedResponsesCreate(
+    this: unknown,
+    body: Record<string, unknown>,
+    requestOptions?: unknown,
+  ) {
     if (!isEnabled()) return original.call(this, body, requestOptions);
 
     const startTime = getStartTime();
     const startedAt = new Date().toISOString();
-    const { cleanBody, pulseSessionId, pulseMetadata } = extractPulseParams(body);
+    const { cleanBody, pulseSessionId, pulseMetadata } =
+      extractPulseParams(body);
     const requestBody = cleanBody;
     const traceMetadata = resolveTraceMetadata(
       { sessionId: options?.sessionId, metadata: options?.metadata },
@@ -332,7 +370,11 @@ function wrapResponsesCreate(
     const traceId = correlation.traceId ?? generateTraceId();
     // Tool results were produced before this request, so record them up front
     // rather than after the provider responds.
-    for (const span of buildToolResultSpans({ traceId, sessionId, matches: correlation.matches })) {
+    for (const span of buildToolResultSpans({
+      traceId,
+      sessionId,
+      matches: correlation.matches,
+    })) {
       addToBuffer(span);
     }
 
@@ -386,7 +428,10 @@ function wrapResponsesCreate(
           startedAt,
           latencyMs: calculateElapsedTime(startTime),
           status: "error",
-          error: error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) },
+          error:
+            error instanceof Error
+              ? { name: error.name, message: error.message }
+              : { message: String(error) },
           metadata: traceMetadata.metadata,
         }),
       );
@@ -396,10 +441,17 @@ function wrapResponsesCreate(
 }
 
 function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
-  return typeof (value as { [Symbol.asyncIterator]?: unknown })?.[Symbol.asyncIterator] === "function";
+  return (
+    typeof (value as { [Symbol.asyncIterator]?: unknown })?.[
+      Symbol.asyncIterator
+    ] === "function"
+  );
 }
 
-function normalizeResponsesResponse(response: unknown, requestBody: Record<string, unknown>) {
+function normalizeResponsesResponse(
+  response: unknown,
+  requestBody: Record<string, unknown>,
+) {
   const typed = response as {
     id?: unknown;
     output_text?: unknown;
@@ -413,13 +465,15 @@ function normalizeResponsesResponse(response: unknown, requestBody: Record<strin
     inputTokens: typed.usage?.input_tokens ?? null,
     outputTokens: typed.usage?.output_tokens ?? null,
     finishReason:
-      typed.status === "incomplete" && typeof typed.incomplete_details?.reason === "string"
+      typed.status === "incomplete" &&
+      typeof typed.incomplete_details?.reason === "string"
         ? typed.incomplete_details.reason
         : typeof typed.status === "string"
           ? typed.status
           : null,
     model: String(typed.model ?? requestBody.model ?? "unknown"),
-    ...(typeof typed.id === "string" && typed.id.length > 0 && { id: typed.id }),
+    ...(typeof typed.id === "string" &&
+      typed.id.length > 0 && { id: typed.id }),
   };
 }
 
@@ -441,12 +495,23 @@ function createTracedResponsesStream(
   let recorded = false;
 
   function processEvent(event: unknown): void {
-    const typed = event as { type?: string; item?: unknown; response?: unknown; delta?: string };
+    const typed = event as {
+      type?: string;
+      item?: unknown;
+      response?: unknown;
+      delta?: string;
+    };
     if (typed.item) output.push(typed.item);
     if (typed.response) completedResponse = typed.response;
-    if (typed.type === "response.output_text.delta" && typeof typed.delta === "string") {
+    if (
+      typed.type === "response.output_text.delta" &&
+      typeof typed.delta === "string"
+    ) {
       const existing = completedResponse as { output_text?: string } | null;
-      completedResponse = { ...(existing ?? {}), output_text: `${existing?.output_text ?? ""}${typed.delta}` };
+      completedResponse = {
+        ...(existing ?? {}),
+        output_text: `${existing?.output_text ?? ""}${typed.delta}`,
+      };
     }
   }
 
@@ -507,17 +572,30 @@ function createTracedResponsesStream(
 export function patchOpenAI<T extends OpenAI>(
   client: T,
   provider: Provider.OpenAI | Provider.OpenRouter,
-  options?: ObserveOptions
+  options?: ObserveOptions,
 ): T {
   const clientId = generateUUID();
-  const originalCreate = client.chat.completions.create.bind(client.chat.completions);
+  const originalCreate = client.chat.completions.create.bind(
+    client.chat.completions,
+  );
 
-  client.chat.completions.create = wrapChatCompletionCreate(originalCreate, provider, clientId, options);
+  client.chat.completions.create = wrapChatCompletionCreate(
+    originalCreate,
+    provider,
+    clientId,
+    options,
+  );
 
-  const responses = (client as unknown as { responses?: { create?: ResponsesCreateFn } })
-    .responses;
+  const responses = (
+    client as unknown as { responses?: { create?: ResponsesCreateFn } }
+  ).responses;
   if (responses?.create) {
-    responses.create = wrapResponsesCreate(responses.create.bind(responses), provider, clientId, options);
+    responses.create = wrapResponsesCreate(
+      responses.create.bind(responses),
+      provider,
+      clientId,
+      options,
+    );
   }
 
   return client;

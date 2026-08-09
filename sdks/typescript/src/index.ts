@@ -97,8 +97,13 @@ export type { RecordSpanInput } from "./core/record";
  * process can exit instead of being held open by the interval.
  */
 export async function shutdownPulse(): Promise<void> {
-  await flushBuffer();
-  stopFlushInterval();
+  // The interval has to stop even when the final flush throws, or a failed
+  // export keeps a short-lived process alive indefinitely.
+  try {
+    await flushBuffer();
+  } finally {
+    stopFlushInterval();
+  }
 }
 
 export type {

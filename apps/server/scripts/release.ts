@@ -24,7 +24,14 @@ function sha256(path: string): string {
 }
 
 run(["bun", "run", "build:pulse"]);
-run(["tar", "-czf", join(DIST_DIR, DASHBOARD_ARCHIVE), "-C", DIST_DIR, "dashboard"]);
+run([
+  "tar",
+  "-czf",
+  join(DIST_DIR, DASHBOARD_ARCHIVE),
+  "-C",
+  DIST_DIR,
+  "dashboard",
+]);
 
 const lines: string[] = [];
 for (const artifact of ARTIFACTS) {

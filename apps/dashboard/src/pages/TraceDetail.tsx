@@ -269,7 +269,9 @@ export default function TraceDetail() {
       </Centered>
     );
   }
-  if (notFound || !trace) return <NotFoundState backTo={back.to} />;
+  if (notFound) return <NotFoundState backTo={back.to} />;
+  // A failed request leaves `trace` null, so the retry branch has to come
+  // first — otherwise every transient failure renders as a 404.
   if (errorMessage) {
     return (
       <Centered>
@@ -288,6 +290,7 @@ export default function TraceDetail() {
       </Centered>
     );
   }
+  if (!trace) return <NotFoundState backTo={back.to} />;
 
   const totalTokens = (trace.inputTokens ?? 0) + (trace.outputTokens ?? 0);
   const inputPercent =

@@ -1,4 +1,10 @@
-import type { Trace, Provider, TraceStatus, NormalizedResponse, ObserveOptions } from "../types";
+import type {
+  Trace,
+  Provider,
+  TraceStatus,
+  NormalizedResponse,
+  ObserveOptions,
+} from "../types";
 import { generateUUID } from "../lib/uuid";
 import { calculateCost } from "../lib/pricing";
 
@@ -23,7 +29,7 @@ export function extractPulseParams(body: Record<string, unknown>): {
 export function resolveTraceMetadata(
   observeOptions?: TraceMetadata,
   pulseSessionId?: string,
-  pulseMetadata?: Record<string, unknown>
+  pulseMetadata?: Record<string, unknown>,
 ): TraceMetadata {
   return {
     sessionId: pulseSessionId ?? observeOptions?.sessionId,
@@ -40,7 +46,8 @@ export function resolveTraceMetadata(
  * @returns Elapsed time in milliseconds
  */
 export function calculateElapsedTime(startTime: number): number {
-  const endTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const endTime =
+    typeof performance !== "undefined" ? performance.now() : Date.now();
   return Math.round(endTime - startTime);
 }
 
@@ -69,7 +76,7 @@ export function buildTrace(
   response: NormalizedResponse | null,
   provider: Provider,
   latencyMs: number,
-  options?: TraceMetadata
+  options?: TraceMetadata,
 ): Trace {
   const modelRequested = (request.model as string) ?? "unknown";
 
@@ -79,9 +86,16 @@ export function buildTrace(
     // Prefer provider-supplied cost (e.g., OpenRouter)
     if (response.costCents !== undefined) {
       costCents = response.costCents;
-    } else if (response.inputTokens !== null && response.outputTokens !== null) {
+    } else if (
+      response.inputTokens !== null &&
+      response.outputTokens !== null
+    ) {
       // Calculate cost based on model and token usage
-      const calculated = calculateCost(response.model, response.inputTokens, response.outputTokens);
+      const calculated = calculateCost(
+        response.model,
+        response.inputTokens,
+        response.outputTokens,
+      );
       if (calculated !== null) {
         costCents = calculated;
       }
@@ -125,7 +139,7 @@ export function buildErrorTrace(
   error: Error,
   provider: Provider,
   latencyMs: number,
-  options?: TraceMetadata
+  options?: TraceMetadata,
 ): Trace {
   const modelRequested = (request.model as string) ?? "unknown";
 

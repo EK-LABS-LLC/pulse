@@ -11,7 +11,8 @@ import { apiKeys, userProjects } from "../db/schema";
 const LOCAL_LOGIN_TOKEN_TTL_MS = 2 * 60 * 1000;
 const LOCAL_DASHBOARD_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-type LocalLoginTokenRecord = LocalLoginPasswordTokenRecord | LocalLoginApiKeyTokenRecord;
+type LocalLoginTokenRecord =
+  LocalLoginPasswordTokenRecord | LocalLoginApiKeyTokenRecord;
 
 interface LocalLoginPasswordTokenRecord {
   kind: "password";
@@ -38,10 +39,17 @@ interface LocalLoginTokenRequest {
 
 const localLoginTokens = new Map<string, LocalLoginTokenRecord>();
 
-export async function handleCreateLocalLoginToken(c: Context): Promise<Response> {
+export async function handleCreateLocalLoginToken(
+  c: Context,
+): Promise<Response> {
   const requestUrl = safeParseUrl(c.req.url);
   if (!requestUrl || !isLoopbackHost(requestUrl.hostname)) {
-    return c.json({ error: "Local login token endpoint is only available on loopback hosts" }, 403);
+    return c.json(
+      {
+        error: "Local login token endpoint is only available on loopback hosts",
+      },
+      403,
+    );
   }
 
   let body: LocalLoginTokenRequest;
@@ -63,7 +71,12 @@ export async function handleCreateLocalLoginToken(c: Context): Promise<Response>
 
   const redirect = safeParseUrl(redirectUrl);
   if (!redirect || !isLoopbackHost(redirect.hostname)) {
-    return c.json({ error: "redirect_url must use a loopback host (localhost or 127.0.0.1)" }, 400);
+    return c.json(
+      {
+        error: "redirect_url must use a loopback host (localhost or 127.0.0.1)",
+      },
+      400,
+    );
   }
 
   purgeExpiredTokens();
@@ -92,7 +105,10 @@ export async function handleCreateLocalLoginToken(c: Context): Promise<Response>
       expiresAt,
     });
   } else {
-    return c.json({ error: "Missing required fields: api_key or email/password" }, 400);
+    return c.json(
+      { error: "Missing required fields: api_key or email/password" },
+      400,
+    );
   }
 
   const loginUrl = new URL("/dashboard/api/local-login", requestUrl);
@@ -103,14 +119,19 @@ export async function handleCreateLocalLoginToken(c: Context): Promise<Response>
       login_url: loginUrl.toString(),
       expires_at: new Date(expiresAt).toISOString(),
     },
-    201
+    201,
   );
 }
 
-export async function handleConsumeLocalLoginToken(c: Context): Promise<Response> {
+export async function handleConsumeLocalLoginToken(
+  c: Context,
+): Promise<Response> {
   const requestUrl = safeParseUrl(c.req.url);
   if (!requestUrl || !isLoopbackHost(requestUrl.hostname)) {
-    return c.json({ error: "Local login endpoint is only available on loopback hosts" }, 403);
+    return c.json(
+      { error: "Local login endpoint is only available on loopback hosts" },
+      403,
+    );
   }
 
   purgeExpiredTokens();
@@ -128,10 +149,13 @@ export async function handleConsumeLocalLoginToken(c: Context): Promise<Response
   if (record.kind === "api-key") {
     const sessionCookie = await createLocalSessionCookie(
       record.userId,
-      c.req.header("user-agent") ?? null
+      c.req.header("user-agent") ?? null,
     );
     if (!sessionCookie) {
-      return c.json({ error: "Local dashboard session could not be created" }, 500);
+      return c.json(
+        { error: "Local dashboard session could not be created" },
+        500,
+      );
     }
 
     c.header("Set-Cookie", sessionCookie);
@@ -158,7 +182,7 @@ export async function handleConsumeLocalLoginToken(c: Context): Promise<Response
       {
         error: `Local sign-in failed (${signInResponse.status}): ${compactBody(body)}`,
       },
-      401
+      401,
     );
   }
 
@@ -168,7 +192,7 @@ export async function handleConsumeLocalLoginToken(c: Context): Promise<Response
       {
         error: "Sign-in succeeded but no session cookie was returned",
       },
-      500
+      500,
     );
   }
 
@@ -182,7 +206,7 @@ export async function handleConsumeLocalLoginToken(c: Context): Promise<Response
 
 async function findAdminUserIdForApiKey(
   apiKey: string,
-  requestedProjectId?: string
+  requestedProjectId?: string,
 ): Promise<string | null> {
   const keyHash = hashApiKey(apiKey);
   const [apiKeyRow] = await db
@@ -200,7 +224,12 @@ async function findAdminUserIdForApiKey(
     .select({ userId: userProjects.userId })
     .from(userProjects)
     .innerJoin(user, eq(userProjects.userId, user.id))
-    .where(and(eq(userProjects.projectId, projectId), eq(userProjects.role, "admin")))
+    .where(
+      and(
+        eq(userProjects.projectId, projectId),
+        eq(userProjects.role, "admin"),
+      ),
+    )
     .limit(1);
 
   return adminUser?.userId ?? null;
@@ -208,7 +237,7 @@ async function findAdminUserIdForApiKey(
 
 async function createLocalSessionCookie(
   userId: string,
-  userAgent: string | null
+  userAgent: string | null,
 ): Promise<string | null> {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + LOCAL_DASHBOARD_SESSION_TTL_MS);
@@ -226,13 +255,18 @@ async function createLocalSessionCookie(
     updatedAt: now,
   });
 
-  return serializeSignedCookie("better-auth.session_token", token, env.BETTER_AUTH_SECRET, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    secure: false,
-    maxAge: LOCAL_DASHBOARD_SESSION_TTL_MS / 1000,
-  });
+  return serializeSignedCookie(
+    "better-auth.session_token",
+    token,
+    env.BETTER_AUTH_SECRET,
+    {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: false,
+      maxAge: LOCAL_DASHBOARD_SESSION_TTL_MS / 1000,
+    },
+  );
 }
 
 function consumeToken(token: string): LocalLoginTokenRecord | null {
@@ -286,7 +320,9 @@ function safeParseUrl(value: string): URL | null {
 }
 
 function isLoopbackHost(hostname: string): boolean {
-  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  return (
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
+  );
 }
 
 function compactBody(body: string): string {

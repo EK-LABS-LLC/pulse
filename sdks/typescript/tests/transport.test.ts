@@ -11,9 +11,14 @@ const originalFetch = globalThis.fetch;
  * cannot be assigned to `globalThis.fetch` without it.
  */
 function mockFetch(
-  handler: (url: string | URL | Request, init?: RequestInit) => Promise<Response>
+  handler: (
+    url: string | URL | Request,
+    init?: RequestInit,
+  ) => Promise<Response>,
 ): typeof fetch {
-  return Object.assign(handler, { preconnect: originalFetch.preconnect }) as typeof fetch;
+  return Object.assign(handler, {
+    preconnect: originalFetch.preconnect,
+  }) as typeof fetch;
 }
 
 function sampleSpan(overrides: Partial<Span> = {}): Span {
@@ -43,7 +48,7 @@ function sampleSpan(overrides: Partial<Span> = {}): Span {
 
 function readAttribute(
   span: { attributes: Array<{ key: string; value: Record<string, unknown> }> },
-  key: string
+  key: string,
 ): unknown {
   const value = span.attributes.find((item) => item.key === key)?.value;
 
@@ -96,9 +101,13 @@ describe("toOtlpPayload", () => {
     expect(readAttribute(span!, "pulse.session_id")).toBe("session-123");
     expect(readAttribute(span!, "gen_ai.provider.name")).toBe("openai");
     expect(readAttribute(span!, "gen_ai.request.model")).toBe("gpt-4o-mini");
-    expect(readAttribute(span!, "gen_ai.response.model")).toBe("gpt-4o-mini-2024-07-18");
+    expect(readAttribute(span!, "gen_ai.response.model")).toBe(
+      "gpt-4o-mini-2024-07-18",
+    );
     expect(readAttribute(span!, "gen_ai.response.id")).toBe("chatcmpl_123");
-    expect(readAttribute(span!, "gen_ai.response.finish_reasons")).toBe('["stop"]');
+    expect(readAttribute(span!, "gen_ai.response.finish_reasons")).toBe(
+      '["stop"]',
+    );
     expect(readAttribute(span!, "gen_ai.usage.input_tokens")).toBe("10");
     expect(readAttribute(span!, "gen_ai.usage.output_tokens")).toBe("20");
     expect(readAttribute(span!, "pulse.cost_cents")).toBe(0.002);
@@ -122,8 +131,12 @@ describe("toOtlpPayload", () => {
     const span = payload.resourceSpans[0]?.scopeSpans[0]?.spans[0];
 
     expect(readAttribute(span!, "pulse.source")).toBe("sdk");
-    expect(readAttribute(span!, "pulse.metadata.pulse.source")).toBe("user-value");
-    expect(span?.attributes.filter(({ key }) => key === "pulse.source")).toHaveLength(1);
+    expect(readAttribute(span!, "pulse.metadata.pulse.source")).toBe(
+      "user-value",
+    );
+    expect(
+      span?.attributes.filter(({ key }) => key === "pulse.source"),
+    ).toHaveLength(1);
   });
 
   it("serializes tool spans with tool attributes and parent linkage", () => {
@@ -159,20 +172,22 @@ describe("toOtlpPayload", () => {
 
     expect(span?.status).toEqual({ code: 2, message: "provider unavailable" });
     expect(readAttribute(span!, "pulse.error")).toBe(
-      '{"name":"APIError","message":"provider unavailable"}'
+      '{"name":"APIError","message":"provider unavailable"}',
     );
   });
 });
 
 describe("service name configuration", () => {
   it("falls back to the default service name when unset", () => {
-    expect(loadConfig({ apiKey: "pulse_sk_test" }).serviceName).toBe("pulse-sdk");
+    expect(loadConfig({ apiKey: "pulse_sk_test" }).serviceName).toBe(
+      "pulse-sdk",
+    );
   });
 
   it("rejects a blank service name", () => {
-    expect(() => loadConfig({ apiKey: "pulse_sk_test", serviceName: "   " })).toThrow(
-      "Pulse SDK: serviceName must not be empty"
-    );
+    expect(() =>
+      loadConfig({ apiKey: "pulse_sk_test", serviceName: "   " }),
+    ).toThrow("Pulse SDK: serviceName must not be empty");
   });
 });
 
@@ -205,8 +220,16 @@ describe("sendSpans", () => {
       return Promise.resolve(new Response("{}", { status: 200 }));
     });
 
-    const config = loadConfig({ apiKey: "pulse_sk_test", serviceName: "checkout-api" });
-    await sendSpans(config.apiUrl, config.apiKey, [sampleSpan()], config.serviceName);
+    const config = loadConfig({
+      apiKey: "pulse_sk_test",
+      serviceName: "checkout-api",
+    });
+    await sendSpans(
+      config.apiUrl,
+      config.apiKey,
+      [sampleSpan()],
+      config.serviceName,
+    );
 
     const body = JSON.parse(bodies[0]!);
     expect(body.resourceSpans[0].resource.attributes).toEqual([
